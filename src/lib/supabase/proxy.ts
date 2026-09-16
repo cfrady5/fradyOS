@@ -2,9 +2,10 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { getSupabasePublishableKey, getSupabaseUrl, isSupabaseConfigured } from "./env";
 
-const PUBLIC_PREFIXES = ["/login", "/auth/", "/api/cron/", "/api/health"];
+// Paths that never require a session: auth pages and machine-to-machine endpoints that carry their own secret.
+const PUBLIC_PREFIXES = ["/login", "/setup", "/auth/", "/api/cron/", "/api/webhooks/", "/api/health"];
 
-function isPublicPath(pathname: string) {
+export function isPublicPath(pathname: string) {
   return PUBLIC_PREFIXES.some((p) => (p.endsWith("/") ? pathname.startsWith(p) : pathname === p || pathname.startsWith(p + "/")));
 }
 
