@@ -11,7 +11,7 @@ import { magicLinkAction, signInAction, signUpAction, type AuthState } from "./a
 
 type Mode = "signin" | "signup" | "magic";
 
-export function LoginForm({ initialError, next }: { initialError?: string; next: string }) {
+export function LoginForm({ initialError, next, allowSignup }: { initialError?: string; next: string; allowSignup: boolean }) {
   const [mode, setMode] = useState<Mode>("signin");
   const [signInState, signIn, signInPending] = useActionState<AuthState, FormData>(signInAction, {});
   const [signUpState, signUp, signUpPending] = useActionState<AuthState, FormData>(signUpAction, {});
@@ -28,7 +28,7 @@ export function LoginForm({ initialError, next }: { initialError?: string; next:
       <Tabs value={mode} onValueChange={(v) => setMode(v as Mode)} className="mb-4">
         <TabsList className="w-full">
           <TabsTrigger value="signin">Sign in</TabsTrigger>
-          <TabsTrigger value="signup">Create account</TabsTrigger>
+          {allowSignup ? <TabsTrigger value="signup">Create account</TabsTrigger> : null}
           <TabsTrigger value="magic">Magic link</TabsTrigger>
         </TabsList>
       </Tabs>
@@ -36,15 +36,15 @@ export function LoginForm({ initialError, next }: { initialError?: string; next:
       <form action={action} className="flex flex-col gap-3">
         <input type="hidden" name="next" value={next} />
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="email">Email</Label>
+          <Label htmlFor="email">{mode === "signin" ? "Email or username" : "Email"}</Label>
           <Input
             id="email"
             name="email"
-            type="email"
-            autoComplete="email"
+            type={mode === "signin" ? "text" : "email"}
+            autoComplete={mode === "signin" ? "username" : "email"}
             required
             defaultValue={lastEmail}
-            placeholder="you@example.com"
+            placeholder={mode === "signin" ? "you@example.com or username" : "you@example.com"}
           />
         </div>
         {mode !== "magic" ? (

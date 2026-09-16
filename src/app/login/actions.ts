@@ -27,12 +27,28 @@ async function siteOrigin() {
   return process.env.NEXT_PUBLIC_SITE_URL ?? `${proto}://${host}`;
 }
 
+/** Sign-ups are closed unless ALLOW_SIGNUP=true; this is a single-person workspace by default. */
+export async function isSignupAllowed() {
+  return process.env.ALLOW_SIGNUP === "true";
+}
+
+/** Resolves a username alias (LOGIN_USERNAME → LOGIN_EMAIL) so you can sign in without typing the email. */
+function resolveIdentifier(identifier: string): string {
+  const id = identifier.trim();
+  if (id.includes("@")) return id;
+  const alias = process.env.LOGIN_USERNAME?.trim();
+  const email = process.env.LOGIN_EMAIL?.trim();
+  if (alias && email && id.toLowerCase() === alias.toLowerCase()) return email;
+  return id;
+}
+
 export async function signInAction(_prev: AuthState, formData: FormData): Promise<AuthState> {
-  const email = String(formData.get("email") ?? "");
+  const identifier = String(formData.get("email") ?? "");
+  const email = resolveIdentifier(identifier);
   const password = String(formData.get("password") ?? "");
   const parsed = emailSchema.safeParse(email);
-  if (!parsed.success) return { error: parsed.error.issues[0].message, email, mode: "signin" };
-  if (!password) return { error: "Enter your password", email, mode: "signin" };
+  if (!parsed.success) return { error: identifier.includes("@") ? parsed.error.issues[0].message : "Unknown username. Try your email address.", email: identifier, mode: "signin" };
+  if (!password) return { error: "Enter your password", email: identifier, mode: "signin" };
 
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithPassword({ email: parsed.data, password });
@@ -43,6 +59,7 @@ export async function signInAction(_prev: AuthState, formData: FormData): Promis
 export async function signUpAction(_prev: AuthState, formData: FormData): Promise<AuthState> {
   const email = String(formData.get("email") ?? "");
   const password = String(formData.get("password") ?? "");
+  if (!(await isSignupAllowed())) return { error: "Sign-ups are closed. This workspace is private.", email, mode: "signin" };
   const e = emailSchema.safeParse(email);
   if (!e.success) return { error: e.error.issues[0].message, email, mode: "signup" };
   const p = passwordSchema.safeParse(password);
@@ -65,14 +82,14 @@ export async function signUpAction(_prev: AuthState, formData: FormData): Promis
 }
 
 export async function magicLinkAction(_prev: AuthState, formData: FormData): Promise<AuthState> {
-  const email = String(formData.get("email") ?? "");
+  const email = resolveIdentifier(String(formData.get("email") ?? ""));
   const e = emailSchema.safeParse(email);
   if (!e.success) return { error: e.error.issues[0].message, email, mode: "magic" };
   const supabase = await createClient();
   const origin = await siteOrigin();
   const { error } = await supabase.auth.signInWithOtp({
     email: e.data,
-    options: { emailRedirectTo: `${origin}/auth/confirm`, shouldCreateUser: true },
+    options: { emailRedirectTo: `${origin}/auth/confirm`, shouldCreateUser: await isSignupAllowed() },
   });
   if (error) return { error: error.message, email, mode: "magic" };
   return { message: "Magic link sent. Check your inbox.", email, mode: "magic" };

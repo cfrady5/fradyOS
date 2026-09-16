@@ -52,6 +52,8 @@ Copy `.env.example` to `.env.local` and fill in:
 | `CRON_SECRET` | for scheduled jobs | Long random string; Vercel sends it as a bearer token to cron routes |
 | `MONDAY_API_TOKEN` | optional | Personal API token; leaving it blank keeps the integration clearly disconnected |
 | `NEXT_PUBLIC_SITE_URL` | optional | Public origin for auth emails |
+| `ALLOW_SIGNUP` | optional | Sign-ups are closed unless `true`. Add users from Supabase → Authentication → Users instead. |
+| `LOGIN_USERNAME`, `LOGIN_EMAIL` | optional | Lets you type a short username on the sign-in form instead of the email |
 | `RESEND_API_KEY`, `REMINDER_FROM_EMAIL` | optional | Enables the email digest toggle in Settings → Reminders |
 
 ### 3. Run locally
@@ -65,7 +67,7 @@ npm test           # vitest unit tests
 npm run build
 ```
 
-Sign up with email + password (or a magic link). The first sign-in bootstraps your workspace.
+Sign in with email + password (or a magic link). The first sign-in bootstraps your workspace. Sign-ups are closed by default; create your account under Supabase → Authentication → Users → Add user, or set `ALLOW_SIGNUP=true` temporarily.
 
 ### 4. Deploy to Vercel
 
