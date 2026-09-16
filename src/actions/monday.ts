@@ -5,7 +5,7 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { requireWorkspace } from "@/lib/data/workspace";
 import { fail, ok, errorMessage, type ActionResult } from "@/lib/action-result";
-import { fetchBoardSchema, fetchMe, isMondayConfigured, listBoards, type MondayBoardSchema, type MondayBoardSummary, type MondayMe } from "@/lib/monday/client";
+import { fetchBoardSchema, fetchMe, isMondayConfigured, listBoards, mondayTokenProblem, type MondayBoardSchema, type MondayBoardSummary, type MondayMe } from "@/lib/monday/client";
 import { runMondaySync } from "@/lib/monday/sync";
 import { getMondayWebhookUrl } from "@/lib/monday/webhook";
 import { mondayQuery } from "@/lib/monday/client";
@@ -14,7 +14,8 @@ import type { MondayConnection, SyncResult } from "@/lib/types";
 export async function testMondayConnection(): Promise<ActionResult<MondayMe>> {
   try {
     await requireWorkspace();
-    if (!isMondayConfigured()) return fail("MONDAY_API_TOKEN is not set on the server. Add it to your environment and redeploy.");
+    const problem = mondayTokenProblem(process.env.MONDAY_API_TOKEN);
+    if (problem) return fail(`${problem} Then redeploy.`);
     const me = await fetchMe();
     return ok(me);
   } catch (e) {

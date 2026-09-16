@@ -7,8 +7,17 @@ import "server-only";
 export const MONDAY_ENDPOINT = "https://api.monday.com/v2";
 export const MONDAY_API_VERSION = "2026-01";
 
+/** A real personal API token is a long ASCII string; placeholder text (spaces, arrows, angle brackets) is not. */
+export function mondayTokenProblem(token: string | undefined): string | null {
+  const t = token?.trim() ?? "";
+  if (!t) return "MONDAY_API_TOKEN is not set on the server.";
+  if (/[^\x21-\x7e]/.test(t) || /[<>]/.test(t)) return "MONDAY_API_TOKEN contains spaces or non-ASCII characters, so it is probably placeholder text. Paste only the token from monday.com → your avatar → Developers → My access tokens.";
+  if (t.length < 20) return "MONDAY_API_TOKEN is too short to be a real token.";
+  return null;
+}
+
 export function isMondayConfigured() {
-  return Boolean(process.env.MONDAY_API_TOKEN?.trim());
+  return mondayTokenProblem(process.env.MONDAY_API_TOKEN) === null;
 }
 
 export class MondayError extends Error {
@@ -23,8 +32,9 @@ export class MondayError extends Error {
 type GraphQLResponse<T> = { data?: T; errors?: { message: string; extensions?: Record<string, unknown> }[]; error_message?: string; error_code?: string };
 
 export async function mondayQuery<T>(query: string, variables: Record<string, unknown> = {}, attempt = 0): Promise<T> {
-  const token = process.env.MONDAY_API_TOKEN?.trim();
-  if (!token) throw new MondayError("Monday.com is not connected: MONDAY_API_TOKEN is not set on the server.");
+  const problem = mondayTokenProblem(process.env.MONDAY_API_TOKEN);
+  if (problem) throw new MondayError(`Monday.com is not connected: ${problem}`);
+  const token = process.env.MONDAY_API_TOKEN!.trim();
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 25_000);
