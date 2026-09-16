@@ -218,6 +218,7 @@ export interface Event {
   monday_group: string | null;
   monday_state: string | null;
   monday_synced_at: string | null;
+  monday_raw: Record<string, unknown> | null;
   sync_flag: SyncFlag;
   sync_flag_reason: string | null;
   sync_flag_at: string | null;
