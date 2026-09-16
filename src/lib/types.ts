@@ -255,6 +255,14 @@ export interface SocialPost {
   anchor_date: string | null;
   offset_days: number | null;
   date_overridden: boolean;
+  monday_board_id: string | null;
+  monday_item_id: string | null;
+  monday_item_url: string | null;
+  monday_synced_at: string | null;
+  monday_pushed_at: string | null;
+  monday_push_error: string | null;
+  monday_removed_at: string | null;
+  monday_raw: Record<string, unknown> | null;
   created_at: string;
   updated_at: string;
   published_at: string | null;
@@ -297,14 +305,36 @@ export interface MondayColumnMap {
   notes?: string | null;
 }
 
+export type MondayPurpose = "events" | "social";
+
+/** Column mapping for the social media board (column ids, or "__name__" for the item name). */
+export interface SocialColumnMap {
+  name?: string | null;
+  publish_date?: string | null;
+  draft_due?: string | null;
+  approval_due?: string | null;
+  status?: string | null;
+  platform?: string | null;
+  brand?: string | null;
+  caption?: string | null;
+  event_link?: string | null;
+  published_url?: string | null;
+  approver?: string | null;
+  notes?: string | null;
+}
+
 export interface MondayConnection {
   id: string;
   user_id: string;
+  purpose: MondayPurpose;
   board_id: string;
   board_name: string | null;
-  column_map: MondayColumnMap;
-  columns_snapshot: { id: string; title: string; type: string }[];
+  board_url: string | null;
+  column_map: MondayColumnMap & SocialColumnMap;
+  columns_snapshot: { id: string; title: string; type: string; settings_str?: string | null }[];
   canceled_labels: string[];
+  group_id: string | null;
+  status_map: Record<string, string>;
   auto_sync_enabled: boolean;
   webhook_ids: string[];
   last_webhook_at: string | null;
@@ -330,6 +360,8 @@ export interface SyncResult {
 export interface MondaySyncRun {
   id: string;
   user_id: string;
+  connection_id: string | null;
+  purpose: MondayPurpose;
   trigger: "manual" | "scheduled" | "webhook";
   started_at: string;
   finished_at: string | null;

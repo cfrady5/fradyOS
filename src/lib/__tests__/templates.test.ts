@@ -43,7 +43,7 @@ const task = (over: Partial<Task>): Task => ({
 const post = (over: Partial<SocialPost>): SocialPost => ({
   id: "p", user_id: "u", work_area_id: null, project_id: null, event_id: "e", title: "Promo", brand: null, platform: "linkedin", draft_due_date: "2026-09-12", approval_due_date: "2026-09-15",
   publish_date: "2026-09-17", publish_time: null, status: "drafting", approver: null, followup_date: null, caption: null, assets: [], published_url: null, notes: null,
-  template_item_id: "i2", anchor_date: "2026-10-01", offset_days: -14, date_overridden: false, created_at: "", updated_at: "", published_at: null, ...over,
+  template_item_id: "i2", anchor_date: "2026-10-01", offset_days: -14, date_overridden: false, monday_board_id: null, monday_item_id: null, monday_item_url: null, monday_synced_at: null, monday_pushed_at: null, monday_push_error: null, monday_removed_at: null, monday_raw: null, created_at: "", updated_at: "", published_at: null, ...over,
 });
 
 describe("event move proposals", () => {

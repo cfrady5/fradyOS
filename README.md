@@ -85,6 +85,15 @@ Both routes reject requests that do not carry `Authorization: Bearer $CRON_SECRE
 3. Map the board's actual columns to event name, start/end dates (Date or Timeline), location, program, owner, status, website and notes. Sensible defaults are suggested from the schema; every mapping is editable. Choose which status labels mean "canceled".
 4. **Sync now**, or leave scheduled sync on. The connection shows the last successful sync time and the last error.
 
+### Social media board (two-way)
+
+Settings → Monday.com has a second card for your social media board. Map its columns (publish date, draft and approval deadlines, status, platform, brand, caption, connect-boards link to the events board, published URL), pick the group new items go to, and match each FRADY OS status to one of the board's status labels. Then:
+
+- Applying an event template offers "Also create the social posts on the Monday.com board", and each event page has "Send N to Monday" for posts that aren't on the board yet. A post editor has "Send to Monday" / "Open in Monday".
+- Saving a linked post in FRADY OS pushes the mapped columns to the board.
+- Syncing the social board (manual, scheduled or webhook) reads every item back: posts created by your team on the board appear in the content calendar, and status or date changes made in Monday update the linked post. Fields you did not map (assets, follow-up date, template linkage) stay local.
+- Statuses are only written to Monday when you mapped a label for them, so the board never gains surprise labels.
+
 ### Real-time updates via webhook
 
 Set `MONDAY_WEBHOOK_SECRET` (any random string, 16+ characters), redeploy, then open Settings → Monday.com. The card shows the URL `https://<your-domain>/api/webhooks/monday?token=<secret>`. Either paste it into Monday's "Send a webhook" recipe (Integrations → Webhooks; the endpoint answers the challenge handshake automatically) or click **Register webhooks automatically**, which creates recipes for item created, column changed, name changed, item deleted, archived and restored. Each webhook call re-runs the same read-only sync, coalesced so a burst of edits triggers one run. Monday does not sign webhook bodies, which is why the secret lives in the URL.

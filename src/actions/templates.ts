@@ -6,8 +6,10 @@ import { createClient } from "@/lib/supabase/server";
 import { requireWorkspace } from "@/lib/data/workspace";
 import { fail, ok, errorMessage, type ActionResult } from "@/lib/action-result";
 import { dateOnly, optionalDate, platformSchema } from "@/lib/validation";
-import type { Event, EventTemplateItem, SocialPost, Task } from "@/lib/types";
+import type { Event, EventTemplateItem, MondayConnection, SocialPost, Task } from "@/lib/types";
 import { proposeDateChanges } from "@/lib/templates";
+import { isMondayConfigured } from "@/lib/monday/client";
+import { pushSocialPostToMonday } from "@/lib/monday/social-sync";
 
 const templateSchema = z.object({ name: z.string().trim().min(1, "Name the template").max(120), description: z.string().trim().max(2000).nullable().optional(), is_default: z.boolean().optional() });
 
@@ -119,6 +121,7 @@ export async function loadTemplateItems(templateId: string): Promise<ActionResul
 
 const applySchema = z.object({
   event_id: z.string().uuid(),
+  push_to_monday: z.boolean().default(false),
   items: z
     .array(
       z.object({
@@ -138,7 +141,7 @@ const applySchema = z.object({
 });
 
 /** Creates the reviewed items. Items already created from the same template item for this event are skipped. */
-export async function applyTemplateToEvent(input: unknown): Promise<ActionResult<{ tasks: number; posts: number; skipped: number }>> {
+export async function applyTemplateToEvent(input: unknown): Promise<ActionResult<{ tasks: number; posts: number; skipped: number; pushed: number; push_errors: string[] }>> {
   const parsed = applySchema.safeParse(input);
   if (!parsed.success) return fail(parsed.error.issues[0].message);
   try {
@@ -158,6 +161,7 @@ export async function applyTemplateToEvent(input: unknown): Promise<ActionResult
     let tasks = 0;
     let posts = 0;
     let skipped = 0;
+    const createdPostIds: string[] = [];
     for (const it of parsed.data.items) {
       if (applied.has(it.template_item_id)) {
         skipped++;
@@ -180,7 +184,7 @@ export async function applyTemplateToEvent(input: unknown): Promise<ActionResult
         if (error) return fail(error.message);
         tasks++;
       } else {
-        const { error } = await supabase.from("social_posts").insert({
+        const { data: created, error } = await supabase.from("social_posts").insert({
           user_id: ws.userId,
           event_id: event.id,
           work_area_id: event.work_area_id,
@@ -196,14 +200,36 @@ export async function applyTemplateToEvent(input: unknown): Promise<ActionResult
           template_item_id: it.template_item_id,
           anchor_date: event.start_date,
           offset_days: it.offset_days,
-        });
+        }).select("id").single();
         if (error) return fail(error.message);
         posts++;
+        createdPostIds.push(created.id as string);
       }
       applied.add(it.template_item_id);
     }
+
+    // Optionally create the new posts on the Monday.com social board.
+    let pushed = 0;
+    const push_errors: string[] = [];
+    if (parsed.data.push_to_monday && createdPostIds.length) {
+      if (!isMondayConfigured()) push_errors.push("MONDAY_API_TOKEN is not set on the server.");
+      else {
+        const { data: conn } = await supabase.from("monday_connections").select("*").eq("user_id", ws.userId).eq("purpose", "social").maybeSingle();
+        if (!conn) push_errors.push("Social media board is not connected.");
+        else {
+          for (const pid of createdPostIds) {
+            try {
+              await pushSocialPostToMonday(supabase, ws.userId, conn as MondayConnection, pid);
+              pushed++;
+            } catch (e) {
+              push_errors.push(e instanceof Error ? e.message : "push failed");
+            }
+          }
+        }
+      }
+    }
     revalidatePath("/", "layout");
-    return ok({ tasks, posts, skipped });
+    return ok({ tasks, posts, skipped, pushed, push_errors });
   } catch (e) {
     return fail(errorMessage(e));
   }

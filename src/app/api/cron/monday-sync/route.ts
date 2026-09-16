@@ -3,6 +3,7 @@ import { isAuthorizedCron } from "@/lib/cron-auth";
 import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
 import { isMondayConfigured } from "@/lib/monday/client";
 import { runMondaySync } from "@/lib/monday/sync";
+import { runMondaySocialSync } from "@/lib/monday/social-sync";
 import type { MondayConnection } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -22,8 +23,8 @@ export async function GET(request: NextRequest) {
   const results: Record<string, unknown>[] = [];
   for (const conn of (connections ?? []) as MondayConnection[]) {
     try {
-      const r = await runMondaySync(supabase, conn.user_id, conn, "scheduled");
-      results.push({ user_id: conn.user_id, board_id: conn.board_id, ok: true, ...r });
+      const r = conn.purpose === "social" ? await runMondaySocialSync(supabase, conn.user_id, conn, "scheduled") : await runMondaySync(supabase, conn.user_id, conn, "scheduled");
+      results.push({ user_id: conn.user_id, purpose: conn.purpose, board_id: conn.board_id, ok: true, ...r });
     } catch (e) {
       results.push({ user_id: conn.user_id, board_id: conn.board_id, ok: false, error: e instanceof Error ? e.message : "failed" });
     }

@@ -18,7 +18,7 @@ const SYNCED_FIELDS: (keyof MappedEventFields)[] = ["name", "start_date", "end_d
  */
 export async function runMondaySync(supabase: Client, userId: string, connection: MondayConnection, trigger: "manual" | "scheduled" | "webhook"): Promise<SyncResult> {
   const started = Date.now();
-  const { data: run } = await supabase.from("monday_sync_runs").insert({ user_id: userId, trigger, status: "running" }).select("id").single();
+  const { data: run } = await supabase.from("monday_sync_runs").insert({ user_id: userId, trigger, status: "running", connection_id: connection.id, purpose: "events" }).select("id").single();
   const runId = run?.id as string | undefined;
   await supabase.from("monday_connections").update({ last_sync_started_at: new Date().toISOString() }).eq("id", connection.id);
 

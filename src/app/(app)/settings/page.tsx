@@ -12,9 +12,9 @@ export default async function SettingsPage({ searchParams }: PageProps<"/setting
   const sp = await searchParams;
   const ws = await requireWorkspace();
   const supabase = await createClient();
-  const [conn, runs, templates, items] = await Promise.all([
-    supabase.from("monday_connections").select("*").eq("user_id", ws.userId).maybeSingle(),
-    supabase.from("monday_sync_runs").select("*").eq("user_id", ws.userId).order("started_at", { ascending: false }).limit(10),
+  const [conns, runs, templates, items] = await Promise.all([
+    supabase.from("monday_connections").select("*").eq("user_id", ws.userId),
+    supabase.from("monday_sync_runs").select("*").eq("user_id", ws.userId).order("started_at", { ascending: false }).limit(12),
     supabase.from("event_templates").select("*").eq("user_id", ws.userId).order("is_default", { ascending: false }).order("name"),
     supabase.from("event_template_items").select("*").eq("user_id", ws.userId).order("sort_order"),
   ]);
@@ -28,7 +28,10 @@ export default async function SettingsPage({ searchParams }: PageProps<"/setting
       email={ws.email}
       monday={{
         tokenConfigured: isMondayConfigured(),
-        connection: (conn.data ?? null) as MondayConnection | null,
+        connections: {
+          events: (((conns.data ?? []) as MondayConnection[]).find((c) => c.purpose === "events") ?? null),
+          social: (((conns.data ?? []) as MondayConnection[]).find((c) => c.purpose === "social") ?? null),
+        },
         runs: (runs.data ?? []) as MondaySyncRun[],
         webhookUrl,
       }}

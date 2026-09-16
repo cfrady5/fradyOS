@@ -3,6 +3,7 @@ import { z } from "zod";
 import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
 import { isMondayConfigured } from "@/lib/monday/client";
 import { runMondaySync } from "@/lib/monday/sync";
+import { runMondaySocialSync } from "@/lib/monday/social-sync";
 import { isMondayWebhookConfigured, timingSafeEqual } from "@/lib/monday/webhook";
 import type { MondayConnection } from "@/lib/types";
 
@@ -72,7 +73,8 @@ export async function POST(request: NextRequest) {
       const freshLast = fresh?.last_sync_started_at ? new Date(fresh.last_sync_started_at as string).getTime() : 0;
       if (freshLast > receivedAt) continue;
       try {
-        await runMondaySync(admin, conn.user_id, conn, "webhook");
+        if (conn.purpose === "social") await runMondaySocialSync(admin, conn.user_id, conn, "webhook");
+        else await runMondaySync(admin, conn.user_id, conn, "webhook");
       } catch (e) {
         console.error("monday webhook sync failed", e instanceof Error ? e.message : e);
       }

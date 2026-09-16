@@ -67,7 +67,7 @@ vi.mock("../client", () => ({
 const { runMondaySync } = await import("../sync");
 
 const connection: MondayConnection = {
-  id: "conn", user_id: "u1", board_id: "b1", board_name: "Events", column_map: { name: "__name__", start: "date", status: "status" }, columns_snapshot: [], canceled_labels: ["canceled", "cancelled"],
+  id: "conn", user_id: "u1", purpose: "events", board_id: "b1", board_name: "Events", board_url: null, column_map: { name: "__name__", start: "date", status: "status" }, columns_snapshot: [], canceled_labels: ["canceled", "cancelled"], group_id: null, status_map: {},
   auto_sync_enabled: true, webhook_ids: [], last_webhook_at: null, last_sync_started_at: null, last_success_at: null, last_error: null, last_result: null, created_at: "", updated_at: "",
 };
 

@@ -113,6 +113,8 @@ export type MondayColumnValue = {
   url?: string | null;
   url_text?: string | null;
   address?: string | null;
+  linked_item_ids?: string[] | null;
+  display_value?: string | null;
 };
 
 export type MondayItem = {
@@ -134,6 +136,7 @@ const ITEM_FIELDS = `
     ... on StatusValue { label is_done }
     ... on LinkValue { url url_text }
     ... on LocationValue { address }
+    ... on BoardRelationValue { linked_item_ids display_value }
   }
 `;
 
@@ -160,4 +163,26 @@ export async function fetchAllItems(boardId: string, columnIds: string[], onPage
     cursor = next.next_items_page.cursor;
   }
   return items;
+}
+
+/** Creates an item on a board. column_values keys are column ids in Monday's per-type JSON format. */
+export async function createItem(boardId: string, groupId: string | null, name: string, columnValues: Record<string, unknown>): Promise<{ id: string; url: string }> {
+  const data = await mondayQuery<{ create_item: { id: string; url: string } | null }>(
+    `mutation ($board: ID!, $group: String, $name: String!, $values: JSON) {
+      create_item(board_id: $board, group_id: $group, item_name: $name, column_values: $values, create_labels_if_missing: true) { id url }
+    }`,
+    { board: boardId, group: groupId, name: name.slice(0, 255), values: JSON.stringify(columnValues) },
+  );
+  if (!data.create_item) throw new MondayError("Monday.com did not return the created item");
+  return data.create_item;
+}
+
+/** Updates several columns (and optionally the name via the "name" key) on an existing item. */
+export async function changeColumnValues(boardId: string, itemId: string, columnValues: Record<string, unknown>): Promise<void> {
+  await mondayQuery<{ change_multiple_column_values: { id: string } | null }>(
+    `mutation ($board: ID!, $item: ID!, $values: JSON!) {
+      change_multiple_column_values(board_id: $board, item_id: $item, column_values: $values, create_labels_if_missing: true) { id }
+    }`,
+    { board: boardId, item: itemId, values: JSON.stringify(columnValues) },
+  );
 }

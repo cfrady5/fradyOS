@@ -4,7 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { ArrowLeft, ExternalLink, Lock, Pencil, Plus, Trash2, Archive, AlertTriangle, CalendarClock, Check, Loader2, Wand2, MapPin, User, Globe } from "lucide-react";
+import { ArrowLeft, ExternalLink, Lock, Pencil, Plus, Trash2, Archive, AlertTriangle, CalendarClock, Check, Loader2, Wand2, MapPin, User, Globe, UploadCloud } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -24,6 +24,7 @@ import { useWorkspace } from "@/components/app/workspace-provider";
 import { completeTask, reopenTask } from "@/actions/tasks";
 import { acknowledgeEventDateChange, archiveEvent, deleteEvent, dismissEventFlag, updateEvent } from "@/actions/events";
 import { acceptDateProposals, keepDatesForProposals } from "@/actions/templates";
+import { sendEventPostsToMonday } from "@/actions/monday";
 import type { EventDetail } from "@/lib/data/events";
 import type { TaskWithRefs } from "@/lib/types";
 import { formatDate, formatDateRange, formatTime, formatTimestamp } from "@/lib/dates";
@@ -200,7 +201,20 @@ export function EventDetailView({ detail }: { detail: EventDetail }) {
           </section>
 
           <section>
-            <SectionHeader title="Social media plan" count={detail.posts.length} action={<NewSocialPostButton preset={{ event_id: e.id, work_area_id: e.work_area_id, project_id: e.project_id, publish_date: e.start_date }} />} />
+            <SectionHeader
+              title="Social media plan"
+              count={detail.posts.length}
+              action={
+                <div className="flex items-center gap-1.5">
+                  {detail.socialBoard && detail.posts.some((p) => !p.monday_item_id) ? (
+                    <Button size="sm" variant="outline" disabled={pending} onClick={() => startTransition(async () => { const r = await sendEventPostsToMonday(e.id); if (!r.ok) return void toast.error(r.error, { duration: 8000 }); toast.success(`Sent ${r.data.pushed} post${r.data.pushed === 1 ? "" : "s"} to Monday.com`); if (r.data.errors.length) toast.warning(r.data.errors[0], { duration: 10000 }); router.refresh(); })}>
+                      <UploadCloud /> Send {detail.posts.filter((p) => !p.monday_item_id).length} to Monday
+                    </Button>
+                  ) : null}
+                  <NewSocialPostButton preset={{ event_id: e.id, work_area_id: e.work_area_id, project_id: e.project_id, publish_date: e.start_date }} />
+                </div>
+              }
+            />
             {detail.posts.length ? (
               <div className="flex flex-col gap-1.5">
                 {detail.posts.map((p) => (
@@ -261,7 +275,7 @@ export function EventDetailView({ detail }: { detail: EventDetail }) {
       </div>
 
       {!isMonday ? <EventDialog open={editOpen} onOpenChange={setEditOpen} event={e} /> : null}
-      <ApplyTemplateDialog open={templateOpen} onOpenChange={setTemplateOpen} event={e} templates={detail.templates} items={detail.templateItems} existing={{ tasks: detail.tasks, posts: detail.posts }} />
+      <ApplyTemplateDialog open={templateOpen} onOpenChange={setTemplateOpen} event={e} templates={detail.templates} items={detail.templateItems} existing={{ tasks: detail.tasks, posts: detail.posts }} socialBoardName={detail.socialBoard?.board_name ?? (detail.socialBoard ? `board #${detail.socialBoard.board_id}` : null)} />
     </div>
   );
 }

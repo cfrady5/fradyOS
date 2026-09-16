@@ -22,7 +22,7 @@ import { useWorkspace } from "./workspace-provider";
 type Existing = { tasks: Pick<Task, "template_item_id">[]; posts: Pick<SocialPost, "template_item_id">[] };
 type Edit = Partial<Pick<TemplatePreviewItem, "title" | "date" | "draft_due_date" | "approval_due_date" | "platform">> & { selected?: boolean };
 
-export function ApplyTemplateDialog({ open, onOpenChange, event, templates, items, existing }: { open: boolean; onOpenChange: (v: boolean) => void; event: Event; templates: EventTemplate[]; items: EventTemplateItem[]; existing: Existing }) {
+export function ApplyTemplateDialog({ open, onOpenChange, event, templates, items, existing, socialBoardName }: { open: boolean; onOpenChange: (v: boolean) => void; event: Event; templates: EventTemplate[]; items: EventTemplateItem[]; existing: Existing; socialBoardName?: string | null }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-2xl">
@@ -37,18 +37,19 @@ export function ApplyTemplateDialog({ open, onOpenChange, event, templates, item
             </AlertDescription>
           </Alert>
         ) : (
-          <ApplyTemplateBody event={event} templates={templates} items={items} existing={existing} onClose={() => onOpenChange(false)} />
+          <ApplyTemplateBody event={event} templates={templates} items={items} existing={existing} socialBoardName={socialBoardName ?? null} onClose={() => onOpenChange(false)} />
         )}
       </DialogContent>
     </Dialog>
   );
 }
 
-function ApplyTemplateBody({ event, templates, items, existing, onClose }: { event: Event; templates: EventTemplate[]; items: EventTemplateItem[]; existing: Existing; onClose: () => void }) {
+function ApplyTemplateBody({ event, templates, items, existing, socialBoardName, onClose }: { event: Event; templates: EventTemplate[]; items: EventTemplateItem[]; existing: Existing; socialBoardName: string | null; onClose: () => void }) {
   const router = useRouter();
   const { today } = useWorkspace();
   const [templateId, setTemplateId] = React.useState(templates.find((t) => t.is_default)?.id ?? templates[0]?.id ?? "");
   const [includePast, setIncludePast] = React.useState(false);
+  const [pushToMonday, setPushToMonday] = React.useState(Boolean(socialBoardName));
   // Per-template edits keyed by template item id; switching templates starts from a clean preview.
   const [edits, setEdits] = React.useState<Record<string, Record<string, Edit>>>({});
   const [error, setError] = React.useState<string | null>(null);
@@ -72,6 +73,7 @@ function ApplyTemplateBody({ event, templates, items, existing, onClose }: { eve
     startTransition(async () => {
       const res = await applyTemplateToEvent({
         event_id: event.id,
+        push_to_monday: pushToMonday && Boolean(socialBoardName),
         items: chosen.map((r) => ({
           template_item_id: r.template_item_id,
           kind: r.kind,
@@ -86,7 +88,8 @@ function ApplyTemplateBody({ event, templates, items, existing, onClose }: { eve
         })),
       });
       if (!res.ok) return setError(res.error);
-      toast.success(`Created ${res.data.tasks} task${res.data.tasks === 1 ? "" : "s"} and ${res.data.posts} post${res.data.posts === 1 ? "" : "s"}${res.data.skipped ? ` (${res.data.skipped} already existed)` : ""}`);
+      toast.success(`Created ${res.data.tasks} task${res.data.tasks === 1 ? "" : "s"} and ${res.data.posts} post${res.data.posts === 1 ? "" : "s"}${res.data.skipped ? ` (${res.data.skipped} already existed)` : ""}${res.data.pushed ? ` · ${res.data.pushed} sent to Monday` : ""}`);
+      if (res.data.push_errors.length) toast.warning(`Monday.com: ${res.data.push_errors[0]}${res.data.push_errors.length > 1 ? ` (+${res.data.push_errors.length - 1} more)` : ""}`, { duration: 10000 });
       onClose();
       router.refresh();
     });
@@ -167,6 +170,12 @@ function ApplyTemplateBody({ event, templates, items, existing, onClose }: { eve
           </table>
         </div>
       )}
+      {socialBoardName ? (
+        <label className="flex items-center gap-2 text-sm">
+          <Checkbox checked={pushToMonday} onCheckedChange={(v) => setPushToMonday(v === true)} />
+          Also create the social posts on the Monday.com board “{socialBoardName}”
+        </label>
+      ) : null}
       {error ? (
         <Alert variant="destructive">
           <AlertDescription>{error}</AlertDescription>

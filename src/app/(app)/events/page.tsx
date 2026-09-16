@@ -17,7 +17,7 @@ export default async function EventsPage({ searchParams }: PageProps<"/events">)
   const [events, reviewCount, conn] = await Promise.all([
     listEvents(ws.userId, ws.today, { scope, area }),
     countReviewFlags(ws.userId),
-    supabase.from("monday_connections").select("*").eq("user_id", ws.userId).maybeSingle(),
+    supabase.from("monday_connections").select("*").eq("user_id", ws.userId).eq("purpose", "events").maybeSingle(),
   ]);
   return <EventsView events={events} scope={scope} area={area} reviewCount={reviewCount} connection={(conn.data ?? null) as MondayConnection | null} tokenConfigured={isMondayConfigured()} />;
 }

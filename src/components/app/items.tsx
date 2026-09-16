@@ -195,6 +195,7 @@ export function SocialPostRow({ post, className, dense = false }: { post: Social
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
           <span className="text-sm font-medium leading-5">{post.title}</span>
           <SocialStatusBadge status={post.status} />
+          {post.monday_item_id ? <Badge variant={post.monday_removed_at ? "destructive" : "muted"}>{post.monday_removed_at ? "Removed from Monday" : "Monday"}</Badge> : null}
         </div>
         <div className="text-muted-foreground mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
           {post.platform ? <span>{labelFor(PLATFORMS, post.platform)}</span> : null}

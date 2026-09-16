@@ -3,14 +3,16 @@
 import * as React from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Loader2, Trash2, Send, ExternalLink, AlertTriangle } from "lucide-react";
+import { Loader2, Trash2, Send, ExternalLink, AlertTriangle, UploadCloud } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { NativeSelect } from "@/components/ui/native-select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
 import { deleteSocialPost, markPostPublished, updateSocialPost } from "@/actions/social";
+import { sendPostToMonday } from "@/actions/monday";
 import type { SocialPostDetail } from "@/lib/data/social";
 import { PLATFORMS, SOCIAL_STATUSES, type Link as LinkT, type Platform, type SocialStatus } from "@/lib/types";
 import { formatDate, formatTimestamp } from "@/lib/dates";
@@ -94,7 +96,17 @@ export function SocialPostEditor({ detail, onChanged, onClose }: { detail: Socia
       });
       if (!res.ok) return setError(res.error);
       setDirty(false);
-      toast.success("Saved");
+      if (res.data.monday_warning) toast.warning(res.data.monday_warning, { duration: 8000 });
+      else toast.success(p.monday_item_id ? "Saved and updated on Monday.com" : "Saved");
+      onChanged();
+    });
+  }
+
+  function sendToMonday() {
+    startTransition(async () => {
+      const res = await sendPostToMonday(p.id);
+      if (!res.ok) return void toast.error(res.error, { duration: 8000 });
+      toast.success(res.data.created ? "Created on the Monday.com social board" : "Updated on Monday.com");
       onChanged();
     });
   }
@@ -126,7 +138,19 @@ export function SocialPostEditor({ detail, onChanged, onClose }: { detail: Socia
       <div className="sticky top-0 z-10 flex items-center gap-2 border-b bg-background/95 px-4 py-2.5 backdrop-blur">
         <SocialStatusBadge status={p.status} />
         {next && p.status !== "published" ? <DueBadge date={next.date} today={today} label={next.label} /> : null}
+        {p.monday_item_id ? (
+          <Badge variant={p.monday_removed_at ? "destructive" : "muted"}>{p.monday_removed_at ? "Removed from Monday" : "On Monday"}</Badge>
+        ) : null}
         <div className="ml-auto flex items-center gap-1">
+          {p.monday_item_url ? (
+            <Button asChild variant="ghost" size="sm">
+              <a href={p.monday_item_url} target="_blank" rel="noreferrer noopener"><ExternalLink /> Open in Monday</a>
+            </Button>
+          ) : (
+            <Button variant="ghost" size="sm" onClick={sendToMonday} disabled={pending} title="Create this post on the connected Monday.com social board">
+              <UploadCloud /> Send to Monday
+            </Button>
+          )}
           {p.status !== "published" ? (
             <Button variant="outline" size="sm" onClick={publish} disabled={pending}>
               <Send /> Mark published
@@ -136,6 +160,12 @@ export function SocialPostEditor({ detail, onChanged, onClose }: { detail: Socia
       </div>
 
       <div className="flex flex-col gap-4 p-4">
+        {p.monday_push_error ? (
+          <Alert variant="warning">
+            <AlertTriangle />
+            <AlertDescription>Last Monday.com update failed: {p.monday_push_error}</AlertDescription>
+          </Alert>
+        ) : null}
         <Input value={form.title} onChange={(e) => set("title", e.target.value)} className="h-10 text-base font-medium" aria-label="Title" />
 
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
