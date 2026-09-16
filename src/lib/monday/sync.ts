@@ -16,7 +16,7 @@ const SYNCED_FIELDS: (keyof MappedEventFields)[] = ["name", "start_date", "end_d
  * - Flags canceled (status label) and removed (missing from board) items for review.
  * - Never touches local work: tasks, social posts, notes, work area, project, local_notes.
  */
-export async function runMondaySync(supabase: Client, userId: string, connection: MondayConnection, trigger: "manual" | "scheduled"): Promise<SyncResult> {
+export async function runMondaySync(supabase: Client, userId: string, connection: MondayConnection, trigger: "manual" | "scheduled" | "webhook"): Promise<SyncResult> {
   const started = Date.now();
   const { data: run } = await supabase.from("monday_sync_runs").insert({ user_id: userId, trigger, status: "running" }).select("id").single();
   const runId = run?.id as string | undefined;

@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Loader2, RefreshCw, Plug, Unplug, CheckCircle2, AlertTriangle, ExternalLink } from "lucide-react";
+import { Loader2, RefreshCw, Plug, Unplug, CheckCircle2, AlertTriangle, ExternalLink, Copy, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { NativeSelect } from "@/components/ui/native-select";
@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Field } from "@/components/app/form-fields";
-import { disconnectMonday, inspectMondayBoard, listMondayBoards, saveMondayConnection, setMondayAutoSync, syncMondayNow, testMondayConnection } from "@/actions/monday";
+import { disconnectMonday, inspectMondayBoard, listMondayBoards, registerMondayWebhooks, removeMondayWebhooks, saveMondayConnection, setMondayAutoSync, syncMondayNow, testMondayConnection } from "@/actions/monday";
 import type { MondayBoardSchema, MondayBoardSummary } from "@/lib/monday/client";
 import { FIELD_COLUMN_TYPES, FIELD_LABELS, NAME_COLUMN } from "@/lib/monday/mapping";
 import type { MondayColumnMap, MondayConnection, MondaySyncRun, WorkArea } from "@/lib/types";
@@ -21,7 +21,7 @@ import { useWorkspace } from "./workspace-provider";
 
 const FIELD_ORDER: (keyof MondayColumnMap)[] = ["name", "start", "end", "location", "program", "owner", "status", "website", "notes"];
 
-export function MondaySettings({ tokenConfigured, connection, runs, cronConfigured, adminConfigured, workAreas }: { tokenConfigured: boolean; connection: MondayConnection | null; runs: MondaySyncRun[]; cronConfigured: boolean; adminConfigured: boolean; workAreas: WorkArea[] }) {
+export function MondaySettings({ tokenConfigured, connection, runs, webhookUrl, cronConfigured, adminConfigured, workAreas }: { tokenConfigured: boolean; connection: MondayConnection | null; runs: MondaySyncRun[]; webhookUrl: string | null; cronConfigured: boolean; adminConfigured: boolean; workAreas: WorkArea[] }) {
   const router = useRouter();
   const { timezone } = useWorkspace();
   const [pending, startTransition] = React.useTransition();
@@ -266,6 +266,54 @@ export function MondaySettings({ tokenConfigured, connection, runs, cronConfigur
           ) : null}
         </CardContent>
       </Card>
+
+      {connection && !editing ? (
+        <Card>
+          <CardHeader>
+            <div>
+              <CardTitle className="flex items-center gap-2"><Zap className="size-4" /> Real-time updates (webhook)</CardTitle>
+              <CardDescription className="mt-1">Monday.com can call FRADY OS the moment an item changes. Each call re-runs the same read-only sync, so nothing local is ever touched.</CardDescription>
+            </div>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-3">
+            {!webhookUrl ? (
+              <Alert variant="warning">
+                <AlertTitle>Webhook secret not configured</AlertTitle>
+                <AlertDescription>Set <code>MONDAY_WEBHOOK_SECRET</code> (any random string, 16+ characters) on the server and redeploy. The URL to paste into Monday appears here afterwards.</AlertDescription>
+              </Alert>
+            ) : (
+              <>
+                <Field label="Webhook URL" hint="Paste into Monday's “Send a webhook” recipe (Integrations → Webhooks), or register automatically below.">
+                  <div className="flex items-center gap-2">
+                    <Input readOnly value={webhookUrl} className="font-mono text-xs" onFocus={(e) => e.currentTarget.select()} />
+                    <Button type="button" variant="outline" size="icon" aria-label="Copy webhook URL" onClick={() => { navigator.clipboard.writeText(webhookUrl).then(() => toast.success("Copied")); }}>
+                      <Copy />
+                    </Button>
+                  </div>
+                </Field>
+                <div className="flex flex-wrap items-center gap-2">
+                  {(connection.webhook_ids ?? []).length ? (
+                    <>
+                      <Badge variant="success"><CheckCircle2 /> {(connection.webhook_ids ?? []).length} webhooks registered</Badge>
+                      <Button variant="outline" size="sm" disabled={pending} onClick={() => startTransition(async () => { const r = await removeMondayWebhooks(); if (!r.ok) toast.error(r.error); else { toast.success(`Removed ${r.data.removed} webhooks`); router.refresh(); } })}>
+                        Remove webhooks
+                      </Button>
+                    </>
+                  ) : (
+                    <Button size="sm" disabled={pending || !tokenConfigured} onClick={() => startTransition(async () => { const r = await registerMondayWebhooks(); if (!r.ok) toast.error(r.error, { duration: 8000 }); else { toast.success(`Registered ${r.data.created} webhooks on the board`); router.refresh(); } })}>
+                      {pending ? <Loader2 className="animate-spin" /> : <Zap />} Register webhooks automatically
+                    </Button>
+                  )}
+                  <span className="text-muted-foreground text-xs">
+                    {connection.last_webhook_at ? `Last webhook received ${timeAgo(connection.last_webhook_at)}` : "No webhook received yet"}
+                  </span>
+                </div>
+                <p className="text-muted-foreground text-xs">Automatic registration creates recipes for item created, any column changed, name changed, item deleted, archived and restored. The daily scheduled sync stays on as a safety net.</p>
+              </>
+            )}
+          </CardContent>
+        </Card>
+      ) : null}
 
       {runs.length ? (
         <Card>

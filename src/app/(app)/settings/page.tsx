@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { SettingsView } from "./settings-view";
 import type { EventTemplate, EventTemplateItem, MondayConnection, MondaySyncRun } from "@/lib/types";
 import { isMondayConfigured } from "@/lib/monday/client";
+import { getMondayWebhookUrl } from "@/lib/monday/webhook";
 
 export const metadata: Metadata = { title: "Settings" };
 
@@ -18,6 +19,7 @@ export default async function SettingsPage({ searchParams }: PageProps<"/setting
     supabase.from("event_template_items").select("*").eq("user_id", ws.userId).order("sort_order"),
   ]);
   const tab = typeof sp.tab === "string" ? sp.tab : "general";
+  const webhookUrl = await getMondayWebhookUrl();
   return (
     <SettingsView
       tab={tab}
@@ -28,6 +30,7 @@ export default async function SettingsPage({ searchParams }: PageProps<"/setting
         tokenConfigured: isMondayConfigured(),
         connection: (conn.data ?? null) as MondayConnection | null,
         runs: (runs.data ?? []) as MondaySyncRun[],
+        webhookUrl,
       }}
       emailConfigured={Boolean(process.env.RESEND_API_KEY)}
       adminConfigured={Boolean(process.env.SUPABASE_SECRET_KEY ?? process.env.SUPABASE_SERVICE_ROLE_KEY)}

@@ -7,6 +7,8 @@ import { requireWorkspace } from "@/lib/data/workspace";
 import { fail, ok, errorMessage, type ActionResult } from "@/lib/action-result";
 import { fetchBoardSchema, fetchMe, isMondayConfigured, listBoards, type MondayBoardSchema, type MondayBoardSummary, type MondayMe } from "@/lib/monday/client";
 import { runMondaySync } from "@/lib/monday/sync";
+import { getMondayWebhookUrl } from "@/lib/monday/webhook";
+import { mondayQuery } from "@/lib/monday/client";
 import type { MondayConnection, SyncResult } from "@/lib/types";
 
 export async function testMondayConnection(): Promise<ActionResult<MondayMe>> {
@@ -111,6 +113,61 @@ export async function syncMondayNow(): Promise<ActionResult<SyncResult>> {
     return ok(result);
   } catch (e) {
     revalidatePath("/", "layout");
+    return fail(errorMessage(e));
+  }
+}
+
+const WEBHOOK_EVENTS = ["create_item", "change_column_value", "change_name", "item_deleted", "item_archived", "item_restored"] as const;
+
+/** Creates the Monday.com webhooks for the connected board so changes sync within seconds. */
+export async function registerMondayWebhooks(): Promise<ActionResult<{ created: number }>> {
+  try {
+    const ws = await requireWorkspace();
+    if (!isMondayConfigured()) return fail("MONDAY_API_TOKEN is not set on the server.");
+    const url = await getMondayWebhookUrl();
+    if (!url) return fail("Set MONDAY_WEBHOOK_SECRET (16+ characters) on the server first.");
+    const supabase = await createClient();
+    const { data: conn } = await supabase.from("monday_connections").select("*").eq("user_id", ws.userId).maybeSingle();
+    if (!conn) return fail("Connect a board first.");
+    const existing = ((conn as MondayConnection).webhook_ids ?? []) as string[];
+    const ids: string[] = [...existing];
+    for (const event of WEBHOOK_EVENTS) {
+      const data = await mondayQuery<{ create_webhook: { id: string } | null }>(
+        `mutation ($board: ID!, $url: String!, $event: WebhookEventType!) { create_webhook(board_id: $board, url: $url, event: $event) { id } }`,
+        { board: conn.board_id, url, event },
+      );
+      if (data.create_webhook?.id) ids.push(String(data.create_webhook.id));
+    }
+    const { error } = await supabase.from("monday_connections").update({ webhook_ids: ids }).eq("id", conn.id);
+    if (error) return fail(error.message);
+    revalidatePath("/", "layout");
+    return ok({ created: ids.length - existing.length });
+  } catch (e) {
+    return fail(errorMessage(e));
+  }
+}
+
+export async function removeMondayWebhooks(): Promise<ActionResult<{ removed: number }>> {
+  try {
+    const ws = await requireWorkspace();
+    const supabase = await createClient();
+    const { data: conn } = await supabase.from("monday_connections").select("*").eq("user_id", ws.userId).maybeSingle();
+    if (!conn) return fail("No connection.");
+    const ids = ((conn as MondayConnection).webhook_ids ?? []) as string[];
+    let removed = 0;
+    for (const id of ids) {
+      try {
+        await mondayQuery(`mutation ($id: ID!) { delete_webhook(id: $id) { id } }`, { id });
+        removed++;
+      } catch (e) {
+        console.error("delete_webhook failed", id, e instanceof Error ? e.message : e);
+      }
+    }
+    const { error } = await supabase.from("monday_connections").update({ webhook_ids: [] }).eq("id", conn.id);
+    if (error) return fail(error.message);
+    revalidatePath("/", "layout");
+    return ok({ removed });
+  } catch (e) {
     return fail(errorMessage(e));
   }
 }

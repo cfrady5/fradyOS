@@ -41,7 +41,7 @@ export function SettingsView(props: {
   profile: Profile;
   workAreas: WorkArea[];
   email: string | null;
-  monday: { tokenConfigured: boolean; connection: MondayConnection | null; runs: MondaySyncRun[] };
+  monday: { tokenConfigured: boolean; connection: MondayConnection | null; runs: MondaySyncRun[]; webhookUrl: string | null };
   emailConfigured: boolean;
   adminConfigured: boolean;
   cronConfigured: boolean;
@@ -68,7 +68,7 @@ export function SettingsView(props: {
           <WorkAreasSettings key={props.workAreas.map((a) => a.id).join(",")} workAreas={props.workAreas} />
         </TabsContent>
         <TabsContent value="monday">
-          <MondaySettings tokenConfigured={props.monday.tokenConfigured} connection={props.monday.connection} runs={props.monday.runs} cronConfigured={props.cronConfigured} adminConfigured={props.adminConfigured} workAreas={props.workAreas} />
+          <MondaySettings tokenConfigured={props.monday.tokenConfigured} connection={props.monday.connection} runs={props.monday.runs} webhookUrl={props.monday.webhookUrl} cronConfigured={props.cronConfigured} adminConfigured={props.adminConfigured} workAreas={props.workAreas} />
         </TabsContent>
         <TabsContent value="templates">
           <TemplatesSettings templates={props.templates} items={props.templateItems} />

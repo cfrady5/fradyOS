@@ -305,6 +305,8 @@ export interface MondayConnection {
   columns_snapshot: { id: string; title: string; type: string }[];
   canceled_labels: string[];
   auto_sync_enabled: boolean;
+  webhook_ids: string[];
+  last_webhook_at: string | null;
   last_sync_started_at: string | null;
   last_success_at: string | null;
   last_error: string | null;
@@ -327,7 +329,7 @@ export interface SyncResult {
 export interface MondaySyncRun {
   id: string;
   user_id: string;
-  trigger: "manual" | "scheduled";
+  trigger: "manual" | "scheduled" | "webhook";
   started_at: string;
   finished_at: string | null;
   status: "running" | "success" | "error";
