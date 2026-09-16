@@ -27,10 +27,13 @@ describe("sync engine writes only real columns", () => {
     const cols = columnsOf("events");
     expect(cols.size).toBeGreaterThan(20);
     const written = new Set<string>();
-    // Object-literal keys inside insert({...}) and update[...] assignments.
-    for (const m of src.matchAll(/^\s{10}([a-z_]+): /gm)) written.add(m[1]);
-    for (const m of src.matchAll(/update\.([a-z_]+) =/g)) written.add(m[1]);
-    for (const m of src.matchAll(/\.update\(\{ ([^}]+) \}\)/g)) for (const k of m[1].matchAll(/([a-z_]+):/g)) written.add(k[1]);
+    // Keys of the events insert payload.
+    const insert = src.match(/from\("events"\)\.insert\(\{([\s\S]*?)\n\s{8}\}\)/);
+    expect(insert, "events insert block found").toBeTruthy();
+    for (const m of insert![1].matchAll(/^\s+([a-z_]+):/gm)) written.add(m[1]);
+    // Keys assigned onto the events update object, and the inline "removed" update on the events table.
+    for (const m of src.matchAll(/\bupdate\.([a-z_]+) =/g)) written.add(m[1]);
+    for (const m of src.matchAll(/from\("events"\)\s*\.update\(\{([^}]+)\}\)/g)) for (const k of m[1].matchAll(/([a-z_]+):/g)) written.add(k[1]);
     for (const name of ["name", "start_date", "end_date", "start_time", "location", "program", "owner", "status", "website_url", "notes"]) written.add(name);
     const missing = [...written].filter((c) => !cols.has(c));
     expect(missing, `columns written by sync.ts but absent from migrations: ${missing.join(", ")}`).toEqual([]);
