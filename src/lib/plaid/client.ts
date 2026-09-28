@@ -12,9 +12,13 @@ export type PlaidEnv = "sandbox" | "production";
 function pick(...names: string[]): string | undefined {
   for (const n of names) {
     const v = process.env[n];
-    if (v && v.trim()) return v.trim();
+    if (v && v.trim()) return v.trim().replace(/^["']+|["']+$/g, "").trim();
   }
   return undefined;
+}
+
+export function plaidEnvConfigured(): boolean {
+  return Boolean(pick("PLAID_ENV"));
 }
 
 export function plaidEnv(): PlaidEnv {
@@ -70,10 +74,10 @@ export const REAUTH_CODES = new Set(["ITEM_LOGIN_REQUIRED", "PENDING_EXPIRATION"
 /** Codes that mean "not ready yet, try later" rather than a real failure. */
 export const TRANSIENT_CODES = new Set(["PRODUCT_NOT_READY", "RATE_LIMIT_EXCEEDED", "INSTITUTION_DOWN", "INSTITUTION_NOT_RESPONDING", "INSTITUTION_NO_LONGER_SUPPORTED", "INTERNAL_SERVER_ERROR", "PLANNED_MAINTENANCE"]);
 
-export async function plaidCall<T>(path: string, body: Record<string, unknown>, opts: { signal?: AbortSignal } = {}): Promise<T> {
-  const creds = plaidCredentials();
+export async function plaidCall<T>(path: string, body: Record<string, unknown>, opts: { signal?: AbortSignal; env?: PlaidEnv; credentials?: { clientId: string; secret: string } } = {}): Promise<T> {
+  const creds = opts.credentials ?? plaidCredentials();
   if (!creds) throw new PlaidError("Plaid is not configured: set PLAID_CLIENT_ID and PLAID_SECRET", { code: "NOT_CONFIGURED", type: "CONFIG" });
-  const res = await fetch(`${BASES[plaidEnv()]}${path}`, {
+  const res = await fetch(`${BASES[opts.env ?? plaidEnv()]}${path}`, {
     method: "POST",
     headers: { "content-type": "application/json", "PLAID-CLIENT-ID": creds.clientId, "PLAID-SECRET": creds.secret, "Plaid-Version": "2020-09-14" },
     body: JSON.stringify(body),
@@ -201,4 +205,67 @@ export function removeItem(accessToken: string) {
 
 export function getWebhookVerificationKey(keyId: string) {
   return plaidCall<{ key: { alg: string; crv: string; kid: string; kty: string; use: string; x: string; y: string; created_at: number; expired_at: number | null } }>("/webhook_verification_key/get", { key_id: keyId });
+}
+
+/* ---------- Key diagnostics (never reveals the values) ---------- */
+
+export interface PlaidKeyDiagnosis {
+  configured: boolean;
+  envSetting: string | null;
+  envInUse: PlaidEnv;
+  clientId: { source: string | null; length: number; hex: boolean };
+  secret: { source: string | null; length: number; hex: boolean };
+  sandbox: "ok" | "rejected" | "unreachable" | "skipped";
+  production: "ok" | "rejected" | "unreachable" | "skipped";
+  verdict: string;
+}
+
+function shape(names: string[]): { source: string | null; length: number; hex: boolean } {
+  for (const n of names) {
+    const v = process.env[n];
+    if (v && v.trim()) {
+      const clean = v.trim().replace(/^["']+|["']+$/g, "").trim();
+      return { source: n, length: clean.length, hex: /^[0-9a-f]+$/i.test(clean) };
+    }
+  }
+  return { source: null, length: 0, hex: false };
+}
+
+async function probe(env: PlaidEnv, creds: { clientId: string; secret: string }): Promise<"ok" | "rejected" | "unreachable"> {
+  try {
+    // A bogus access token proves the keys: valid keys answer INVALID_ACCESS_TOKEN / INVALID_INPUT, bad keys answer INVALID_API_KEYS.
+    await plaidCall("/item/get", { access_token: "access-probe-000000000000000000000000000000" }, { env, credentials: creds, signal: AbortSignal.timeout(8000) });
+    return "ok";
+  } catch (e) {
+    if (e instanceof PlaidError) {
+      if (e.code === "INVALID_API_KEYS") return "rejected";
+      if (e.code.startsWith("HTTP_") || e.code === "UNKNOWN") return "unreachable";
+      return "ok";
+    }
+    return "unreachable";
+  }
+}
+
+/** Checks the configured keys against both Plaid environments and explains what to change. */
+export async function diagnosePlaidKeys(): Promise<PlaidKeyDiagnosis> {
+  const clientId = shape(["PLAID_CLIENT_ID", "CLIENT_ID"]);
+  const secret = shape(["PLAID_SECRET", "SECRET_Plaid", "PLAID_SANDBOX_SECRET", "PLAID_PRODUCTION_SECRET"]);
+  const creds = plaidCredentials();
+  const base: PlaidKeyDiagnosis = { configured: Boolean(creds), envSetting: pick("PLAID_ENV") ?? null, envInUse: plaidEnv(), clientId, secret, sandbox: "skipped", production: "skipped", verdict: "" };
+  if (!creds) return { ...base, verdict: "No client id or secret found on the server. Set PLAID_CLIENT_ID and PLAID_SECRET (or CLIENT_ID / SECRET_Plaid) for the Production environment in Vercel and redeploy." };
+  const [sandbox, production] = await Promise.all([probe("sandbox", creds), probe("production", creds)]);
+  let verdict: string;
+  const inUse = base.envInUse;
+  if (sandbox === "ok" && production === "ok") verdict = `Keys work in both environments. Currently using ${inUse}.`;
+  else if ((inUse === "sandbox" && sandbox === "ok") || (inUse === "production" && production === "ok")) verdict = `Keys work for ${inUse}. If Link still fails, check the Plaid dashboard for the error.`;
+  else if (inUse === "sandbox" && production === "ok") verdict = "This secret is a Production secret but the app is in sandbox mode. Add PLAID_ENV=production in Vercel and redeploy (real banks need Production access approved in the Plaid dashboard), or paste the Sandbox secret instead.";
+  else if (inUse === "production" && sandbox === "ok") verdict = "This secret is a Sandbox secret but PLAID_ENV is production. Set PLAID_ENV=sandbox, or paste the Production secret.";
+  else if (sandbox === "rejected" && production === "rejected") {
+    const hints: string[] = [];
+    if (clientId.length !== 24 || !clientId.hex) hints.push(`the client id should be 24 hex characters (found ${clientId.length}${clientId.hex ? "" : ", non-hex"})`);
+    if (secret.length !== 30 || !secret.hex) hints.push(`the secret should be 30 hex characters (found ${secret.length}${secret.hex ? "" : ", non-hex"})`);
+    if (clientId.length === secret.length && clientId.length > 0) hints.push("client id and secret have the same length; one may have been pasted into both");
+    verdict = `Plaid rejected the keys in both environments${hints.length ? `: ${hints.join("; ")}` : ""}. Re-copy them from dashboard.plaid.com → Developers → Keys, paste without quotes or spaces, and redeploy.`;
+  } else verdict = "Could not reach Plaid to verify the keys. Try again in a minute.";
+  return { ...base, sandbox, production, verdict };
 }

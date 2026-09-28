@@ -7,7 +7,7 @@ import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
 import { requireWorkspace } from "@/lib/data/workspace";
 import { fail, ok, errorMessage, type ActionResult } from "@/lib/action-result";
 import { siteOrigin } from "@/lib/monday/webhook";
-import { createLinkToken, exchangePublicToken, getInstitutionName, isPlaidConfigured, plaidEnv, plaidProducts, plaidRedirectUri, removeItem, PlaidError, type PlaidEnv } from "@/lib/plaid/client";
+import { createLinkToken, diagnosePlaidKeys, exchangePublicToken, getInstitutionName, isPlaidConfigured, plaidEnv, plaidProducts, plaidRedirectUri, removeItem, PlaidError, type PlaidEnv, type PlaidKeyDiagnosis } from "@/lib/plaid/client";
 import { decryptToken, encryptToken, keySource } from "@/lib/plaid/crypto";
 import { runPlaidSync, syncItems } from "@/lib/plaid/sync";
 import { describePlaidError } from "@/lib/plaid/mapping";
@@ -175,6 +175,16 @@ export async function disconnectPlaidItem(itemId: string, opts: { deleteAccounts
     if (error) return fail(error.message);
     revalidate();
     return ok(undefined);
+  } catch (e) {
+    return fail(errorMessage(e));
+  }
+}
+
+/** Tests the server's Plaid keys against both environments without exposing them. */
+export async function testPlaidKeys(): Promise<ActionResult<PlaidKeyDiagnosis>> {
+  try {
+    await requireWorkspace();
+    return ok(await diagnosePlaidKeys());
   } catch (e) {
     return fail(errorMessage(e));
   }

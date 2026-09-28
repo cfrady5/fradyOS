@@ -8,7 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { completePlaidLink, completePlaidReconnect, createPlaidLinkToken, disconnectPlaidItem, syncPlaidNow } from "@/actions/plaid";
+import { completePlaidLink, completePlaidReconnect, createPlaidLinkToken, disconnectPlaidItem, syncPlaidNow, testPlaidKeys } from "@/actions/plaid";
+import type { PlaidKeyDiagnosis } from "@/lib/plaid/client";
 import type { PlaidItem, PlaidSyncRun } from "@/lib/finance/types";
 import { formatTimestamp, timeAgo } from "@/lib/dates";
 import { useWorkspace } from "@/components/app/workspace-provider";
@@ -56,7 +57,18 @@ export function PlaidConnections({ status, items, runs, accountCounts }: { statu
   const { timezone } = useWorkspace();
   const [busy, setBusy] = React.useState<string | null>(null);
   const [error, setError] = React.useState<string | null>(null);
+  const [diagnosis, setDiagnosis] = React.useState<PlaidKeyDiagnosis | null>(null);
   const [pending, startTransition] = React.useTransition();
+
+  function testKeys() {
+    setBusy("test");
+    startTransition(async () => {
+      const res = await testPlaidKeys();
+      setBusy(null);
+      if (!res.ok) return void setError(res.error);
+      setDiagnosis(res.data);
+    });
+  }
 
   const launch = React.useCallback(
     async (token: string, itemId: string | null, receivedRedirectUri?: string) => {
@@ -206,7 +218,27 @@ export function PlaidConnections({ status, items, runs, accountCounts }: { statu
         {status.configured && status.env === "sandbox" ? <p className="text-muted-foreground text-xs">Sandbox mode: choose any bank in Link and sign in with <code>user_good</code> / <code>pass_good</code>. Switch <code>PLAID_ENV</code> to <code>production</code> with a production secret for real accounts.</p> : null}
         {error ? (
           <Alert variant="destructive">
-            <AlertDescription>{error}</AlertDescription>
+            <AlertDescription className="flex flex-col gap-2">
+              <span>{error}</span>
+              {status.configured ? (
+                <span>
+                  <Button type="button" size="sm" variant="outline" onClick={testKeys} disabled={anyBusy}>
+                    {busy === "test" ? <Loader2 className="animate-spin" /> : <KeyRound />} Test the Plaid keys
+                  </Button>
+                </span>
+              ) : null}
+            </AlertDescription>
+          </Alert>
+        ) : null}
+        {diagnosis ? (
+          <Alert variant={diagnosis.verdict.startsWith("Keys work") ? "default" : "warning"}>
+            <AlertTitle>Key check</AlertTitle>
+            <AlertDescription className="flex flex-col gap-1">
+              <span>{diagnosis.verdict}</span>
+              <span className="text-muted-foreground text-xs">
+                client id from {diagnosis.clientId.source ?? "—"} ({diagnosis.clientId.length} chars) · secret from {diagnosis.secret.source ?? "—"} ({diagnosis.secret.length} chars) · PLAID_ENV {diagnosis.envSetting ?? "not set → sandbox"} · sandbox: {diagnosis.sandbox} · production: {diagnosis.production}
+              </span>
+            </AlertDescription>
           </Alert>
         ) : null}
         {items.length ? (
