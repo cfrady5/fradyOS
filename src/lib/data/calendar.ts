@@ -7,7 +7,7 @@ export type { CalendarItem, CalendarItemKind } from "@/lib/calendar-kinds";
 
 export async function getCalendarItems(userId: string, from: string, to: string): Promise<CalendarItem[]> {
   const supabase = await createClient();
-  const [events, tasks, posts] = await Promise.all([
+  const [events, tasks, posts, milestones, goals] = await Promise.all([
     supabase.from("events").select("*").eq("user_id", userId).eq("is_archived", false).not("start_date", "is", null).lte("start_date", to).or(`end_date.gte.${from},and(end_date.is.null,start_date.gte.${from})`),
     supabase
       .from("tasks")
@@ -19,6 +19,8 @@ export async function getCalendarItems(userId: string, from: string, to: string)
       .select("id,title,status,platform,brand,publish_date,publish_time,draft_due_date,approval_due_date")
       .eq("user_id", userId)
       .or(`and(publish_date.gte.${from},publish_date.lte.${to}),and(draft_due_date.gte.${from},draft_due_date.lte.${to}),and(approval_due_date.gte.${from},approval_due_date.lte.${to})`),
+    supabase.from("financial_milestones").select("id,title,target_date,amount,is_done").eq("user_id", userId).gte("target_date", from).lte("target_date", to),
+    supabase.from("financial_goals").select("id,name,target_date,target_amount,status").eq("user_id", userId).in("status", ["active", "paused"]).gte("target_date", from).lte("target_date", to),
   ]);
   if (events.error) throw new Error(events.error.message);
   if (tasks.error) throw new Error(tasks.error.message);
@@ -45,6 +47,14 @@ export async function getCalendarItems(userId: string, from: string, to: string)
     if (p.publish_date && p.publish_date >= from && p.publish_date <= to) items.push({ id: `social_publish:${p.id}`, entityId: p.id, entityType: "social", kind: "social_publish", date: p.publish_date, time: p.publish_time, title: p.title, subtitle: sub, done });
     if (!done && p.draft_due_date && p.draft_due_date >= from && p.draft_due_date <= to && ["idea", "drafting"].includes(p.status)) items.push({ id: `social_draft:${p.id}`, entityId: p.id, entityType: "social", kind: "social_draft", date: p.draft_due_date, title: `Draft: ${p.title}`, subtitle: sub });
     if (!done && p.approval_due_date && p.approval_due_date >= from && p.approval_due_date <= to && ["idea", "drafting", "awaiting_approval"].includes(p.status)) items.push({ id: `social_approval:${p.id}`, entityId: p.id, entityType: "social", kind: "social_approval", date: p.approval_due_date, title: `Approval: ${p.title}`, subtitle: sub });
+  }
+  type M = { id: string; title: string; target_date: string; amount: number | string | null; is_done: boolean };
+  for (const m of ((milestones.data ?? []) as M[])) {
+    items.push({ id: `finance_ms:${m.id}`, entityId: m.id, entityType: "finance", kind: "finance", date: m.target_date, title: m.title, subtitle: m.amount != null ? `$${Number(m.amount).toLocaleString("en-US", { maximumFractionDigits: 0 })}` : null, done: m.is_done, readOnly: true });
+  }
+  type G = { id: string; name: string; target_date: string; target_amount: number | string; status: string };
+  for (const g of ((goals.data ?? []) as G[])) {
+    items.push({ id: `finance_goal:${g.id}`, entityId: g.id, entityType: "finance", kind: "finance", date: g.target_date, title: `Goal target: ${g.name}`, subtitle: `$${Number(g.target_amount).toLocaleString("en-US", { maximumFractionDigits: 0 })}`, readOnly: true });
   }
   items.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : (a.time ?? "99") < (b.time ?? "99") ? -1 : 0));
   return items;

@@ -56,6 +56,7 @@ export function CalendarView({ items, view, date, from, to, preset, types }: { i
   function open(item: CalendarItem) {
     if (item.entityType === "task") openTask(item.entityId);
     else if (item.entityType === "social") openPost(item.entityId);
+    else if (item.entityType === "finance") router.push(item.id.startsWith("finance_goal") ? "/finances/goals" : "/finances/timeline");
     else router.push(`/events/${item.entityId}`);
   }
 

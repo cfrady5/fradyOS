@@ -6,6 +6,7 @@ import {
   CalendarDays,
   CalendarRange,
   Trophy,
+  Wallet,
   Settings,
   type LucideIcon,
 } from "lucide-react";
@@ -20,6 +21,7 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/events", label: "Events", icon: CalendarDays, key: "e" },
   { href: "/calendar", label: "Calendar", icon: CalendarRange, key: "c" },
   { href: "/completed", label: "Completed", icon: Trophy, key: "d" },
+  { href: "/finances", label: "Finances", icon: Wallet, key: "f" },
   { href: "/settings", label: "Settings", icon: Settings, key: "s" },
 ];
 

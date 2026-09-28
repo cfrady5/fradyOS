@@ -25,6 +25,7 @@ Built with Next.js 16 (App Router, Server Actions), TypeScript, Tailwind CSS v4,
 | **Completed** | Tasks completed this week/month, projects completed, posts published, carry-over into next week, weekly summary grouped by project or work area, copy-to-clipboard and CSV exports. Generated from real records only. |
 | **Reminders** | Deduplicated in-app notifications for approaching deadlines, overdue tasks, follow-ups and social milestones, with configurable lead times. Optional daily email digest once an email service is connected. |
 | **Search** | ⌘K / `/` searches projects, tasks, events and posts. `N` opens quick add from anywhere. `?` lists shortcuts. |
+| **Finances** | Personal financial OS under `/finances`: manual accounts (cash, investments, debts) with balance history, income and expenses, a month-by-month projection engine (net worth, cash, investments, debt, goal completion, debt-free date, net-worth milestones) with editable assumptions, financial goals with *computed* status (ahead / on track / slightly behind / significantly behind) and drag-to-reorder priorities that recompute a cash-flow allocation, a debt dashboard comparing minimum / avalanche / snowball / custom payoff, a scenario simulator with housing / career / education / debt / investing / life presets compared side by side, a financial timeline that includes life events linked to FradyOS events, insights derived from the projection, and a calculator-mode Copilot that separates projections, assumptions and general education. Goals can be turned into FradyOS projects with tasks (shared ids). No bank credentials are stored. |
 
 ## Setup
 
@@ -115,12 +116,13 @@ All deadlines, planned dates and event dates are stored as Postgres `date` value
 
 ```
 supabase/migrations/      SQL schema, RLS policies, storage policies, bootstrap trigger
-src/app/(app)/            Authenticated pages: Today, Projects, Tasks, Waiting On, Events, Calendar, Completed, Settings
+src/app/(app)/            Authenticated pages: Today, Projects, Tasks, Waiting On, Events, Calendar, Completed, Finances, Settings
 src/app/api/cron/         Protected scheduled endpoints (Monday sync, reminders)
 src/app/api/export/       CSV export
 src/actions/              Server Actions (all writes; zod-validated; RLS-scoped)
 src/lib/data/             Server-side read models
 src/lib/monday/           Monday.com GraphQL client, column mapping, sync engine
+src/lib/finance/          Pure projection engine (engine.ts), scenario presets, insights, copilot calculators, validation
 src/lib/dates.ts          Time-zone-safe date-only helpers
 src/lib/recurrence.ts     Recurring task rules
 src/lib/templates.ts      Template preview and event-move proposals
@@ -128,6 +130,14 @@ src/lib/notifications.ts  Deduplicated reminder generation
 src/components/app/       App shell, editors, dialogs, shared rows
 src/components/ui/        shadcn-style primitives
 ```
+
+## Financial Future
+
+Everything under Finances is a projection under stated assumptions, not a forecast. The engine (`src/lib/finance/engine.ts`) is pure and unit-tested: each month it applies income (with yearly growth), living expenses, required debt payments plus interest, extra debt money allocated by the chosen strategy (freed payments roll forward), planned contributions and goal contributions, then sends the surplus to the chosen destination and grows assets at their rate. Scenario changes are typed deltas (income, expense, one-time, extra debt, payoff-now, contribution, return rate, income growth) applied by month offset on top of the same model, so every comparison is apples to apples.
+
+Goal status is computed, never set by hand: the projection finds the month the goal completes and compares it to the target date (≥3 months early = ahead, on/before = on track, ≤3 months late = slightly behind, later or never = significantly behind). Reordering goal priorities recomputes a suggested allocation of monthly cash flow (higher priority funded first, up to what it needs for its date) which you can apply in one click.
+
+Phase 1 is manual entry only. The schema keeps `external_provider` / `external_account_id` on accounts and a `financial_transactions` table so a tokenized aggregator can be added later without storing bank credentials.
 
 ## Security notes
 

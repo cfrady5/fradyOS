@@ -1,11 +1,11 @@
 /** Client-safe calendar item types and display metadata (no server imports). */
 
-export type CalendarItemKind = "event" | "due" | "planned" | "followup" | "delivery" | "social_publish" | "social_draft" | "social_approval";
+export type CalendarItemKind = "event" | "due" | "planned" | "followup" | "delivery" | "social_publish" | "social_draft" | "social_approval" | "finance";
 
 export type CalendarItem = {
   id: string; // unique per row (kind + entity id)
   entityId: string;
-  entityType: "task" | "event" | "social";
+  entityType: "task" | "event" | "social" | "finance";
   kind: CalendarItemKind;
   date: string;
   endDate?: string | null;
@@ -26,4 +26,5 @@ export const KIND_META: Record<CalendarItemKind, { label: string; className: str
   social_publish: { label: "Social publish", className: "bg-fuchsia-500/15 text-fuchsia-800 dark:text-fuchsia-200 border-fuchsia-500/30", short: "Publish" },
   social_draft: { label: "Social drafts due", className: "bg-fuchsia-500/8 text-fuchsia-800 dark:text-fuchsia-200 border-fuchsia-500/20", short: "Draft" },
   social_approval: { label: "Social approvals due", className: "bg-fuchsia-500/8 text-fuchsia-800 dark:text-fuchsia-200 border-fuchsia-500/20", short: "Approval" },
+  finance: { label: "Financial milestones", className: "bg-emerald-500/12 text-emerald-800 dark:text-emerald-200 border-emerald-500/30", short: "Finance" },
 };
