@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { toast } from "sonner";
-import { ChevronLeft, ChevronRight, Plus, Archive, Check, Loader2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Archive, Check, Loader2, Landmark } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { NativeSelect } from "@/components/ui/native-select";
@@ -11,24 +11,30 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AssumptionsPanel } from "@/components/finance/assumptions-panel";
 import { MoneyInput, StatTile } from "@/components/finance/bits";
-import { archiveBudgetCategory, saveBudgetActual, saveBudgetCategory } from "@/actions/finance";
+import { archiveBudgetCategory, saveBudgetActual, saveBudgetCategory, saveFinancialProfile } from "@/actions/finance";
+import type { BudgetLive } from "@/lib/data/finance";
+import { averageCashFlow } from "@/lib/plaid/mapping";
+import { Badge } from "@/components/ui/badge";
 import type { BudgetActual, BudgetCategory, BudgetKind, FinancialProfile } from "@/lib/finance/types";
 import { fmtMoney } from "@/lib/finance/format";
 import { addMonths, formatDate } from "@/lib/dates";
 import { cn } from "@/lib/utils";
 
-export function BudgetView({ profile, categories, actuals, month, today }: { profile: FinancialProfile; categories: BudgetCategory[]; actuals: BudgetActual[]; month: string; today: string }) {
+export function BudgetView({ profile, categories, actuals, month, today, live }: { profile: FinancialProfile; categories: BudgetCategory[]; actuals: BudgetActual[]; month: string; today: string; live: BudgetLive }) {
   const router = useRouter();
   const pathname = usePathname();
   const actualByCat = new Map(actuals.map((a) => [a.category_id, a]));
+  const effectiveActual = (c: BudgetCategory) => actualByCat.get(c.id)?.actual ?? live.actualsByCategory[c.id] ?? null;
   const totalBudget = categories.reduce((s, c) => s + c.budgeted, 0);
-  const totalActual = categories.reduce((s, c) => s + (actualByCat.get(c.id)?.actual ?? 0), 0);
+  const totalActual = categories.reduce((s, c) => s + (effectiveActual(c) ?? 0), 0) + (live.uncategorized ?? 0);
   const expenseBudget = categories.filter((c) => c.kind === "expense").reduce((s, c) => s + c.budgeted, 0);
   const go = (m: string) => router.push(`${pathname}?m=${m.slice(0, 7)}`);
 
   return (
     <div className="flex flex-col gap-6">
       <AssumptionsPanel profile={profile} sections={["income"]} title="Income and expenses" description="These monthly totals drive the projection. The category budget below is a detail view; it does not change the projection unless you copy the totals up here." />
+
+      {live.hasTransactions ? <LiveCashFlow live={live} today={today} profile={profile} /> : null}
 
       <div className="grid gap-3 sm:grid-cols-3">
         <StatTile label="Take-home income" value={fmtMoney(profile.monthly_income)} sub="per month" />
@@ -40,7 +46,7 @@ export function BudgetView({ profile, categories, actuals, month, today }: { pro
         <CardHeader className="items-center">
           <div>
             <CardTitle>Monthly budget</CardTitle>
-            <CardDescription className="mt-1">Budgeted vs actual per category. Type an actual and press Enter or click ✓ to save.</CardDescription>
+            <CardDescription className="mt-1">Budgeted vs actual per category. {live.hasTransactions ? "Actuals fill in from synced bank transactions; type a value to override." : "Type an actual and press Enter or click ✓ to save."}</CardDescription>
           </div>
           <div className="flex items-center gap-1">
             <Button variant="outline" size="icon-sm" aria-label="Previous month" onClick={() => go(addMonths(month, -1))}>
@@ -66,8 +72,15 @@ export function BudgetView({ profile, categories, actuals, month, today }: { pro
             </TableHeader>
             <TableBody>
               {categories.map((c) => (
-                <CategoryRow key={c.id} category={c} actual={actualByCat.get(c.id)} month={month} />
+                <CategoryRow key={c.id} category={c} actual={actualByCat.get(c.id)} liveActual={live.actualsByCategory[c.id]} month={month} />
               ))}
+              {live.uncategorized > 0 ? (
+                <TableRow className="hover:bg-transparent">
+                  <TableCell className="text-muted-foreground text-xs" colSpan={3}>Synced spending with no matching category</TableCell>
+                  <TableCell className="text-muted-foreground text-right text-xs tabular-nums">{fmtMoney(live.uncategorized)}</TableCell>
+                  <TableCell colSpan={2} />
+                </TableRow>
+              ) : null}
               <NewCategoryRow />
             </TableBody>
           </Table>
@@ -89,7 +102,7 @@ const KINDS: { value: BudgetKind; label: string }[] = [
   { value: "investing", label: "Investing" },
 ];
 
-function CategoryRow({ category, actual, month }: { category: BudgetCategory; actual?: BudgetActual; month: string }) {
+function CategoryRow({ category, actual, liveActual, month }: { category: BudgetCategory; actual?: BudgetActual; liveActual?: number; month: string }) {
   const router = useRouter();
   const [budget, setBudget] = React.useState(String(category.budgeted || ""));
   const [spent, setSpent] = React.useState(actual ? String(actual.actual) : "");
@@ -100,7 +113,8 @@ function CategoryRow({ category, actual, month }: { category: BudgetCategory; ac
     setBudget(String(category.budgeted || ""));
     setSpent(actual ? String(actual.actual) : "");
   }
-  const left = category.budgeted - (actual?.actual ?? 0);
+  const effective = actual?.actual ?? liveActual ?? null;
+  const left = category.budgeted - (effective ?? 0);
   const budgetDirty = Number(budget || 0) !== category.budgeted;
   const spentDirty = (spent === "" ? null : Number(spent)) !== (actual ? actual.actual : null);
 
@@ -138,13 +152,16 @@ function CategoryRow({ category, actual, month }: { category: BudgetCategory; ac
       </TableCell>
       <TableCell>
         <div className="flex items-center gap-1">
-          <MoneyInput aria-label={`${category.name} actual`} value={spent} onChange={setSpent} onKeyDown={(e) => e.key === "Enter" && saveSpent()} className="h-8 text-right" />
+          <MoneyInput aria-label={`${category.name} actual`} value={spent} onChange={setSpent} onKeyDown={(e) => e.key === "Enter" && saveSpent()} className="h-8 text-right" placeholder={liveActual != null ? String(Math.round(liveActual)) : "0"} title={liveActual != null && !actual ? "From synced transactions" : undefined} />
           <Button variant={spentDirty ? "default" : "ghost"} size="icon-xs" aria-label="Save actual" onClick={saveSpent} disabled={pending || !spentDirty}>
             {pending ? <Loader2 className="animate-spin" /> : <Check />}
           </Button>
         </div>
       </TableCell>
-      <TableCell className={cn("text-right tabular-nums", left < 0 ? "text-[#a52a2a] dark:text-[#f08080]" : "text-muted-foreground")}>{actual ? fmtMoney(left) : "—"}</TableCell>
+      <TableCell className={cn("text-right tabular-nums", left < 0 ? "text-[#a52a2a] dark:text-[#f08080]" : "text-muted-foreground")}>
+        {effective != null ? fmtMoney(left) : "—"}
+        {!actual && liveActual != null ? <span className="text-muted-foreground ml-1 text-[10px]">auto</span> : null}
+      </TableCell>
       <TableCell>
         <Button variant="ghost" size="icon-xs" aria-label={`Archive ${category.name}`} onClick={archive} disabled={pending}>
           <Archive />
@@ -193,5 +210,80 @@ function NewCategoryRow() {
         </Button>
       </TableCell>
     </TableRow>
+  );
+}
+
+function LiveCashFlow({ live, today, profile }: { live: BudgetLive; today: string; profile: FinancialProfile }) {
+  const router = useRouter();
+  const [pending, startTransition] = React.useTransition();
+  const currentMonth = today.slice(0, 7);
+  const complete = live.months.filter((m) => m.month.slice(0, 7) < currentMonth);
+  const basis = (complete.length ? complete : live.months).slice(-3);
+  const avg = averageCashFlow(basis);
+  const differs = Math.abs(avg.income - profile.monthly_income) > 1 || Math.abs(avg.fixed - profile.fixed_expenses) > 1 || Math.abs(avg.variable - profile.variable_expenses) > 1;
+  function apply() {
+    startTransition(async () => {
+      const res = await saveFinancialProfile({ monthly_income: avg.income, fixed_expenses: avg.fixed, variable_expenses: avg.variable });
+      if (!res.ok) return void toast.error(res.error);
+      toast.success("Assumptions now match your real cash flow");
+      router.refresh();
+    });
+  }
+  return (
+    <Card>
+      <CardHeader className="items-center">
+        <div>
+          <CardTitle className="flex items-center gap-2">
+            <Landmark className="size-4" /> Real cash flow from your bank <Badge variant="success">Live</Badge>
+          </CardTitle>
+          <CardDescription className="mt-1">From synced transactions. Income = deposits Plaid tags as income. Spending excludes transfers and loan payments; fixed = rent and utilities, variable = everything else.</CardDescription>
+        </div>
+        <Button size="sm" onClick={apply} disabled={pending || !basis.length || !differs}>
+          {pending ? <Loader2 className="animate-spin" /> : null} {differs ? `Use ${basis.length}-month average in assumptions` : "Assumptions already match"}
+        </Button>
+      </CardHeader>
+      <CardContent>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Month</TableHead>
+              <TableHead className="text-right">Income</TableHead>
+              <TableHead className="text-right">Spending</TableHead>
+              <TableHead className="text-right">Fixed</TableHead>
+              <TableHead className="text-right">Variable</TableHead>
+              <TableHead className="text-right">Loan payments</TableHead>
+              <TableHead className="text-right">Left</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {live.months.map((m) => (
+              <TableRow key={m.month} className={cn(m.month.slice(0, 7) === currentMonth ? "text-muted-foreground" : null)}>
+                <TableCell className="font-medium">
+                  {formatDate(m.month, "monthYear")}
+                  {m.month.slice(0, 7) === currentMonth ? <span className="text-muted-foreground ml-1 text-xs">(so far)</span> : null}
+                </TableCell>
+                <TableCell className="text-right tabular-nums">{fmtMoney(m.income)}</TableCell>
+                <TableCell className="text-right tabular-nums">{fmtMoney(m.spending)}</TableCell>
+                <TableCell className="text-right tabular-nums">{fmtMoney(m.fixed)}</TableCell>
+                <TableCell className="text-right tabular-nums">{fmtMoney(m.variable)}</TableCell>
+                <TableCell className="text-right tabular-nums">{fmtMoney(m.loanPayments)}</TableCell>
+                <TableCell className={cn("text-right tabular-nums", m.income - m.spending - m.loanPayments < 0 ? "text-[#a52a2a] dark:text-[#f08080]" : null)}>{fmtMoney(m.income - m.spending - m.loanPayments)}</TableCell>
+              </TableRow>
+            ))}
+            {basis.length ? (
+              <TableRow className="bg-muted/40 font-medium">
+                <TableCell>Average ({basis.length} mo)</TableCell>
+                <TableCell className="text-right tabular-nums">{fmtMoney(avg.income)}</TableCell>
+                <TableCell className="text-right tabular-nums">{fmtMoney(avg.spending)}</TableCell>
+                <TableCell className="text-right tabular-nums">{fmtMoney(avg.fixed)}</TableCell>
+                <TableCell className="text-right tabular-nums">{fmtMoney(avg.variable)}</TableCell>
+                <TableCell className="text-right tabular-nums">{fmtMoney(basis.reduce((s, m) => s + m.loanPayments, 0) / basis.length)}</TableCell>
+                <TableCell className="text-right tabular-nums">{fmtMoney(avg.income - avg.spending - basis.reduce((s, m) => s + m.loanPayments, 0) / basis.length)}</TableCell>
+              </TableRow>
+            ) : null}
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
   );
 }

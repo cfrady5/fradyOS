@@ -80,9 +80,82 @@ export interface FinancialAccount {
   include_in_net_worth: boolean;
   external_provider: string | null;
   external_account_id: string | null;
+  plaid_item_id: string | null;
+  external_subtype: string | null;
+  external_mask: string | null;
+  official_name: string | null;
+  available_balance: number | null;
+  last_synced_at: string | null;
+  sync_error: string | null;
   notes: string | null;
   last_updated: string;
   is_archived: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export type PlaidItemStatus = "active" | "error" | "reauth_required" | "disconnected";
+
+export interface PlaidItem {
+  id: string;
+  user_id: string;
+  item_id: string;
+  institution_id: string | null;
+  institution_name: string | null;
+  environment: "sandbox" | "production";
+  status: PlaidItemStatus;
+  error_code: string | null;
+  error_message: string | null;
+  products: string[];
+  transactions_cursor: string | null;
+  last_synced_at: string | null;
+  last_webhook_at: string | null;
+  consent_expires_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PlaidSyncResult {
+  accounts_seen: number;
+  accounts_created: number;
+  accounts_updated: number;
+  transactions_added: number;
+  transactions_modified: number;
+  transactions_removed: number;
+  liabilities: boolean;
+  realtime: boolean;
+  warnings: string[];
+}
+
+export interface PlaidSyncRun {
+  id: string;
+  user_id: string;
+  item_id: string | null;
+  trigger: "link" | "manual" | "scheduled" | "webhook";
+  started_at: string;
+  finished_at: string | null;
+  status: "running" | "success" | "error";
+  result: PlaidSyncResult | null;
+  error: string | null;
+}
+
+export type TransactionType = "income" | "expense" | "transfer" | "payment" | "contribution";
+
+export interface FinancialTransaction {
+  id: string;
+  user_id: string;
+  account_id: string;
+  transaction_date: string;
+  description: string | null;
+  category_id: string | null;
+  amount: number;
+  transaction_type: TransactionType;
+  external_id: string | null;
+  pending: boolean;
+  merchant_name: string | null;
+  category_primary: string | null;
+  category_detailed: string | null;
+  plaid_item_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -177,6 +250,7 @@ export interface BudgetCategory {
   budgeted: number;
   sort_order: number;
   is_archived: boolean;
+  plaid_categories: string[];
   created_at: string;
 }
 

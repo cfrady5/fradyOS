@@ -2,7 +2,8 @@ import "server-only";
 import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { requireWorkspace, type Workspace } from "@/lib/data/workspace";
-import type { BalanceSnapshot, BudgetActual, BudgetCategory, FinancialAccount, FinancialDebt, FinancialGoal, FinancialMilestone, FinancialProfile, FinancialScenario, ScenarioChange } from "@/lib/finance/types";
+import type { BalanceSnapshot, BudgetActual, BudgetCategory, FinancialAccount, FinancialDebt, FinancialGoal, FinancialMilestone, FinancialProfile, FinancialScenario, PlaidItem, PlaidSyncRun, ScenarioChange, TransactionType } from "@/lib/finance/types";
+import { summarizeCashFlow, type MonthCashFlow } from "@/lib/plaid/mapping";
 import { DEFAULT_BUDGET_CATEGORIES } from "@/lib/finance/types";
 import { buildModelInputs } from "@/lib/finance/model";
 import type { ModelInputs } from "@/lib/finance/engine";
@@ -53,6 +54,7 @@ function shapeAccount(row: Record<string, unknown>): FinancialAccount {
     interest_rate: row.interest_rate == null ? null : num(row.interest_rate),
     minimum_payment: row.minimum_payment == null ? null : num(row.minimum_payment),
     monthly_contribution: num(row.monthly_contribution),
+    available_balance: row.available_balance == null ? null : num(row.available_balance),
   };
 }
 
@@ -173,4 +175,50 @@ export async function getBudgetMonth(userId: string, month: string): Promise<Bud
   const { data, error } = await supabase.from("financial_budget_actuals").select("*").eq("user_id", userId).eq("month", month);
   if (error) throw new Error(error.message);
   return ((data ?? []) as Record<string, unknown>[]).map(shapeActual);
+}
+
+/* ---------- Plaid ---------- */
+
+export async function getPlaidConnections(userId: string): Promise<{ items: PlaidItem[]; runs: PlaidSyncRun[] }> {
+  const supabase = await createClient();
+  const [items, runs] = await Promise.all([
+    supabase.from("plaid_items").select("*").eq("user_id", userId).order("created_at"),
+    supabase.from("plaid_sync_runs").select("*").eq("user_id", userId).order("started_at", { ascending: false }).limit(8),
+  ]);
+  if (items.error) throw new Error(items.error.message);
+  return { items: (items.data ?? []) as PlaidItem[], runs: (runs.data ?? []) as PlaidSyncRun[] };
+}
+
+export type BudgetLive = {
+  hasTransactions: boolean;
+  /** Spending per budget category for the month, from synced transactions (expense + payment outflows). */
+  actualsByCategory: Record<string, number>;
+  uncategorized: number;
+  months: MonthCashFlow[];
+};
+
+/** Real numbers from synced transactions: per-category actuals for `month` and a 6-month cash-flow history. */
+export async function getBudgetLive(userId: string, month: string): Promise<BudgetLive> {
+  const supabase = await createClient();
+  const from = addMonths(month, -6);
+  const to = addMonths(month, 1);
+  const { data, error } = await supabase
+    .from("financial_transactions")
+    .select("transaction_date,amount,transaction_type,category_primary,category_id,pending")
+    .eq("user_id", userId)
+    .gte("transaction_date", from)
+    .lt("transaction_date", to);
+  if (error) throw new Error(error.message);
+  type R = { transaction_date: string; amount: number | string; transaction_type: TransactionType; category_primary: string | null; category_id: string | null; pending: boolean };
+  const rows = ((data ?? []) as R[]).map((r) => ({ ...r, amount: num(r.amount) }));
+  const actualsByCategory: Record<string, number> = {};
+  let uncategorized = 0;
+  for (const r of rows) {
+    if (r.pending || r.transaction_date < month || r.transaction_date >= to || r.amount >= 0) continue;
+    if (r.transaction_type !== "expense" && r.transaction_type !== "payment") continue;
+    const out = -r.amount;
+    if (r.category_id) actualsByCategory[r.category_id] = Math.round(((actualsByCategory[r.category_id] ?? 0) + out) * 100) / 100;
+    else uncategorized = Math.round((uncategorized + out) * 100) / 100;
+  }
+  return { hasTransactions: rows.length > 0, actualsByCategory, uncategorized, months: summarizeCashFlow(rows) };
 }

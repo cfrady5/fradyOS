@@ -117,12 +117,13 @@ All deadlines, planned dates and event dates are stored as Postgres `date` value
 ```
 supabase/migrations/      SQL schema, RLS policies, storage policies, bootstrap trigger
 src/app/(app)/            Authenticated pages: Today, Projects, Tasks, Waiting On, Events, Calendar, Completed, Finances, Settings
-src/app/api/cron/         Protected scheduled endpoints (Monday sync, reminders)
+src/app/api/cron/         Protected scheduled endpoints (Monday sync, Plaid sync, reminders)
 src/app/api/export/       CSV export
 src/actions/              Server Actions (all writes; zod-validated; RLS-scoped)
 src/lib/data/             Server-side read models
 src/lib/monday/           Monday.com GraphQL client, column mapping, sync engine
 src/lib/finance/          Pure projection engine (engine.ts), scenario presets, insights, copilot calculators, validation
+src/lib/plaid/            Plaid client (fetch), token encryption, account/transaction mapping, sync engine, webhook verification
 src/lib/dates.ts          Time-zone-safe date-only helpers
 src/lib/recurrence.ts     Recurring task rules
 src/lib/templates.ts      Template preview and event-move proposals
@@ -137,7 +138,18 @@ Everything under Finances is a projection under stated assumptions, not a foreca
 
 Goal status is computed, never set by hand: the projection finds the month the goal completes and compares it to the target date (≥3 months early = ahead, on/before = on track, ≤3 months late = slightly behind, later or never = significantly behind). Reordering goal priorities recomputes a suggested allocation of monthly cash flow (higher priority funded first, up to what it needs for its date) which you can apply in one click.
 
-Phase 1 is manual entry only. The schema keeps `external_provider` / `external_account_id` on accounts and a `financial_transactions` table so a tokenized aggregator can be added later without storing bank credentials.
+### Live bank data through Plaid
+
+Finances → Accounts has a **Connect a bank** button powered by [Plaid Link](https://plaid.com/docs/link/). The bank login happens inside Plaid; the app only ever receives an access token, which is encrypted (AES-256-GCM) and stored in `plaid_item_secrets`, a table with row-level security enabled and no policies, so only the server-side service role can read it. Each sync pulls balances (real-time on "Sync now", cached on the daily cron), APR and minimum payments when the `liabilities` product is enabled, and transactions via `/transactions/sync` with cursors. Synced accounts appear as normal finance accounts (marked **Live**), so the projection, goals, debt plan and scenarios use them immediately; the name, contributions, "include in net worth" and actual payment stay yours to edit. Transactions feed the Budget page: per-category actuals via Plaid's personal-finance categories and a monthly real cash-flow table you can copy into the assumptions in one click. Plaid webhooks (`/api/webhooks/plaid`, signature-verified) trigger syncs when new transactions land or a bank needs re-authentication.
+
+Setup:
+
+1. Create a Plaid account at dashboard.plaid.com and copy the client id and the sandbox (or production) secret.
+2. Set `PLAID_CLIENT_ID`, `PLAID_SECRET`, `PLAID_ENV` (`sandbox` or `production`) and `PLAID_TOKEN_ENCRYPTION_KEY` (`openssl rand -hex 32`) on the server; optionally `PLAID_PRODUCTS=transactions,liabilities` and `PLAID_REDIRECT_URI=https://<your-domain>/finances/accounts` (register the same URL in the Plaid dashboard for OAuth banks).
+3. Redeploy, open Finances → Accounts → Connect a bank. In sandbox any institution works with `user_good` / `pass_good`.
+4. For real banks, request Production access in the Plaid dashboard, then switch `PLAID_SECRET` to the production secret and `PLAID_ENV=production`.
+
+The daily `/api/cron/plaid-sync` job refreshes every healthy connection.
 
 ## Security notes
 

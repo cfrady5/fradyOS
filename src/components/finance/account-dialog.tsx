@@ -63,6 +63,7 @@ function AccountForm({ account, debt, defaultType, onClose }: { account?: Financ
   const [fieldErrors, setFieldErrors] = React.useState<Record<string, string>>({});
   const [pending, startTransition] = React.useTransition();
   const liability = isLiability(form.account_type);
+  const live = account?.external_provider === "plaid";
   const investable = form.account_type === "brokerage" || form.account_type === "retirement" || form.account_type === "savings";
   const set = <K extends keyof Form>(k: K, v: Form[K]) => setForm((f) => ({ ...f, [k]: v }));
 
@@ -73,13 +74,13 @@ function AccountForm({ account, debt, defaultType, onClose }: { account?: Financ
       name: form.name,
       account_type: form.account_type,
       institution: form.institution,
-      balance: form.balance || 0,
+      balance: live ? account!.balance : form.balance || 0,
       interest_rate: form.interest_rate,
       minimum_payment: liability ? form.minimum_payment : "",
       actual_payment: liability ? form.actual_payment : "",
       monthly_contribution: liability ? 0 : form.monthly_contribution || 0,
       include_in_net_worth: form.include_in_net_worth,
-      last_updated: form.last_updated,
+      last_updated: live ? account!.last_updated : form.last_updated,
       notes: form.notes,
     };
     startTransition(async () => {
@@ -118,7 +119,7 @@ function AccountForm({ account, debt, defaultType, onClose }: { account?: Financ
         <Field label="Name" htmlFor="acc-name" error={fieldErrors.name} className="sm:col-span-2">
           <Input id="acc-name" value={form.name} onChange={(e) => set("name", e.target.value)} placeholder="e.g. Chase checking" autoFocus />
         </Field>
-        <Field label="Type" htmlFor="acc-type">
+        <Field label="Type" htmlFor="acc-type" hint={live ? `Plaid reports ${account?.external_subtype ?? "this type"}; change it if the mapping is off.` : undefined}>
           <NativeSelect id="acc-type" value={form.account_type} onChange={(e) => set("account_type", e.target.value as AccountType)}>
             {(["cash", "debt", "investment", "other"] as const).map((g) => (
               <optgroup key={g} label={g === "cash" ? "Cash" : g === "debt" ? "Debt" : g === "investment" ? "Investments" : "Other"}>
@@ -134,11 +135,11 @@ function AccountForm({ account, debt, defaultType, onClose }: { account?: Financ
         <Field label="Institution" htmlFor="acc-inst">
           <Input id="acc-inst" value={form.institution} onChange={(e) => set("institution", e.target.value)} placeholder="Optional" />
         </Field>
-        <Field label={liability ? "Balance owed" : "Current balance"} htmlFor="acc-bal" error={fieldErrors.balance}>
-          <MoneyInput id="acc-bal" value={form.balance} onChange={(v) => set("balance", v)} allowNegative={!liability} />
+        <Field label={liability ? "Balance owed" : "Current balance"} htmlFor="acc-bal" error={fieldErrors.balance} hint={live ? `Synced from ${account?.institution ?? "your bank"}; every sync overwrites it.` : undefined}>
+          <MoneyInput id="acc-bal" value={form.balance} onChange={(v) => set("balance", v)} allowNegative={!liability} disabled={live} />
         </Field>
-        <Field label="As of" htmlFor="acc-date" hint="Defaults to today when the balance changes.">
-          <DateInput id="acc-date" value={form.last_updated} onChange={(v) => set("last_updated", v)} />
+        <Field label="As of" htmlFor="acc-date" hint={live ? "Set by the sync." : "Defaults to today when the balance changes."}>
+          <DateInput id="acc-date" value={form.last_updated} onChange={(v) => set("last_updated", v)} disabled={live} />
         </Field>
         <Field label={liability ? "APR" : investable ? "Expected annual growth" : "Annual rate"} htmlFor="acc-rate" hint={liability ? "Interest accrues monthly on the balance." : investable ? "Leave blank to use the return assumption in Settings." : "Optional."}>
           <PctInput id="acc-rate" value={form.interest_rate} onChange={(v) => set("interest_rate", v)} placeholder={liability ? "e.g. 6.5" : "blank = default"} />
@@ -165,10 +166,12 @@ function AccountForm({ account, debt, defaultType, onClose }: { account?: Financ
         </label>
       </div>
       <DialogFooter className="flex-row items-center justify-between sm:justify-between">
-        {account ? (
+        {account && !live ? (
           <Button type="button" variant="ghost" size="sm" className="text-destructive" onClick={remove} disabled={pending}>
             <Trash2 /> Delete
           </Button>
+        ) : account && live ? (
+          <span className="text-muted-foreground text-xs">Linked to {account.institution ?? "a bank"}. Remove the bank connection to make this a manual account.</span>
         ) : (
           <span />
         )}
