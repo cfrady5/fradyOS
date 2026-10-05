@@ -4,7 +4,7 @@ import type { MondayConnection } from "@/lib/types";
 
 // --- Minimal in-memory stand-in for the subset of supabase-js used by the sync engine ---
 type Row = Record<string, unknown>;
-const tables: Record<string, Row[]> = { events: [], monday_sync_runs: [], monday_connections: [], work_areas: [] };
+const tables: Record<string, Row[]> = { events: [], monday_sync_runs: [], monday_connections: [], work_areas: [], monday_excluded_items: [] };
 let idCounter = 0;
 
 function makeBuilder(table: string) {
@@ -83,6 +83,7 @@ beforeEach(() => {
   tables.monday_sync_runs = [];
   tables.monday_connections = [{ id: "conn", user_id: "u1" }];
   tables.work_areas = [{ id: "wa1", user_id: "u1", name: "ARI", is_archived: false }];
+  tables.monday_excluded_items = [];
   items.length = 0;
 });
 
@@ -133,6 +134,20 @@ describe("Monday sync engine", () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await runMondaySync(fakeSupabase as any, "u1", { ...connection, column_map: { ...connection.column_map, program: "prog" } }, "manual");
     expect(tables.events[0]).toMatchObject({ sync_flag: "none", sync_flag_reason: null, work_area_id: "wa1", program: "ari" });
+  });
+
+  it("skips items the user deleted locally until they are restored", async () => {
+    items.push(item("1", "Fall Gala", "2026-10-01"), item("2", "Webinar", "2026-11-05"));
+    tables.monday_excluded_items = [{ id: "x1", user_id: "u1", board_id: "b1", item_id: "2", title: "Webinar" }];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const r1 = await runMondaySync(fakeSupabase as any, "u1", connection, "manual");
+    expect(r1).toMatchObject({ items_seen: 2, created: 1 });
+    expect(tables.events.map((e) => e.monday_item_id)).toEqual(["1"]);
+    tables.monday_excluded_items = [];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const r2 = await runMondaySync(fakeSupabase as any, "u1", connection, "manual");
+    expect(r2).toMatchObject({ created: 1, unchanged: 1 });
+    expect(tables.events.map((e) => e.monday_item_id).sort()).toEqual(["1", "2"]);
   });
 
   it("records errors on the connection and run when the mapping is incomplete", async () => {

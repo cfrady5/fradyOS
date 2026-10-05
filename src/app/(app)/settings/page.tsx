@@ -12,8 +12,9 @@ export default async function SettingsPage({ searchParams }: PageProps<"/setting
   const sp = await searchParams;
   const ws = await requireWorkspace();
   const supabase = await createClient();
-  const [conns, runs, templates, items] = await Promise.all([
+  const [conns, runs, templates, items, excluded] = await Promise.all([
     supabase.from("monday_connections").select("*").eq("user_id", ws.userId),
+    supabase.from("monday_excluded_items").select("id", { count: "exact", head: true }).eq("user_id", ws.userId),
     supabase.from("monday_sync_runs").select("*").eq("user_id", ws.userId).order("started_at", { ascending: false }).limit(12),
     supabase.from("event_templates").select("*").eq("user_id", ws.userId).order("is_default", { ascending: false }).order("name"),
     supabase.from("event_template_items").select("*").eq("user_id", ws.userId).order("sort_order"),
@@ -34,6 +35,7 @@ export default async function SettingsPage({ searchParams }: PageProps<"/setting
         },
         runs: (runs.data ?? []) as MondaySyncRun[],
         webhookUrl,
+        excludedCount: excluded.count ?? 0,
       }}
       emailConfigured={Boolean(process.env.RESEND_API_KEY)}
       adminConfigured={Boolean(process.env.SUPABASE_SECRET_KEY ?? process.env.SUPABASE_SERVICE_ROLE_KEY)}

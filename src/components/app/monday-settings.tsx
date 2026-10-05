@@ -13,6 +13,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Field } from "@/components/app/form-fields";
 import { disconnectMonday, inspectMondayBoard, listMondayBoards, registerMondayWebhooks, removeMondayWebhooks, saveMondayConnection, setMondayAutoSync, syncMondayNow, testMondayConnection } from "@/actions/monday";
+import { restoreExcludedMondayItems } from "@/actions/events";
 import type { MondayBoardSchema, MondayBoardSummary, MondayColumn } from "@/lib/monday/client";
 import { FIELD_COLUMN_TYPES, FIELD_LABELS, NAME_COLUMN } from "@/lib/monday/mapping";
 import { SOCIAL_FIELD_COLUMN_TYPES, SOCIAL_FIELD_LABELS, SOCIAL_FIELD_ORDER, parseColumnLabels } from "@/lib/monday/social-mapping";
@@ -29,7 +30,7 @@ function fieldsFor(purpose: MondayPurpose): FieldDef[] {
   return SOCIAL_FIELD_ORDER.map((k) => ({ key: k, label: SOCIAL_FIELD_LABELS[k].label, hint: SOCIAL_FIELD_LABELS[k].hint, types: SOCIAL_FIELD_COLUMN_TYPES[k], required: k === "publish_date" }));
 }
 
-export function MondaySettings({ tokenConfigured, connections, runs, webhookUrl, cronConfigured, adminConfigured, workAreas }: { tokenConfigured: boolean; connections: { events: MondayConnection | null; social: MondayConnection | null }; runs: MondaySyncRun[]; webhookUrl: string | null; cronConfigured: boolean; adminConfigured: boolean; workAreas: WorkArea[] }) {
+export function MondaySettings({ tokenConfigured, connections, runs, webhookUrl, cronConfigured, adminConfigured, workAreas, excludedCount = 0 }: { tokenConfigured: boolean; connections: { events: MondayConnection | null; social: MondayConnection | null }; runs: MondaySyncRun[]; webhookUrl: string | null; cronConfigured: boolean; adminConfigured: boolean; workAreas: WorkArea[]; excludedCount?: number }) {
   const { timezone } = useWorkspace();
   return (
     <div className="flex flex-col gap-4">
@@ -42,7 +43,7 @@ export function MondaySettings({ tokenConfigured, connections, runs, webhookUrl,
           </AlertDescription>
         </Alert>
       ) : null}
-      <BoardCard purpose="events" tokenConfigured={tokenConfigured} connection={connections.events} webhookUrl={webhookUrl} cronConfigured={cronConfigured} adminConfigured={adminConfigured} workAreas={workAreas} />
+      <BoardCard purpose="events" tokenConfigured={tokenConfigured} connection={connections.events} webhookUrl={webhookUrl} cronConfigured={cronConfigured} adminConfigured={adminConfigured} workAreas={workAreas} excludedCount={excludedCount} />
       <BoardCard purpose="social" tokenConfigured={tokenConfigured} connection={connections.social} webhookUrl={webhookUrl} cronConfigured={cronConfigured} adminConfigured={adminConfigured} workAreas={workAreas} />
       {runs.length ? (
         <Card>
@@ -69,7 +70,7 @@ export function MondaySettings({ tokenConfigured, connections, runs, webhookUrl,
   );
 }
 
-function BoardCard({ purpose, tokenConfigured, connection, webhookUrl, cronConfigured, adminConfigured, workAreas }: { purpose: MondayPurpose; tokenConfigured: boolean; connection: MondayConnection | null; webhookUrl: string | null; cronConfigured: boolean; adminConfigured: boolean; workAreas: WorkArea[] }) {
+function BoardCard({ purpose, tokenConfigured, connection, webhookUrl, cronConfigured, adminConfigured, workAreas, excludedCount = 0 }: { purpose: MondayPurpose; tokenConfigured: boolean; connection: MondayConnection | null; webhookUrl: string | null; cronConfigured: boolean; adminConfigured: boolean; workAreas: WorkArea[]; excludedCount?: number }) {
   const router = useRouter();
   const { timezone } = useWorkspace();
   const [pending, startTransition] = React.useTransition();
@@ -204,6 +205,26 @@ function BoardCard({ purpose, tokenConfigured, connection, webhookUrl, cronConfi
                 <AlertTitle>Last sync failed</AlertTitle>
                 <AlertDescription>{connection.last_error}</AlertDescription>
               </Alert>
+            ) : null}
+            {!isSocial && excludedCount > 0 ? (
+              <p className="text-muted-foreground flex flex-wrap items-center gap-2 text-xs">
+                <span>{excludedCount} item{excludedCount === 1 ? "" : "s"} deleted locally and kept out of sync.</span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={pending}
+                  onClick={() =>
+                    startTransition(async () => {
+                      const res = await restoreExcludedMondayItems(connection.board_id);
+                      if (!res.ok) return void toast.error(res.error);
+                      toast.success(`${res.data.restored} item${res.data.restored === 1 ? "" : "s"} will come back on the next sync`);
+                      router.refresh();
+                    })
+                  }
+                >
+                  Restore on next sync
+                </Button>
+              </p>
             ) : null}
             {connection.last_result ? (
               <p className="text-muted-foreground text-xs">

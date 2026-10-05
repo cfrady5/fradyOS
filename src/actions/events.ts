@@ -100,18 +100,91 @@ export async function archiveEvent(id: string, archived = true): Promise<ActionR
   }
 }
 
-/** Deletes an event. Linked tasks and posts are kept (their event link is cleared). */
+/** Deletes an event. Linked tasks and posts are kept (their event link is cleared). Monday items are excluded from future syncs. */
 export async function deleteEvent(id: string): Promise<ActionResult<undefined>> {
+  const res = await bulkDeleteEvents([id]);
+  return res.ok ? ok(undefined) : fail(res.error);
+}
+
+// Ids are validated for shape only; Postgres rejects malformed uuids and RLS plus the user_id filter scope every write.
+const idListSchema = z.array(z.string().min(1).max(64)).min(1, "Select at least one event").max(500);
+const optionalId = z.preprocess((v) => (v === "" || v === undefined || v === "none" ? null : v), z.string().min(1).max(64).nullable());
+const bulkPatchSchema = z.object({
+  work_area_id: optionalId.optional(),
+  project_id: optionalId.optional(),
+  is_archived: z.boolean().optional(),
+  dismiss_review: z.boolean().optional(),
+});
+
+/** Applies the same local changes (work area, project, archive, dismiss review flag) to many events at once. */
+export async function bulkUpdateEvents(ids: unknown, patch: unknown): Promise<ActionResult<{ updated: number }>> {
+  try {
+    const ws = await requireWorkspace();
+    const idList = idListSchema.safeParse(ids);
+    if (!idList.success) return fail(firstZodMessage(idList.error));
+    const parsed = bulkPatchSchema.safeParse(patch);
+    if (!parsed.success) return fail(firstZodMessage(parsed.error));
+    const update: Record<string, unknown> = {};
+    if (parsed.data.work_area_id !== undefined) update.work_area_id = parsed.data.work_area_id;
+    if (parsed.data.project_id !== undefined) update.project_id = parsed.data.project_id;
+    if (parsed.data.is_archived !== undefined) {
+      update.is_archived = parsed.data.is_archived;
+      if (parsed.data.is_archived) update.review_dismissed_at = new Date().toISOString();
+    }
+    if (parsed.data.dismiss_review) update.review_dismissed_at = new Date().toISOString();
+    if (!Object.keys(update).length) return fail("Nothing to change");
+    const supabase = await createClient();
+    const { data, error } = await supabase.from("events").update(update).eq("user_id", ws.userId).in("id", idList.data).select("id");
+    if (error) return fail(error.message);
+    revalidatePath("/", "layout");
+    return ok({ updated: (data ?? []).length });
+  } catch (e) {
+    return fail(errorMessage(e));
+  }
+}
+
+/**
+ * Deletes many events. Linked tasks and posts are kept (their event link is cleared); notes and
+ * attachments go with the event. Monday.com items are recorded as excluded so the next sync does
+ * not bring them back; Settings → Monday.com can restore them.
+ */
+export async function bulkDeleteEvents(ids: unknown): Promise<ActionResult<{ deleted: number; excluded: number }>> {
+  try {
+    const ws = await requireWorkspace();
+    const idList = idListSchema.safeParse(ids);
+    if (!idList.success) return fail(firstZodMessage(idList.error));
+    const supabase = await createClient();
+    const { data: rows, error: loadErr } = await supabase.from("events").select("id,name,source,monday_board_id,monday_item_id").eq("user_id", ws.userId).in("id", idList.data);
+    if (loadErr) return fail(loadErr.message);
+    const events = (rows ?? []) as Pick<Event, "id" | "name" | "source" | "monday_board_id" | "monday_item_id">[];
+    if (!events.length) return fail("No matching events");
+    const monday = events.filter((e) => e.source === "monday" && e.monday_board_id && e.monday_item_id);
+    if (monday.length) {
+      const { error } = await supabase
+        .from("monday_excluded_items")
+        .upsert(monday.map((e) => ({ user_id: ws.userId, board_id: e.monday_board_id, item_id: e.monday_item_id, title: e.name })), { onConflict: "user_id,board_id,item_id" });
+      if (error) return fail(error.message);
+    }
+    const { error } = await supabase.from("events").delete().eq("user_id", ws.userId).in("id", events.map((e) => e.id));
+    if (error) return fail(error.message);
+    revalidatePath("/", "layout");
+    return ok({ deleted: events.length, excluded: monday.length });
+  } catch (e) {
+    return fail(errorMessage(e));
+  }
+}
+
+/** Forgets locally deleted Monday.com items so the next sync imports them again. */
+export async function restoreExcludedMondayItems(boardId?: string | null): Promise<ActionResult<{ restored: number }>> {
   try {
     const ws = await requireWorkspace();
     const supabase = await createClient();
-    const { data: existing } = await supabase.from("events").select("source,sync_flag").eq("id", id).eq("user_id", ws.userId).maybeSingle();
-    if (!existing) return fail("Event not found");
-    if (existing.source === "monday" && existing.sync_flag !== "removed") return fail("This event still exists in Monday.com and would be re-imported. Archive it instead, or remove it from the board.");
-    const { error } = await supabase.from("events").delete().eq("id", id).eq("user_id", ws.userId);
+    let q = supabase.from("monday_excluded_items").delete().eq("user_id", ws.userId);
+    if (boardId) q = q.eq("board_id", boardId);
+    const { data, error } = await q.select("id");
     if (error) return fail(error.message);
     revalidatePath("/", "layout");
-    return ok(undefined);
+    return ok({ restored: (data ?? []).length });
   } catch (e) {
     return fail(errorMessage(e));
   }

@@ -34,6 +34,10 @@ export async function runMondaySync(supabase: Client, userId: string, connection
     if (exErr) throw new Error(exErr.message);
     const existing = new Map(((existingRows ?? []) as Event[]).map((e) => [e.monday_item_id as string, e]));
 
+    // Items the user deleted locally stay out until restored from Settings.
+    const { data: excludedRows } = await supabase.from("monday_excluded_items").select("item_id").eq("user_id", userId).eq("board_id", connection.board_id);
+    const excluded = new Set(((excludedRows ?? []) as { item_id: string }[]).map((r) => r.item_id));
+
     const { data: areas } = await supabase.from("work_areas").select("id,name").eq("user_id", userId).eq("is_archived", false);
     const areaByName = new Map(((areas ?? []) as Pick<WorkArea, "id" | "name">[]).map((a) => [a.name.trim().toLowerCase(), a.id]));
 
@@ -42,6 +46,7 @@ export async function runMondaySync(supabase: Client, userId: string, connection
 
     for (const item of items) {
       seen.add(item.id);
+      if (excluded.has(item.id)) continue;
       const fields = mapItemToEvent(item, map);
       const canceled = isCanceledStatus(fields.status, connection.canceled_labels ?? []) || (item.state && item.state !== "active");
       const prev = existing.get(item.id);
