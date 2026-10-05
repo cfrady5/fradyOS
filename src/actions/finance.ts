@@ -113,6 +113,52 @@ export async function deleteAccount(id: string): Promise<ActionResult<undefined>
   }
 }
 
+const accountIdsSchema = z.array(z.string().min(1).max(64)).min(1, "Select at least one account").max(500);
+
+/**
+ * Deletes many accounts at once. Balance history, debt details and transactions go with each
+ * account (cascade); goals that tracked one lose only the link. Accounts still synced from a
+ * connected bank are skipped, because the next sync would recreate them: remove the bank first.
+ */
+export async function bulkDeleteAccounts(ids: unknown): Promise<ActionResult<{ deleted: number; skippedLinked: number }>> {
+  try {
+    const ws = await requireWorkspace();
+    const parsed = accountIdsSchema.safeParse(ids);
+    if (!parsed.success) return fail(firstZodMessage(parsed.error));
+    const supabase = await createClient();
+    const { data: rows, error: loadErr } = await supabase.from("financial_accounts").select("id,external_provider,plaid_item_id").eq("user_id", ws.userId).in("id", parsed.data);
+    if (loadErr) return fail(loadErr.message);
+    const accounts = (rows ?? []) as { id: string; external_provider: string | null; plaid_item_id: string | null }[];
+    if (!accounts.length) return fail("No matching accounts");
+    const linked = accounts.filter((a) => a.external_provider === "plaid" && a.plaid_item_id);
+    const deletable = accounts.filter((a) => !linked.includes(a)).map((a) => a.id);
+    if (deletable.length) {
+      const { error } = await supabase.from("financial_accounts").delete().eq("user_id", ws.userId).in("id", deletable);
+      if (error) return fail(error.message);
+    }
+    revalidate();
+    return ok({ deleted: deletable.length, skippedLinked: linked.length });
+  } catch (e) {
+    return fail(errorMessage(e));
+  }
+}
+
+/** Toggles "include in net worth" for many accounts at once. */
+export async function bulkSetAccountsInNetWorth(ids: unknown, include: boolean): Promise<ActionResult<{ updated: number }>> {
+  try {
+    const ws = await requireWorkspace();
+    const parsed = accountIdsSchema.safeParse(ids);
+    if (!parsed.success) return fail(firstZodMessage(parsed.error));
+    const supabase = await createClient();
+    const { data, error } = await supabase.from("financial_accounts").update({ include_in_net_worth: include }).eq("user_id", ws.userId).in("id", parsed.data).select("id");
+    if (error) return fail(error.message);
+    revalidate();
+    return ok({ updated: (data ?? []).length });
+  } catch (e) {
+    return fail(errorMessage(e));
+  }
+}
+
 export async function setDebtOrder(accountIds: string[]): Promise<ActionResult<undefined>> {
   try {
     const ws = await requireWorkspace();
