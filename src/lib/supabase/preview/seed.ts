@@ -202,7 +202,7 @@ export function seedTables(): Record<string, Row[]> {
   const txRows: Row[] = [];
   let tn = 0;
   const tx = (date: string, amount: number, name: string, primary: string, detailed: string, accountId = "fa-chk", type?: string) =>
-    txRows.push({ id: `tx-${++tn}`, user_id: uid, account_id: accountId, transaction_date: date, description: name, category_id: categories.find((c) => (c.plaid_categories as string[]).some((p) => detailed.startsWith(p)))?.id ?? null, amount, transaction_type: type ?? (amount > 0 ? "income" : "expense"), external_id: `ext-${tn}`, pending: false, merchant_name: name, category_primary: primary, category_detailed: detailed, plaid_item_id: "item-chase", ...ts });
+    txRows.push({ id: `tx-${++tn}`, user_id: uid, account_id: accountId, transaction_date: date, description: name, category_id: categories.find((c) => (c.plaid_categories as string[]).some((p) => detailed.startsWith(p)))?.id ?? null, amount, transaction_type: type ?? (amount > 0 ? "income" : "expense"), external_id: `ext-${tn}`, pending: false, merchant_name: name, category_primary: primary, category_detailed: detailed, plaid_item_id: "item-chase", source: "plaid", ...ts });
   for (let m = 3; m >= 0; m--) {
     const base = addMonths(startOfMonth(today), -m);
     tx(addDays(base, 0), 2700, "ARI payroll", "INCOME", "INCOME_WAGES");
@@ -215,7 +215,20 @@ export function seedTables(): Record<string, Row[]> {
     tx(addDays(base, 15), -150, "Chase card payment", "LOAN_PAYMENTS", "LOAN_PAYMENTS_CREDIT_CARD_PAYMENT", "fa-chk", "payment");
     tx(addDays(base, 16), -650, "Transfer to Ally", "TRANSFER_OUT", "TRANSFER_OUT_SAVINGS", "fa-chk", "transfer");
     tx(addDays(base, 20), -210, "Target", "GENERAL_MERCHANDISE", "GENERAL_MERCHANDISE_SUPERSTORES", "fa-card");
+    tx(addDays(base, 12), -15.99, "Netflix", "ENTERTAINMENT", "ENTERTAINMENT_TV_AND_MOVIES", "fa-card");
+    tx(addDays(base, 22), -165, "MOHELA student loan", "LOAN_PAYMENTS", "LOAN_PAYMENTS_STUDENT_LOAN_PAYMENT", "fa-chk", "payment");
   }
+  const rec = (id: string, name: string, kind: string, amount: number, cadence: string, nextDay: number, extra: Row = {}): Row => ({ id, user_id: uid, name, kind, amount, cadence, next_date: addDays(startOfMonth(today), nextDay - 1), account_id: null, category_id: null, match_pattern: null, is_variable: false, in_projection: true, is_active: true, notes: null, sort_order: 0, ...ts, ...extra });
+  const recurring = [
+    rec("rc-pay", "ARI payroll", "income", 2700, "semimonthly", 1, { account_id: "fa-chk", match_pattern: "ARI payroll" }),
+    rec("rc-side", "Design side work", "income", 600, "monthly", 20, { account_id: "fa-chk", is_variable: true, in_projection: false, notes: "Invoices vary; not counted until it is steady." }),
+    rec("rc-rent", "Harrison Lofts rent", "expense", 1350, "monthly", 2, { account_id: "fa-chk", category_id: "bc-0", match_pattern: "harrison lofts" }),
+    rec("rc-duke", "Duke Energy", "expense", 92.4, "monthly", 4, { account_id: "fa-chk", category_id: "bc-1", match_pattern: "duke energy", is_variable: true }),
+    rec("rc-netflix", "Netflix", "expense", 15.99, "monthly", 13, { account_id: "fa-card", category_id: "bc-12", match_pattern: "netflix" }),
+    rec("rc-mohela", "MOHELA student loan", "debt", 165, "monthly", 23, { account_id: "fa-student", category_id: "bc-8", match_pattern: "mohela" }),
+    rec("rc-ally", "Transfer to Ally", "savings", 650, "monthly", 17, { account_id: "fa-sav", category_id: "bc-9", match_pattern: "transfer to ally" }),
+    rec("rc-card", "Sapphire minimum", "debt", 65, "monthly", 16, { account_id: "fa-card", category_id: "bc-8", match_pattern: "chase card payment" }),
+  ];
   const plaidItems = [{ id: "pi-1", user_id: uid, item_id: "item-chase", institution_id: "ins_56", institution_name: "Chase", environment: "sandbox", status: "active", error_code: null, error_message: null, products: ["transactions"], transactions_cursor: "c-1", last_synced_at: iso(0, 6), last_webhook_at: iso(0, 5), consent_expires_at: null, ...ts }];
   const plaidRuns = [{ id: "pr-1", user_id: uid, item_id: "item-chase", trigger: "webhook", started_at: iso(0, 6), finished_at: iso(0, 6), status: "success", result: { accounts_seen: 3, accounts_created: 0, accounts_updated: 3, transactions_added: 4, transactions_modified: 0, transactions_removed: 0, liabilities: false, realtime: false, warnings: [] }, error: null }];
 
@@ -245,6 +258,7 @@ export function seedTables(): Record<string, Row[]> {
     financial_budget_categories: categories,
     financial_budget_actuals: actuals,
     financial_transactions: txRows,
+    financial_recurring: recurring,
     plaid_items: plaidItems,
     plaid_item_secrets: [],
     plaid_sync_runs: plaidRuns,

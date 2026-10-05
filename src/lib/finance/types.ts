@@ -140,6 +140,14 @@ export interface PlaidSyncRun {
 }
 
 export type TransactionType = "income" | "expense" | "transfer" | "payment" | "contribution";
+export const TRANSACTION_TYPES: { value: TransactionType; label: string; hint: string }[] = [
+  { value: "income", label: "Income", hint: "Money coming in: pay, sales, refunds you count as income." },
+  { value: "expense", label: "Expense", hint: "Spending. Counts toward the budget category." },
+  { value: "payment", label: "Debt payment", hint: "A payment toward a loan or card. Loan payments with a category count in the budget; card payments do not (their purchases do)." },
+  { value: "transfer", label: "Transfer", hint: "Money moved between your own accounts. Ignored by the budget." },
+  { value: "contribution", label: "Contribution", hint: "A deposit into savings or investments. Counts toward a savings or investing category." },
+];
+export type TransactionSource = "manual" | "import" | "plaid";
 
 export interface FinancialTransaction {
   id: string;
@@ -156,6 +164,39 @@ export interface FinancialTransaction {
   category_primary: string | null;
   category_detailed: string | null;
   plaid_item_id: string | null;
+  source: TransactionSource;
+  created_at: string;
+  updated_at: string;
+}
+
+export type RecurringKind = "income" | "expense" | "debt" | "savings" | "investing";
+export const RECURRING_KINDS: { value: RecurringKind; label: string; hint: string }[] = [
+  { value: "income", label: "Income", hint: "Pay, sales, dividends: money that comes in on a schedule." },
+  { value: "expense", label: "Expense", hint: "Bills and subscriptions. Counted as fixed expenses in the projection." },
+  { value: "debt", label: "Debt payment", hint: "Loan or card payments. The projection already models these through the account's balance and payment; only payments without a balance are added as fixed expenses." },
+  { value: "savings", label: "Savings transfer", hint: "Automatic transfers into savings." },
+  { value: "investing", label: "Investment contribution", hint: "Automatic contributions to brokerage or retirement accounts." },
+];
+export type RecurringCadence = "weekly" | "biweekly" | "semimonthly" | "monthly" | "quarterly" | "yearly";
+
+export interface RecurringItem {
+  id: string;
+  user_id: string;
+  name: string;
+  kind: RecurringKind;
+  /** Per occurrence, always positive. */
+  amount: number;
+  cadence: RecurringCadence;
+  next_date: string | null;
+  account_id: string | null;
+  category_id: string | null;
+  /** Case-insensitive substring(s) matched against transaction descriptions; `|` separates alternatives. */
+  match_pattern: string | null;
+  is_variable: boolean;
+  in_projection: boolean;
+  is_active: boolean;
+  notes: string | null;
+  sort_order: number;
   created_at: string;
   updated_at: string;
 }

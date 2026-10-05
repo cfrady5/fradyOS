@@ -193,6 +193,7 @@ export async function runPlaidSync(supabase: Client, item: PlaidItem, opts: Sync
           pending: t.pending,
           amount: mapped.amount,
           transaction_type: mapped.transaction_type,
+          source: "plaid",
         };
       };
       for (let attempt = 0; attempt < 2; attempt++) {

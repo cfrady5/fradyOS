@@ -2,12 +2,12 @@ import "server-only";
 import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { requireWorkspace, type Workspace } from "@/lib/data/workspace";
-import type { BalanceSnapshot, BudgetActual, BudgetCategory, FinancialAccount, FinancialDebt, FinancialGoal, FinancialMilestone, FinancialProfile, FinancialScenario, PlaidItem, PlaidSyncRun, ScenarioChange, TransactionType } from "@/lib/finance/types";
+import type { BalanceSnapshot, BudgetActual, BudgetCategory, FinancialAccount, FinancialDebt, FinancialGoal, FinancialMilestone, FinancialProfile, FinancialScenario, FinancialTransaction, PlaidItem, PlaidSyncRun, RecurringItem, ScenarioChange, TransactionType } from "@/lib/finance/types";
 import { summarizeCashFlow, type MonthCashFlow } from "@/lib/plaid/mapping";
 import { DEFAULT_BUDGET_CATEGORIES } from "@/lib/finance/types";
 import { buildModelInputs } from "@/lib/finance/model";
 import type { ModelInputs } from "@/lib/finance/engine";
-import { addMonths, startOfMonth } from "@/lib/dates";
+import { addDays, addMonths, startOfMonth } from "@/lib/dates";
 
 export type FinanceData = {
   ws: Workspace;
@@ -81,6 +81,14 @@ export function shapeCategory(row: Record<string, unknown>): BudgetCategory {
 
 export function shapeActual(row: Record<string, unknown>): BudgetActual {
   return { ...(row as unknown as BudgetActual), actual: num(row.actual) };
+}
+
+export function shapeRecurring(row: Record<string, unknown>): RecurringItem {
+  return { ...(row as unknown as RecurringItem), amount: num(row.amount) };
+}
+
+export function shapeTransaction(row: Record<string, unknown>): FinancialTransaction {
+  return { ...(row as unknown as FinancialTransaction), amount: num(row.amount), source: (row.source as FinancialTransaction["source"]) ?? (row.plaid_item_id ? "plaid" : "manual") };
 }
 
 /** Loads everything the Finances section needs, bootstrapping the profile and default budget categories on first visit. */
@@ -191,13 +199,16 @@ export async function getPlaidConnections(userId: string): Promise<{ items: Plai
 
 export type BudgetLive = {
   hasTransactions: boolean;
-  /** Spending per budget category for the month, from synced transactions (expense + payment outflows). */
+  /** Spending per budget category for the month: expense + contribution outflows, plus loan payments that carry a category. */
   actualsByCategory: Record<string, number>;
+  /** Outflows with no category (expenses and contributions only). */
   uncategorized: number;
+  /** Payments to credit cards and loans with no category: pass-through money, shown but never budgeted. */
+  uncategorizedPayments: number;
   months: MonthCashFlow[];
 };
 
-/** Real numbers from synced transactions: per-category actuals for `month` and a 6-month cash-flow history. */
+/** Real numbers from imported and synced transactions: per-category actuals for `month` and a 6-month cash-flow history. */
 export async function getBudgetLive(userId: string, month: string): Promise<BudgetLive> {
   const supabase = await createClient();
   const from = addMonths(month, -6);
@@ -213,12 +224,68 @@ export async function getBudgetLive(userId: string, month: string): Promise<Budg
   const rows = ((data ?? []) as R[]).map((r) => ({ ...r, amount: num(r.amount) }));
   const actualsByCategory: Record<string, number> = {};
   let uncategorized = 0;
+  let uncategorizedPayments = 0;
+  const r2 = (n: number) => Math.round(n * 100) / 100;
   for (const r of rows) {
     if (r.pending || r.transaction_date < month || r.transaction_date >= to || r.amount >= 0) continue;
-    if (r.transaction_type !== "expense" && r.transaction_type !== "payment") continue;
+    if (r.transaction_type !== "expense" && r.transaction_type !== "payment" && r.transaction_type !== "contribution") continue;
     const out = -r.amount;
-    if (r.category_id) actualsByCategory[r.category_id] = Math.round(((actualsByCategory[r.category_id] ?? 0) + out) * 100) / 100;
-    else uncategorized = Math.round((uncategorized + out) * 100) / 100;
+    if (r.category_id) actualsByCategory[r.category_id] = r2((actualsByCategory[r.category_id] ?? 0) + out);
+    else if (r.transaction_type === "payment") uncategorizedPayments = r2(uncategorizedPayments + out);
+    else uncategorized = r2(uncategorized + out);
   }
-  return { hasTransactions: rows.length > 0, actualsByCategory, uncategorized, months: summarizeCashFlow(rows) };
+  return { hasTransactions: rows.length > 0, actualsByCategory, uncategorized, uncategorizedPayments, months: summarizeCashFlow(rows) };
+}
+
+/* ---------- Recurring ---------- */
+
+export async function getRecurring(userId: string): Promise<RecurringItem[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("financial_recurring").select("*").eq("user_id", userId).order("kind").order("sort_order").order("name");
+  if (error) throw new Error(error.message);
+  return ((data ?? []) as Record<string, unknown>[]).map(shapeRecurring);
+}
+
+export type TransactionLite = Pick<FinancialTransaction, "id" | "transaction_date" | "description" | "merchant_name" | "amount" | "transaction_type" | "account_id">;
+
+/** Lightweight transaction rows from the last `days` days, for matching recurring items against what actually happened. */
+export async function getRecentTransactions(userId: string, today: string, days = 120): Promise<TransactionLite[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("financial_transactions")
+    .select("id,transaction_date,description,merchant_name,amount,transaction_type,account_id")
+    .eq("user_id", userId)
+    .eq("pending", false)
+    .gte("transaction_date", addDays(today, -days))
+    .order("transaction_date", { ascending: false })
+    .limit(2000);
+  if (error) throw new Error(error.message);
+  return ((data ?? []) as Record<string, unknown>[]).map((r) => ({ ...(r as unknown as TransactionLite), amount: num(r.amount) }));
+}
+
+/* ---------- Transactions ---------- */
+
+export async function getTransactionsMonth(userId: string, month: string): Promise<FinancialTransaction[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("financial_transactions")
+    .select("*")
+    .eq("user_id", userId)
+    .gte("transaction_date", month)
+    .lt("transaction_date", addMonths(month, 1))
+    .order("transaction_date", { ascending: false })
+    .order("created_at", { ascending: false })
+    .limit(3000);
+  if (error) throw new Error(error.message);
+  return ((data ?? []) as Record<string, unknown>[]).map(shapeTransaction);
+}
+
+/** Months that have at least one transaction (for the month picker), newest first. */
+export async function getTransactionMonths(userId: string): Promise<string[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("financial_transactions").select("transaction_date").eq("user_id", userId).order("transaction_date", { ascending: false }).limit(5000);
+  if (error) throw new Error(error.message);
+  const set = new Set<string>();
+  for (const r of (data ?? []) as { transaction_date: string }[]) set.add(`${r.transaction_date.slice(0, 7)}-01`);
+  return Array.from(set).sort().reverse();
 }

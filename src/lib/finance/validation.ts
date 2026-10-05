@@ -13,6 +13,9 @@ export const goalStatusSchema = z.enum(["active", "paused", "completed", "archiv
 export const debtStrategySchema = z.enum(["minimum", "avalanche", "snowball", "custom"]);
 export const milestoneTypeSchema = z.enum(["goal", "life_event", "debt_free", "net_worth", "custom"]);
 export const budgetKindSchema = z.enum(["expense", "debt", "savings", "investing"]);
+export const recurringKindSchema = z.enum(["income", "expense", "debt", "savings", "investing"]);
+export const recurringCadenceSchema = z.enum(["weekly", "biweekly", "semimonthly", "monthly", "quarterly", "yearly"]);
+export const transactionTypeSchema = z.enum(["income", "expense", "transfer", "payment", "contribution"]);
 
 export const financialProfileSchema = z.object({
   monthly_income: money,
@@ -99,4 +102,35 @@ export const budgetActualSchema = z.object({
   category_id: z.string().uuid(),
   month: z.string().regex(/^\d{4}-\d{2}-01$/, "Month must be YYYY-MM-01"),
   actual: money,
+});
+
+export const recurringInputSchema = z.object({
+  name: z.string().trim().min(1, "Name the recurring item").max(120),
+  kind: recurringKindSchema,
+  amount: money.refine((n) => n >= 0, "Amount is per occurrence and cannot be negative"),
+  cadence: recurringCadenceSchema,
+  next_date: optionalDate,
+  account_id: z.preprocess((v) => (v === "" || v === undefined ? null : v), z.string().min(1).max(64).nullable()),
+  category_id: z.preprocess((v) => (v === "" || v === undefined ? null : v), z.string().min(1).max(64).nullable()),
+  match_pattern: optionalText(200),
+  is_variable: z.boolean().optional(),
+  in_projection: z.boolean().optional(),
+  is_active: z.boolean().optional(),
+  notes: optionalText(5000),
+});
+export type RecurringInput = z.infer<typeof recurringInputSchema>;
+
+export const transactionInputSchema = z.object({
+  account_id: z.string().min(1, "Pick an account").max(64),
+  transaction_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be YYYY-MM-DD"),
+  description: z.string().trim().min(1, "Describe the transaction").max(300),
+  amount: money.refine((n) => n !== 0, "Amount cannot be zero"),
+  transaction_type: transactionTypeSchema,
+  category_id: z.preprocess((v) => (v === "" || v === undefined ? null : v), z.string().min(1).max(64).nullable()),
+});
+export type TransactionInput = z.infer<typeof transactionInputSchema>;
+
+export const transactionPatchSchema = z.object({
+  category_id: z.preprocess((v) => (v === "" ? null : v), z.string().min(1).max(64).nullable()).optional(),
+  transaction_type: transactionTypeSchema.optional(),
 });

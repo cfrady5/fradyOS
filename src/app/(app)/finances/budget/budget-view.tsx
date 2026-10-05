@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { toast } from "sonner";
 import { ChevronLeft, ChevronRight, Plus, Archive, Check, Loader2, Landmark } from "lucide-react";
@@ -32,7 +33,7 @@ export function BudgetView({ profile, categories, actuals, month, today, live }:
 
   return (
     <div className="flex flex-col gap-6">
-      <AssumptionsPanel profile={profile} sections={["income"]} title="Income and expenses" description="These monthly totals drive the projection. The category budget below is a detail view; it does not change the projection unless you copy the totals up here." />
+      <AssumptionsPanel profile={profile} sections={["income"]} title="Income and expenses" description="These monthly totals drive the projection. The category budget below is a detail view; it does not change the projection unless you copy the totals up here. The Recurring page can fill income and fixed expenses from your paychecks and bills." />
 
       {live.hasTransactions ? <LiveCashFlow live={live} today={today} profile={profile} /> : null}
 
@@ -46,7 +47,7 @@ export function BudgetView({ profile, categories, actuals, month, today, live }:
         <CardHeader className="items-center">
           <div>
             <CardTitle>Monthly budget</CardTitle>
-            <CardDescription className="mt-1">Budgeted vs actual per category. {live.hasTransactions ? "Actuals fill in from synced bank transactions; type a value to override." : "Type an actual and press Enter or click ✓ to save."}</CardDescription>
+            <CardDescription className="mt-1">Budgeted vs actual per category. {live.hasTransactions ? "Actuals fill in from categorized transactions; type a value to override." : "Type an actual and press Enter or click ✓ to save."}</CardDescription>
           </div>
           <div className="flex items-center gap-1">
             <Button variant="outline" size="icon-sm" aria-label="Previous month" onClick={() => go(addMonths(month, -1))}>
@@ -76,8 +77,20 @@ export function BudgetView({ profile, categories, actuals, month, today, live }:
               ))}
               {live.uncategorized > 0 ? (
                 <TableRow className="hover:bg-transparent">
-                  <TableCell className="text-muted-foreground text-xs" colSpan={3}>Synced spending with no matching category</TableCell>
+                  <TableCell className="text-muted-foreground text-xs" colSpan={3}>
+                    Spending with no category yet ·{" "}
+                    <Link href={`/finances/transactions?m=${month.slice(0, 7)}`} className="underline underline-offset-2">
+                      categorize
+                    </Link>
+                  </TableCell>
                   <TableCell className="text-muted-foreground text-right text-xs tabular-nums">{fmtMoney(live.uncategorized)}</TableCell>
+                  <TableCell colSpan={2} />
+                </TableRow>
+              ) : null}
+              {live.uncategorizedPayments > 0 ? (
+                <TableRow className="hover:bg-transparent">
+                  <TableCell className="text-muted-foreground text-xs" colSpan={3}>Credit card payments (not budgeted; the purchases behind them are)</TableCell>
+                  <TableCell className="text-muted-foreground text-right text-xs tabular-nums">{fmtMoney(live.uncategorizedPayments)}</TableCell>
                   <TableCell colSpan={2} />
                 </TableRow>
               ) : null}
@@ -236,7 +249,7 @@ function LiveCashFlow({ live, today, profile }: { live: BudgetLive; today: strin
           <CardTitle className="flex items-center gap-2">
             <Landmark className="size-4" /> Real cash flow from your bank <Badge variant="success">Live</Badge>
           </CardTitle>
-          <CardDescription className="mt-1">From synced transactions. Income = deposits Plaid tags as income. Spending excludes transfers and loan payments; fixed = rent and utilities, variable = everything else.</CardDescription>
+          <CardDescription className="mt-1">From imported and synced transactions. Income = rows typed as income. Spending excludes transfers and debt payments; fixed = rent and utilities, variable = everything else. Months with only part of the picture (a card statement but no bank export, or the reverse) read low.</CardDescription>
         </div>
         <Button size="sm" onClick={apply} disabled={pending || !basis.length || !differs}>
           {pending ? <Loader2 className="animate-spin" /> : null} {differs ? `Use ${basis.length}-month average in assumptions` : "Assumptions already match"}

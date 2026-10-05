@@ -6,8 +6,10 @@ import { createClient } from "@/lib/supabase/server";
 import { requireWorkspace } from "@/lib/data/workspace";
 import { fail, ok, errorMessage, type ActionResult } from "@/lib/action-result";
 import { firstZodMessage, zodFieldErrors, optionalDate } from "@/lib/validation";
-import { accountInputSchema, budgetActualSchema, budgetCategoryInputSchema, financialProfileSchema, goalInputSchema, milestoneInputSchema, scenarioInputSchema } from "@/lib/finance/validation";
+import { accountInputSchema, budgetActualSchema, budgetCategoryInputSchema, financialProfileSchema, goalInputSchema, milestoneInputSchema, recurringInputSchema, scenarioInputSchema, transactionInputSchema, transactionPatchSchema } from "@/lib/finance/validation";
 import { isLiability, type AccountType } from "@/lib/finance/types";
+import { projectionFigures } from "@/lib/finance/recurring";
+import { shapeRecurring } from "@/lib/data/finance";
 
 function revalidate() {
   revalidatePath("/", "layout");
@@ -452,6 +454,129 @@ export async function saveBudgetActual(input: unknown): Promise<ActionResult<und
     if (error) return fail(error.message);
     revalidate();
     return ok(undefined);
+  } catch (e) {
+    return fail(errorMessage(e));
+  }
+}
+
+/* ---------------- Recurring ---------------- */
+
+const idListSchema = z.array(z.string().min(1).max(64)).min(1, "Select at least one row").max(1000);
+
+export async function saveRecurring(id: string | null, input: unknown): Promise<ActionResult<{ id: string }>> {
+  try {
+    const ws = await requireWorkspace();
+    const parsed = (id ? recurringInputSchema.partial() : recurringInputSchema).safeParse(input);
+    if (!parsed.success) return fail(firstZodMessage(parsed.error), zodFieldErrors(parsed.error));
+    const supabase = await createClient();
+    if (id) {
+      const { error } = await supabase.from("financial_recurring").update(parsed.data).eq("id", id).eq("user_id", ws.userId);
+      if (error) return fail(error.message);
+      revalidate();
+      return ok({ id });
+    }
+    const { count } = await supabase.from("financial_recurring").select("id", { count: "exact", head: true }).eq("user_id", ws.userId);
+    const { data, error } = await supabase.from("financial_recurring").insert({ user_id: ws.userId, ...parsed.data, sort_order: count ?? 0 }).select("id").single();
+    if (error) return fail(error.message);
+    revalidate();
+    return ok({ id: data.id as string });
+  } catch (e) {
+    return fail(errorMessage(e));
+  }
+}
+
+export async function deleteRecurring(id: string): Promise<ActionResult<undefined>> {
+  try {
+    const ws = await requireWorkspace();
+    const supabase = await createClient();
+    const { error } = await supabase.from("financial_recurring").delete().eq("id", id).eq("user_id", ws.userId);
+    if (error) return fail(error.message);
+    revalidate();
+    return ok(undefined);
+  } catch (e) {
+    return fail(errorMessage(e));
+  }
+}
+
+/** Copies the recurring monthly equivalents into the projection assumptions (income and fixed expenses). Variable spending is left alone. */
+export async function applyRecurringToProfile(): Promise<ActionResult<{ income: number; fixed: number }>> {
+  try {
+    const ws = await requireWorkspace();
+    const supabase = await createClient();
+    const [items, accounts] = await Promise.all([
+      supabase.from("financial_recurring").select("*").eq("user_id", ws.userId),
+      supabase.from("financial_accounts").select("id,balance,is_archived").eq("user_id", ws.userId),
+    ]);
+    if (items.error) return fail(items.error.message);
+    if (accounts.error) return fail(accounts.error.message);
+    const figures = projectionFigures(
+      ((items.data ?? []) as Record<string, unknown>[]).map(shapeRecurring),
+      ((accounts.data ?? []) as { id: string; balance: number | string; is_archived: boolean }[]).map((a) => ({ id: a.id, balance: Number(a.balance) || 0, is_archived: a.is_archived })),
+    );
+    const { error } = await supabase.from("financial_profiles").upsert({ user_id: ws.userId, monthly_income: figures.income, fixed_expenses: figures.fixed }, { onConflict: "user_id" });
+    if (error) return fail(error.message);
+    revalidate();
+    return ok({ income: figures.income, fixed: figures.fixed });
+  } catch (e) {
+    return fail(errorMessage(e));
+  }
+}
+
+/* ---------------- Transactions ---------------- */
+
+export async function addTransaction(input: unknown): Promise<ActionResult<{ id: string }>> {
+  try {
+    const ws = await requireWorkspace();
+    const parsed = transactionInputSchema.safeParse(input);
+    if (!parsed.success) return fail(firstZodMessage(parsed.error), zodFieldErrors(parsed.error));
+    const supabase = await createClient();
+    const { data: acc, error: accErr } = await supabase.from("financial_accounts").select("id").eq("id", parsed.data.account_id).eq("user_id", ws.userId).maybeSingle();
+    if (accErr) return fail(accErr.message);
+    if (!acc) return fail("That account does not exist");
+    const { data, error } = await supabase
+      .from("financial_transactions")
+      .insert({ user_id: ws.userId, ...parsed.data, merchant_name: parsed.data.description, source: "manual", pending: false })
+      .select("id")
+      .single();
+    if (error) return fail(error.message);
+    revalidate();
+    return ok({ id: data.id as string });
+  } catch (e) {
+    return fail(errorMessage(e));
+  }
+}
+
+export async function patchTransactions(ids: unknown, input: unknown): Promise<ActionResult<{ updated: number }>> {
+  try {
+    const ws = await requireWorkspace();
+    const parsedIds = idListSchema.safeParse(ids);
+    if (!parsedIds.success) return fail(firstZodMessage(parsedIds.error));
+    const parsed = transactionPatchSchema.safeParse(input);
+    if (!parsed.success) return fail(firstZodMessage(parsed.error));
+    const patch: Record<string, unknown> = {};
+    if (parsed.data.category_id !== undefined) patch.category_id = parsed.data.category_id;
+    if (parsed.data.transaction_type !== undefined) patch.transaction_type = parsed.data.transaction_type;
+    if (!Object.keys(patch).length) return fail("Nothing to change");
+    const supabase = await createClient();
+    const { data, error } = await supabase.from("financial_transactions").update(patch).eq("user_id", ws.userId).in("id", parsedIds.data).select("id");
+    if (error) return fail(error.message);
+    revalidate();
+    return ok({ updated: (data ?? []).length });
+  } catch (e) {
+    return fail(errorMessage(e));
+  }
+}
+
+export async function deleteTransactions(ids: unknown): Promise<ActionResult<{ deleted: number }>> {
+  try {
+    const ws = await requireWorkspace();
+    const parsedIds = idListSchema.safeParse(ids);
+    if (!parsedIds.success) return fail(firstZodMessage(parsedIds.error));
+    const supabase = await createClient();
+    const { data, error } = await supabase.from("financial_transactions").delete().eq("user_id", ws.userId).in("id", parsedIds.data).select("id");
+    if (error) return fail(error.message);
+    revalidate();
+    return ok({ deleted: (data ?? []).length });
   } catch (e) {
     return fail(errorMessage(e));
   }

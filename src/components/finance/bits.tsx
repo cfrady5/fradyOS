@@ -12,7 +12,9 @@ import type { GoalStatusKey } from "@/lib/finance/engine";
 export const FINANCE_TABS: { href: string; label: string }[] = [
   { href: "/finances", label: "Overview" },
   { href: "/finances/accounts", label: "Accounts" },
+  { href: "/finances/transactions", label: "Transactions" },
   { href: "/finances/budget", label: "Budget" },
+  { href: "/finances/recurring", label: "Recurring" },
   { href: "/finances/goals", label: "Goals" },
   { href: "/finances/debt", label: "Debt" },
   { href: "/finances/scenarios", label: "Scenarios" },
