@@ -79,10 +79,10 @@ export function ProjectsView({ projects, area, status, workAreas }: { projects: 
         <div className="flex flex-col gap-6">
           {groups.map((g) => (
             <section key={g.key}>
-              <h2 className="mb-2 flex items-center gap-2 text-sm font-semibold">
-                <AreaDot color={g.color} /> {g.name} <span className="text-muted-foreground font-normal tabular-nums">{g.items.length}</span>
+              <h2 className="mb-2.5 flex items-center gap-2 text-sm font-semibold">
+                <AreaDot color={g.color} /> {g.name} <span className="bg-secondary text-muted-foreground nums rounded-md px-1.5 py-0.5 text-[11px] leading-4 font-medium">{g.items.length}</span>
               </h2>
-              <div className="grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-3">
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
                 {g.items.map((p) => (
                   <ProjectCard key={p.id} project={p} today={today} />
                 ))}
@@ -101,7 +101,7 @@ export function ProjectCard({ project: p, today }: { project: ProjectWithStats; 
   const pct = p.task_total ? Math.round((p.task_done / p.task_total) * 100) : 0;
   const targetBucket = dueBucket(p.target_date, today);
   return (
-    <Link href={`/projects/${p.id}`} className="bg-card flex flex-col gap-2 rounded-lg border p-3 outline-none transition-colors hover:bg-accent/40 focus-visible:ring-2 focus-visible:ring-ring/60">
+    <Link href={`/projects/${p.id}`} className="bg-card border-border/80 hover:border-border hover:bg-accent/30 flex flex-col gap-2.5 rounded-xl border p-4 outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="truncate text-sm font-semibold">{p.name}</p>

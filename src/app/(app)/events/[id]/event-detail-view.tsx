@@ -148,12 +148,12 @@ export function EventDetailView({ detail }: { detail: EventDetail }) {
       ) : null}
 
       {proposals.length ? (
-        <div className="mb-4 rounded-lg border border-warning/50 bg-warning/10 p-3">
+        <div className="border-warning/40 bg-warning/10 mb-4 rounded-xl border p-3">
           <p className="text-sm font-semibold">Proposed date changes ({proposals.length})</p>
           <p className="text-muted-foreground mb-2 text-xs">The event moved. These unfinished items were created from a template and have not been manually overridden. Completed work and manual dates are never changed.</p>
           <ul className="flex flex-col gap-1">
             {proposals.map((p) => (
-              <li key={p.id} className="flex items-start gap-2 rounded-md bg-card px-2 py-1.5 text-sm">
+              <li key={p.id} className="bg-card border-border/70 flex items-start gap-2 rounded-lg border px-2.5 py-1.5 text-sm">
                 <Checkbox checked={selected.has(p.id)} onCheckedChange={(v) => setDeselected((s) => { const n = new Set(s); if (v) n.delete(p.id); else n.add(p.id); return n; })} aria-label={`Select ${p.title}`} className="mt-0.5" />
                 <div className="min-w-0 flex-1">
                   <span className="font-medium">{p.title}</span> <span className="text-muted-foreground text-xs">({p.kind === "task" ? "task" : "post"})</span>
@@ -228,7 +228,7 @@ export function EventDetailView({ detail }: { detail: EventDetail }) {
         </div>
 
         <div className="flex flex-col gap-4">
-          <section className="bg-card rounded-lg border p-3">
+          <section className="bg-card border-border/80 rounded-xl border p-4">
             <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{isMonday ? "Imported details (read-only)" : "Details"}</h2>
             <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
               <dt className="text-muted-foreground">Dates</dt><dd>{e.start_date ? formatDateRange(e.start_date, e.end_date, today) : "—"}</dd>
@@ -237,13 +237,13 @@ export function EventDetailView({ detail }: { detail: EventDetail }) {
               <dt className="text-muted-foreground">Program</dt><dd>{e.program ?? "—"}</dd>
               <dt className="text-muted-foreground">Owner</dt><dd>{e.owner ?? "—"}</dd>
               <dt className="text-muted-foreground">Status</dt><dd>{e.status ?? "—"}</dd>
-              <dt className="text-muted-foreground">Website</dt><dd className="truncate">{e.website_url ? <a href={e.website_url} className="text-primary hover:underline" target="_blank" rel="noreferrer noopener">{e.website_url}</a> : "—"}</dd>
+              <dt className="text-muted-foreground">Website</dt><dd className="truncate">{e.website_url ? <a href={e.website_url} className="text-primary-soft hover:underline" target="_blank" rel="noreferrer noopener">{e.website_url}</a> : "—"}</dd>
               {isMonday ? (<><dt className="text-muted-foreground">Board group</dt><dd>{e.monday_group ?? "—"}</dd><dt className="text-muted-foreground">Last synced</dt><dd>{e.monday_synced_at ? formatTimestamp(e.monday_synced_at, timezone) : "—"}</dd></>) : null}
             </dl>
             {e.notes ? <p className="mt-2 whitespace-pre-wrap text-sm">{e.notes}</p> : null}
           </section>
 
-          <section className="bg-card flex flex-col gap-3 rounded-lg border p-3">
+          <section className="bg-card border-border/80 flex flex-col gap-3 rounded-xl border p-4">
             <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">My local settings</h2>
             <Field label="Work area">
               <AreaSelect value={local.work_area_id} onChange={(v) => setLocal({ ...local, work_area_id: v })} />

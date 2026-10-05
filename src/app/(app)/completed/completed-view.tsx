@@ -210,9 +210,9 @@ export function CompletedView({ data, range, from, to, area, project }: { data: 
 
 function Stat({ label, value }: { label: string; value: number }) {
   return (
-    <div className="bg-card rounded-lg border p-3">
-      <p className="text-2xl font-semibold tabular-nums">{value}</p>
-      <p className="text-muted-foreground text-xs">{label}</p>
+    <div className="bg-card border-border/80 rounded-xl border px-4 py-3.5">
+      <p className="text-subtle-foreground text-[11px] font-semibold tracking-wide uppercase">{label}</p>
+      <p className="nums mt-0.5 text-2xl font-semibold tracking-tight">{value}</p>
     </div>
   );
 }

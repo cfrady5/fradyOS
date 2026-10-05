@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { getSupabasePublishableKey, getSupabaseUrl } from "./env";
+import { createPreviewClient, isPreviewMode } from "./preview/fake-client";
 
 /**
  * Server-side Supabase client bound to the current request's cookies.
@@ -8,6 +9,8 @@ import { getSupabasePublishableKey, getSupabaseUrl } from "./env";
  * Create a fresh client per request (do not cache across requests).
  */
 export async function createClient() {
+  // FRADYOS_PREVIEW=1 (development only) serves seeded demo data with no database or session.
+  if (isPreviewMode()) return createPreviewClient() as unknown as ReturnType<typeof createServerClient>;
   const cookieStore = await cookies();
 
   return createServerClient(getSupabaseUrl(), getSupabasePublishableKey(), {

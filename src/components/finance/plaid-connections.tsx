@@ -182,15 +182,15 @@ export function PlaidConnections({ status, items, runs, accountCounts }: { statu
 
   return (
     <Card>
-      <CardHeader className="items-center">
-        <div>
-          <CardTitle className="flex items-center gap-2">
+      <CardHeader className="flex-wrap items-center">
+        <div className="min-w-0">
+          <CardTitle className="flex flex-wrap items-center gap-2">
             <Landmark className="size-4" /> Bank connections
             <Badge variant={status.env === "production" ? "success" : "warning"}>{status.env === "production" ? "Live banks" : "Sandbox"}</Badge>
           </CardTitle>
           <CardDescription className="mt-1">Balances, APRs, minimums and transactions sync through Plaid. Your bank login never touches FRADY OS: Plaid holds it and hands the app an encrypted token.</CardDescription>
         </div>
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {items.length ? (
             <Button variant="outline" size="sm" onClick={() => sync()} disabled={anyBusy}>
               {busy === "sync" ? <Loader2 className="animate-spin" /> : <RefreshCw />} Sync all
@@ -206,7 +206,9 @@ export function PlaidConnections({ status, items, runs, accountCounts }: { statu
           <Alert variant="warning">
             <AlertTitle>Plaid keys are not on the server yet</AlertTitle>
             <AlertDescription>
-              Add <code>PLAID_CLIENT_ID</code> and <code>PLAID_SECRET</code> (the app also accepts <code>CLIENT_ID</code> / <code>SECRET_Plaid</code>) in Vercel → Settings → Environment Variables, then redeploy.
+              <p>
+                Add <code>PLAID_CLIENT_ID</code> and <code>PLAID_SECRET</code> (the app also accepts <code>CLIENT_ID</code> / <code>SECRET_Plaid</code>) in Vercel → Settings → Environment Variables, then redeploy.
+              </p>
             </AlertDescription>
           </Alert>
         ) : null}

@@ -135,7 +135,7 @@ export function SocialPostEditor({ detail, onChanged, onClose }: { detail: Socia
 
   return (
     <div className="flex flex-col">
-      <div className="sticky top-0 z-10 flex items-center gap-2 border-b bg-background/95 px-4 py-2.5 backdrop-blur">
+      <div className="border-border bg-card/95 sticky top-0 z-10 flex flex-wrap items-center gap-2 border-b py-2.5 pr-14 pl-4 backdrop-blur">
         <SocialStatusBadge status={p.status} />
         {next && p.status !== "published" ? <DueBadge date={next.date} today={today} label={next.label} /> : null}
         {p.monday_item_id ? (
@@ -202,7 +202,7 @@ export function SocialPostEditor({ detail, onChanged, onClose }: { detail: Socia
         {p.event ? (
           <p className="text-muted-foreground text-xs">
             Event:{" "}
-            <Link href={`/events/${p.event.id}`} className="text-primary hover:underline">
+            <Link href={`/events/${p.event.id}`} className="text-primary-soft hover:underline">
               {p.event.name}
             </Link>
             {p.event.start_date ? ` · ${formatDate(p.event.start_date, "medium", today)}` : ""}

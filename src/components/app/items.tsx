@@ -12,11 +12,11 @@ import { useWorkspace } from "./workspace-provider";
 
 export function PageHeader({ title, description, actions, children }: { title: React.ReactNode; description?: React.ReactNode; actions?: React.ReactNode; children?: React.ReactNode }) {
   return (
-    <div className="mb-5 flex flex-col gap-3">
+    <div className="mb-6 flex flex-col gap-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <h1 className="text-xl font-semibold tracking-tight md:text-2xl">{title}</h1>
-          {description ? <p className="text-muted-foreground mt-1 text-sm">{description}</p> : null}
+          <h1 className="text-2xl font-semibold tracking-tight text-balance md:text-[28px] md:leading-tight">{title}</h1>
+          {description ? <p className="text-muted-foreground mt-1.5 text-sm">{description}</p> : null}
         </div>
         {actions ? <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div> : null}
       </div>
@@ -27,11 +27,11 @@ export function PageHeader({ title, description, actions, children }: { title: R
 
 export function SectionHeader({ title, count, action, hint, className }: { title: React.ReactNode; count?: number; action?: React.ReactNode; hint?: React.ReactNode; className?: string }) {
   return (
-    <div className={cn("mb-2 flex items-center justify-between gap-2", className)}>
-      <div className="flex items-baseline gap-2">
+    <div className={cn("mb-2.5 flex min-h-8 items-center justify-between gap-2", className)}>
+      <div className="flex items-center gap-2">
         <h2 className="text-sm font-semibold">{title}</h2>
-        {typeof count === "number" ? <span className="text-muted-foreground text-xs tabular-nums">{count}</span> : null}
-        {hint ? <span className="text-muted-foreground text-xs">{hint}</span> : null}
+        {typeof count === "number" ? <span className="bg-secondary text-muted-foreground nums rounded-md px-1.5 py-0.5 text-[11px] leading-4 font-medium">{count}</span> : null}
+        {hint ? <span className="text-subtle-foreground text-xs">{hint}</span> : null}
       </div>
       {action}
     </div>
@@ -112,8 +112,8 @@ export function TaskRow({
   return (
     <div
       className={cn(
-        "group flex items-start gap-2.5 rounded-md border bg-card px-2.5 transition-colors hover:bg-accent/40",
-        dense ? "py-1.5" : "py-2",
+        "group border-border/70 bg-card hover:border-border hover:bg-accent/30 flex items-start gap-2.5 rounded-lg border px-3 transition-colors",
+        dense ? "py-2" : "py-2.5",
         done && "opacity-70",
         className,
       )}
@@ -123,14 +123,14 @@ export function TaskRow({
         onClick={() => onToggleComplete?.(task)}
         aria-label={done ? "Reopen task" : "Complete task"}
         title={done ? "Reopen" : "Complete"}
-        className="text-muted-foreground hover:text-primary mt-0.5 shrink-0 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring/60"
+        className="text-muted-foreground hover:text-primary -m-1.5 mt-[-2px] flex size-8 shrink-0 items-center justify-center rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
-        {done ? <CheckCircle2 className="text-success size-[18px]" /> : <Circle className="size-[18px]" />}
+        {done ? <CheckCircle2 className="text-success size-[18px]" strokeWidth={1.75} /> : <Circle className="size-[18px]" strokeWidth={1.75} />}
       </button>
       <Link href={taskHref(task.id)} scroll={false} className="min-w-0 flex-1 outline-none focus-visible:underline">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-          <span className={cn("text-sm font-medium leading-5", done && "line-through")}>{task.title}</span>
-          {task.focus_rank ? <Star className="size-3.5 fill-amber-400 text-amber-400" aria-label="Top priority" /> : null}
+          <span className={cn("text-sm font-medium leading-5 text-foreground", done && "text-muted-foreground line-through")}>{task.title}</span>
+          {task.focus_rank ? <Star className="size-3.5 fill-warning text-warning" aria-label="Top priority" /> : null}
           {task.recurrence ? <Repeat className="text-muted-foreground size-3.5" aria-label="Repeats" /> : null}
           {task.status === "waiting" ? (
             <Badge variant="warning">
@@ -182,8 +182,8 @@ export function SocialPostRow({ post, className, dense = false }: { post: Social
       href={postHref(post.id)}
       scroll={false}
       className={cn(
-        "flex items-start gap-2.5 rounded-md border bg-card px-2.5 outline-none transition-colors hover:bg-accent/40 focus-visible:ring-2 focus-visible:ring-ring/60",
-        dense ? "py-1.5" : "py-2",
+        "border-border/70 bg-card hover:border-border hover:bg-accent/30 flex items-start gap-2.5 rounded-lg border px-3 outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
+        dense ? "py-2" : "py-2.5",
         done && "opacity-70",
         className,
       )}
@@ -258,13 +258,13 @@ export function EventRow({ event, prepOpen, prepTotal, socialOpen, className }: 
     <Link
       href={`/events/${event.id}`}
       className={cn(
-        "flex items-start gap-3 rounded-md border bg-card px-3 py-2 outline-none transition-colors hover:bg-accent/40 focus-visible:ring-2 focus-visible:ring-ring/60",
+        "border-border/70 bg-card hover:border-border hover:bg-accent/30 flex items-start gap-3 rounded-lg border px-3 py-2.5 outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
         className,
       )}
     >
-      <div className="bg-accent text-accent-foreground flex w-12 shrink-0 flex-col items-center rounded-md py-1 leading-none">
-        <span className="text-[10px] font-medium uppercase">{event.start_date ? formatDate(event.start_date, "monthDay").split(" ")[0] : "—"}</span>
-        <span className="text-lg font-semibold tabular-nums">{event.start_date ? formatDate(event.start_date, "monthDay").split(" ")[1] : ""}</span>
+      <div className="bg-secondary text-foreground flex w-12 shrink-0 flex-col items-center rounded-md py-1.5 leading-none">
+        <span className="text-subtle-foreground text-[10px] font-semibold tracking-wide uppercase">{event.start_date ? formatDate(event.start_date, "monthDay").split(" ")[0] : "—"}</span>
+        <span className="nums text-lg font-semibold">{event.start_date ? formatDate(event.start_date, "monthDay").split(" ")[1] : ""}</span>
       </div>
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">

@@ -60,11 +60,11 @@ export function EventsView({ events, scope, area, reviewCount, connection, token
             </span>
           ) : tokenConfigured ? (
             <span>
-              Monday.com token is set. <Link href="/settings?tab=monday" className="text-primary hover:underline">Choose a board</Link> to start importing events.
+              Monday.com token is set. <Link href="/settings?tab=monday" className="text-primary-soft hover:underline">Choose a board</Link> to start importing events.
             </span>
           ) : (
             <span>
-              Monday.com is disconnected. Add events manually, or <Link href="/settings?tab=monday" className="text-primary hover:underline">set up the integration</Link>.
+              Monday.com is disconnected. Add events manually, or <Link href="/settings?tab=monday" className="text-primary-soft hover:underline">set up the integration</Link>.
             </span>
           )
         }

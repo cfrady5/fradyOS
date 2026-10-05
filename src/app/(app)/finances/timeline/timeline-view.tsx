@@ -106,7 +106,7 @@ export function TimelineView({ entries, today, milestones, goals, events }: { en
                       {e.milestone ? (
                         <div className="flex items-center gap-0.5">
                           <Button variant="ghost" size="icon-xs" aria-label={e.milestone.is_done ? "Mark not done" : "Mark done"} onClick={() => toggleDone(e.milestone!)} disabled={pending}>
-                            <Check className={cn(e.milestone.is_done ? "text-[#0ca30c]" : null)} />
+                            <Check className={cn(e.milestone.is_done ? "text-success" : null)} />
                           </Button>
                           <Button variant="ghost" size="icon-xs" aria-label="Edit" onClick={() => setDialog({ open: true, milestone: e.milestone })}>
                             <Pencil />

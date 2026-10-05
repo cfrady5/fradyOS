@@ -57,7 +57,7 @@ export function NotificationsPopover({ initial }: { initial: Notification[] }) {
         </Button>
       </PopoverTrigger>
       <PopoverContent align="end" className="w-[min(92vw,380px)] p-0">
-        <div className="flex items-center justify-between border-b px-3 py-2">
+        <div className="border-border flex items-center justify-between border-b px-3 py-2">
           <p className="text-sm font-semibold">Notifications</p>
           <div className="flex items-center gap-1">
             {unread ? (

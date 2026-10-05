@@ -108,7 +108,7 @@ export function OverviewView({ profile, accounts, goals, history, projection, in
       </Card>
 
       <div className="grid gap-4 lg:grid-cols-5">
-        <Card className="lg:col-span-3">
+        <Card className="min-w-0 lg:col-span-3">
           <CardHeader>
             <div>
               <CardTitle>Where each month goes</CardTitle>
@@ -134,7 +134,7 @@ export function OverviewView({ profile, accounts, goals, history, projection, in
             />
           </CardContent>
         </Card>
-        <Card className="lg:col-span-2">
+        <Card className="min-w-0 lg:col-span-2">
           <CardHeader>
             <div>
               <CardTitle>Emergency fund</CardTitle>
@@ -171,7 +171,7 @@ export function OverviewView({ profile, accounts, goals, history, projection, in
                   <CardTitle className="flex items-center gap-2">
                     <g.icon className="text-muted-foreground size-4" /> {g.label}
                   </CardTitle>
-                  <span className={cn("text-sm font-semibold tabular-nums", g.key === "debt" ? "text-[#a52a2a] dark:text-[#f08080]" : null)}>{g.key === "debt" ? "−" : ""}{fmtMoney(g.items.reduce((s, a) => s + a.balance, 0))}</span>
+                  <span className={cn("text-sm font-semibold tabular-nums", g.key === "debt" ? "text-destructive" : null)}>{g.key === "debt" ? "−" : ""}{fmtMoney(g.items.reduce((s, a) => s + a.balance, 0))}</span>
                 </CardHeader>
                 <CardContent>
                   <ul className="divide-y text-sm">

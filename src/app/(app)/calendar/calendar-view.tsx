@@ -152,18 +152,18 @@ function MonthGrid({ date, items, today, weekStartsOn, onOpen, onDropPlanned }: 
   const month = date.slice(0, 7);
   const [over, setOver] = React.useState<string | null>(null);
   return (
-    <div className="overflow-hidden rounded-lg border bg-card">
-      <div className="bg-muted/50 grid grid-cols-7 text-center text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+    <div className="border-border/80 bg-card overflow-hidden rounded-xl border">
+      <div className="bg-background/60 text-subtle-foreground grid grid-cols-7 text-center text-[11px] font-semibold tracking-wide uppercase">
         {weekdayNames(weekStartsOn).map((d) => <div key={d} className="py-1.5">{d}</div>)}
       </div>
       {weeks.map((week, wi) => (
-        <div key={wi} className="grid grid-cols-7 border-t">
+        <div key={wi} className="border-border/70 grid grid-cols-7 border-t">
           {week.map((day) => {
             const dayItems = itemsOn(items, day);
             const inMonth = day.startsWith(month);
             const shown = dayItems.slice(0, 5);
             return (
-              <div key={day} className={cn("min-h-24 border-r p-1 last:border-r-0 md:min-h-28", !inMonth && "bg-muted/30", over === day && "bg-accent")}
+              <div key={day} className={cn("border-border/70 min-h-24 border-r p-1 last:border-r-0 md:min-h-28", !inMonth && "bg-background/40", over === day && "bg-accent")}
                 onDragOver={(e) => { e.preventDefault(); if (over !== day) setOver(day); }}
                 onDragLeave={() => setOver(null)}
                 onDrop={(e) => { e.preventDefault(); setOver(null); const id = e.dataTransfer.getData("text/task-id"); if (id) onDropPlanned(day, id); }}
@@ -190,7 +190,7 @@ function WeekGrid({ date, items, today, weekStartsOn, onOpen, onDropPlanned }: {
       {days.map((day) => {
         const dayItems = itemsOn(items, day);
         return (
-          <div key={day} className={cn("bg-card min-h-40 rounded-lg border p-2", over === day && "bg-accent")}
+          <div key={day} className={cn("bg-card border-border/80 min-h-40 rounded-xl border p-2.5", over === day && "bg-accent")}
             onDragOver={(e) => { e.preventDefault(); if (over !== day) setOver(day); }}
             onDragLeave={() => setOver(null)}
             onDrop={(e) => { e.preventDefault(); setOver(null); const id = e.dataTransfer.getData("text/task-id"); if (id) onDropPlanned(day, id); }}
@@ -220,7 +220,7 @@ function Agenda({ from, to, items, today, onOpen }: { from: string; to: string; 
           </h3>
           <div className="flex flex-col gap-1">
             {dayItems.map((i) => (
-              <button key={i.id} type="button" onClick={() => onOpen(i)} className={cn("flex items-center gap-2 rounded-md border bg-card px-2.5 py-1.5 text-left text-sm hover:bg-accent/40", i.done && "opacity-60")}>
+              <button key={i.id} type="button" onClick={() => onOpen(i)} className={cn("border-border/70 bg-card hover:border-border hover:bg-accent/30 flex items-center gap-2 rounded-lg border px-2.5 py-1.5 text-left text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring", i.done && "opacity-60")}>
                 <span className={cn("rounded border px-1.5 py-0.5 text-[10px] font-medium", KIND_META[i.kind].className)}>{KIND_META[i.kind].short}</span>
                 {i.readOnly ? <Lock className="text-muted-foreground size-3" aria-label="Read-only" /> : null}
                 <span className={cn("min-w-0 flex-1 truncate", i.done && "line-through")}>{i.title}</span>

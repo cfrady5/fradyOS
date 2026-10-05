@@ -143,7 +143,7 @@ export function DebtView({ profile, accounts, debts, projection, comparison, cur
                   <TableCell className="font-medium">{d.name}</TableCell>
                   <TableCell className="text-right tabular-nums">{fmtMoney(d.startBalance)}</TableCell>
                   <TableCell className="text-right tabular-nums">{fmtPct(d.rate, 2)}</TableCell>
-                  <TableCell className="text-right tabular-nums">{d.monthlyPayment > 0 ? fmtMoney(d.monthlyPayment) : <span className="text-[#9a3f1a] dark:text-[#f3a582]">none set</span>}</TableCell>
+                  <TableCell className="text-right tabular-nums">{d.monthlyPayment > 0 ? fmtMoney(d.monthlyPayment) : <span className="text-chart-serious">none set</span>}</TableCell>
                   <TableCell className="text-right tabular-nums">{d.payoffDate ? formatDate(d.payoffDate, "monthYear") : "—"}</TableCell>
                   <TableCell className="text-right tabular-nums">{fmtMoney(d.totalInterest)}</TableCell>
                 </TableRow>

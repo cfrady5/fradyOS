@@ -188,7 +188,7 @@ function QuickAddForm({ preset, onClose }: { preset?: QuickAddPreset; onClose: (
       </button>
 
       {more ? (
-        <div className="flex flex-col gap-3 rounded-md border p-3">
+        <div className="border-border/70 flex flex-col gap-3 rounded-lg border p-3">
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
             <Field label="Status">
               <NativeSelect value={draft.status} onChange={(e) => set("status", e.target.value as TaskStatus)}>
@@ -215,7 +215,7 @@ function QuickAddForm({ preset, onClose }: { preset?: QuickAddPreset; onClose: (
             </Field>
           </div>
           {draft.status === "waiting" ? (
-            <div className="grid grid-cols-1 gap-2 rounded-md bg-warning/10 p-2 sm:grid-cols-2">
+            <div className="bg-warning/10 grid grid-cols-1 gap-2 rounded-lg p-2 sm:grid-cols-2">
               <Field label="Waiting on (person)">
                 <Input value={draft.waiting_person} onChange={(e) => set("waiting_person", e.target.value)} placeholder="Name" />
               </Field>

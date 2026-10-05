@@ -87,11 +87,11 @@ export const GOAL_STATUS_META: Record<GoalStatusKey, { label: string; tone: "goo
 };
 
 export const TONE_CLASS: Record<"good" | "warning" | "serious" | "critical" | "neutral", string> = {
-  good: "bg-[#0ca30c]/12 text-[#0a7a0a] dark:text-[#4fd14f] border-[#0ca30c]/30",
-  warning: "bg-[#fab219]/18 text-[#7a5200] dark:text-[#f5c65a] border-[#fab219]/40",
-  serious: "bg-[#ec835a]/15 text-[#9a3f1a] dark:text-[#f3a582] border-[#ec835a]/40",
-  critical: "bg-[#d03b3b]/12 text-[#a52a2a] dark:text-[#f08080] border-[#d03b3b]/35",
-  neutral: "bg-muted text-muted-foreground border-transparent",
+  good: "border-success/30 bg-success/12 text-success",
+  warning: "border-warning/30 bg-warning/12 text-warning",
+  serious: "border-chart-serious/30 bg-chart-serious/12 text-chart-serious",
+  critical: "border-destructive/30 bg-destructive/12 text-destructive",
+  neutral: "border-border bg-secondary text-muted-foreground",
 };
 
 /** Chart series colors (dataviz categorical slots, light / dark). */

@@ -108,6 +108,14 @@ How sync behaves:
 - Program values that match a work area name are auto-assigned the first time an item is imported.
 - A `program` value can be re-mapped manually per event under "My local settings".
 
+## Design system
+
+The interface uses a single graphite theme ("performance-driven modernism"): background `#111318`, elevated surfaces `#1B2028`, off-white text `#F5F6F8`, electric blue `#4F7DFF` reserved for the primary action and selected states, sage `#8EAB98` as the positive accent, and neutral borders and muted text for everything else. Tokens live in `src/app/globals.css` (`--background`, `--card`, `--primary`, `--success`, `--warning`, `--border`, chart slots, radii) and every shadcn-style primitive in `src/components/ui/` reads from them, so one change propagates app-wide. Financial amounts and metrics use tabular numerals (`.nums`), focus rings are always visible, and `prefers-reduced-motion` disables transitions.
+
+### Preview mode (no database needed)
+
+`FRADYOS_PREVIEW=1 npm run dev` serves every screen from seeded demo data with no Supabase project or sign-in: `src/lib/supabase/preview/` holds an in-memory PostgREST-style client and the seed. It is handy for design work and screenshots and can never activate on Vercel (it is disabled whenever `VERCEL` is set). Writes work for the lifetime of the process and are discarded on restart.
+
 ## Time zones and dates
 
 All deadlines, planned dates and event dates are stored as Postgres `date` values and handled as `YYYY-MM-DD` strings end to end, so they never shift through UTC conversion. "Today" is computed in the user's time zone (default `America/Indiana/Indianapolis`, editable in Settings). Timestamps (created/completed/synced) are `timestamptz` and displayed in the user's zone.

@@ -88,7 +88,7 @@ export function WaitingView({ tasks, received, area, showReceived }: { tasks: Ta
           {received.length ? (
             <ul className="flex flex-col gap-1.5">
               {received.map((t) => (
-                <li key={t.id} className="flex flex-wrap items-center gap-2 rounded-md border bg-card px-3 py-2 text-sm">
+                <li key={t.id} className="flex flex-wrap items-center gap-2 border-border/70 bg-card rounded-lg border px-3 py-2 text-sm">
                   <Link href={taskHref(t.id)} scroll={false} className="font-medium hover:underline">{t.title}</Link>
                   <span className="text-muted-foreground text-xs">from {t.waiting_person ?? "someone"} · received {formatTimestamp(t.waiting_received_at, timezone)}</span>
                   <Badge variant={t.status === "completed" ? "success" : "secondary"} className="ml-auto">{t.status === "completed" ? "Completed" : "Back in To Do"}</Badge>

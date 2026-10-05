@@ -14,7 +14,7 @@ import { useShell } from "@/components/app/app-shell";
 import { useWorkspace } from "@/components/app/workspace-provider";
 import { completeTask, reopenTask } from "@/actions/tasks";
 import { PRIORITIES, TASK_STATUSES, type TaskWithRefs } from "@/lib/types";
-import { dueBucket, relativeDayLabel } from "@/lib/dates";
+import { diffDays, dueBucket, relativeDayLabel } from "@/lib/dates";
 import { TaskBoard } from "./task-board";
 import { TaskCalendar } from "./task-calendar";
 
@@ -62,6 +62,7 @@ export function TasksView({ tasks, view, month, params }: { tasks: TaskWithRefs[
     <div className="mx-auto max-w-6xl">
       <PageHeader
         title="Tasks"
+        description="Everything open, grouped the way you work. Completed work lives under Completed."
         actions={
           <Button onClick={() => openQuickAdd({ project_id: params.project, work_area_id: params.area })}>
             <Plus /> New task
@@ -174,7 +175,8 @@ function groupTasks(tasks: TaskWithRefs[], group: "due" | "status" | "project" |
       const b = t.status === "completed" ? "done" : dueBucket(t.due_date, today);
       const labels: Record<string, [string, number]> = { overdue: ["Overdue", 0], today: ["Due today", 1], tomorrow: ["Due tomorrow", 2], week: ["Next 7 days", 3], later: ["Later", 4], none: ["No due date", 5], done: ["Completed", 6] };
       const [label, order] = labels[b];
-      if (b === "week" || b === "later") add(b + (t.due_date ?? ""), b === "week" ? relativeDayLabel(t.due_date!, today) : label, order + (b === "week" ? 0 : 0), t);
+      // Each day of the coming week is its own group, in date order; everything further out is one "Later" group.
+      if (b === "week") add(`week:${t.due_date}`, relativeDayLabel(t.due_date!, today), order + diffDays(today, t.due_date!) / 100, t);
       else add(b, label, order, t);
     } else if (group === "status") {
       const i = TASK_STATUSES.findIndex((s) => s.value === t.status);

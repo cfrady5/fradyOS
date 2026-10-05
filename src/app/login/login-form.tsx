@@ -24,7 +24,7 @@ export function LoginForm({ initialError, next, allowSignup }: { initialError?: 
   const lastEmail = signInState.email ?? signUpState.email ?? magicState.email ?? "";
 
   return (
-    <div className="bg-card rounded-xl border p-5 shadow-xs">
+    <div className="bg-card border-border rounded-xl border p-5">
       <Tabs value={mode} onValueChange={(v) => setMode(v as Mode)} className="mb-4">
         <TabsList className="w-full">
           <TabsTrigger value="signin">Sign in</TabsTrigger>

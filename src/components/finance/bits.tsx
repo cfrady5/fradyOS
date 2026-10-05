@@ -24,12 +24,12 @@ export function FinanceNav() {
   const pathname = usePathname();
   return (
     <nav aria-label="Finances sections" className="-mx-1 mb-5 overflow-x-auto">
-      <ul className="bg-muted text-muted-foreground inline-flex h-8 items-center gap-0.5 rounded-lg p-[3px]">
+      <ul className="bg-background text-muted-foreground border-border inline-flex h-9 items-center gap-0.5 rounded-lg border p-[3px]">
         {FINANCE_TABS.map((t) => {
           const active = t.href === "/finances" ? pathname === "/finances" : pathname.startsWith(t.href);
           return (
             <li key={t.href}>
-              <Link href={t.href} className={cn("inline-flex h-[calc(100%-1px)] items-center rounded-md px-2.5 py-1 text-xs font-medium whitespace-nowrap transition-colors", active ? "bg-background text-foreground shadow-sm" : "hover:text-foreground")} aria-current={active ? "page" : undefined}>
+              <Link href={t.href} className={cn("inline-flex h-[calc(100%-1px)] items-center rounded-md px-3 py-1 text-xs font-medium whitespace-nowrap transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring", active ? "bg-secondary text-foreground" : "hover:text-foreground")} aria-current={active ? "page" : undefined}>
                 {t.label}
               </Link>
             </li>
@@ -42,10 +42,10 @@ export function FinanceNav() {
 
 export function StatTile({ label, value, sub, tone, className }: { label: React.ReactNode; value: React.ReactNode; sub?: React.ReactNode; tone?: "good" | "warning" | "serious" | "critical" | "neutral"; className?: string }) {
   return (
-    <Card className={cn("gap-1 py-3", className)}>
+    <Card className={cn("gap-1 py-4", className)}>
       <CardContent className="flex flex-col gap-0.5">
-        <div className="text-muted-foreground text-xs">{label}</div>
-        <div className={cn("text-xl font-semibold tabular-nums tracking-tight", tone === "critical" ? "text-[#a52a2a] dark:text-[#f08080]" : tone === "serious" ? "text-[#9a3f1a] dark:text-[#f3a582]" : null)}>{value}</div>
+        <div className="text-subtle-foreground text-[11px] font-semibold tracking-wide uppercase">{label}</div>
+        <div className={cn("nums text-2xl font-semibold tracking-tight", tone === "critical" ? "text-destructive" : tone === "serious" ? "text-chart-serious" : tone === "good" ? "text-success" : null)}>{value}</div>
         {sub ? <div className="text-muted-foreground text-xs">{sub}</div> : null}
       </CardContent>
     </Card>

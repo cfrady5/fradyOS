@@ -71,8 +71,8 @@ export function AccountsView({ accounts, debts, today, plaid }: { accounts: Fina
                     return (
                       <li key={a.id} className="flex items-center gap-3 px-4 py-2.5">
                         <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2">
-                            <span className="truncate text-sm font-medium">{a.name}</span>
+                          <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                            <span className="text-sm font-medium">{a.name}</span>
                             <span className="text-muted-foreground text-xs">{ACCOUNT_TYPES.find((t) => t.value === a.account_type)?.label}{a.institution ? ` · ${a.institution}` : ""}</span>
                             {!a.include_in_net_worth ? <span className="text-muted-foreground text-xs">(excluded)</span> : null}
                             {live ? <Badge variant={a.sync_error ? "warning" : "success"}>{a.sync_error ? "Sync issue" : "Live"}</Badge> : null}
@@ -81,13 +81,13 @@ export function AccountsView({ accounts, debts, today, plaid }: { accounts: Fina
                             {a.interest_rate != null ? <span>{fmtPct(a.interest_rate, 2)} {isLiability(a.account_type) ? "APR" : "/yr"}</span> : null}
                             {isLiability(a.account_type) ? <span>min {fmtMoney(a.minimum_payment ?? 0)} · paying {fmtMoney(d?.actual_payment || a.minimum_payment || 0)}</span> : a.monthly_contribution ? <span>+{fmtMoney(a.monthly_contribution)}/mo</span> : null}
                             {live ? (
-                              <span className={cn(a.sync_error ? "text-[#9a3f1a] dark:text-[#f3a582]" : null)}>{a.sync_error ?? (a.last_synced_at ? `synced ${timeAgo(a.last_synced_at)}` : "not synced yet")}{a.available_balance != null && Math.abs(a.available_balance - a.balance) > 0.005 ? ` · ${fmtMoney(a.available_balance)} available` : ""}</span>
+                              <span className={cn(a.sync_error ? "text-chart-serious" : null)}>{a.sync_error ?? (a.last_synced_at ? `synced ${timeAgo(a.last_synced_at)}` : "not synced yet")}{a.available_balance != null && Math.abs(a.available_balance - a.balance) > 0.005 ? ` · ${fmtMoney(a.available_balance)} available` : ""}</span>
                             ) : (
-                              <span className={cn(stale ? "text-[#9a3f1a] dark:text-[#f3a582]" : null)}>as of {formatDate(a.last_updated, "medium", today)}{stale ? " · stale" : ""}</span>
+                              <span className={cn(stale ? "text-chart-serious" : null)}>as of {formatDate(a.last_updated, "medium", today)}{stale ? " · stale" : ""}</span>
                             )}
                           </div>
                         </div>
-                        <span className={cn("text-sm font-semibold tabular-nums", isLiability(a.account_type) ? "text-[#a52a2a] dark:text-[#f08080]" : null)}>{fmtMoney(a.balance)}</span>
+                        <span className={cn("text-sm font-semibold tabular-nums", isLiability(a.account_type) ? "text-destructive" : null)}>{fmtMoney(a.balance)}</span>
                         <Button variant="ghost" size="icon-sm" aria-label={`Edit ${a.name}`} onClick={() => setDialog({ open: true, account: a })}>
                           <Pencil />
                         </Button>

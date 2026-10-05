@@ -92,7 +92,7 @@ export function GoalsView({ goals, accounts, projection, allocation, suggestedPr
         <EmptyState icon={<Target />} title="No goals yet" description="An emergency fund, a debt to clear, a down payment, a trip. Give it a target and a date and the projection tells you whether you are on track." action={<Button onClick={() => setDialog({ open: true })}><Plus /> New goal</Button>} />
       ) : (
         <div className="grid gap-4 lg:grid-cols-5">
-          <div className="flex flex-col gap-2 lg:col-span-3">
+          <div className="flex min-w-0 flex-col gap-2 lg:col-span-3">
             {ordered.map((g, idx) => {
               const r = resultById.get(g.id);
               const proj = g.linked_project_id ? projectById.get(g.linked_project_id) : null;
@@ -185,7 +185,7 @@ export function GoalsView({ goals, accounts, projection, allocation, suggestedPr
             ) : null}
           </div>
 
-          <div className="flex flex-col gap-4 lg:col-span-2">
+          <div className="flex min-w-0 flex-col gap-4 lg:col-span-2">
             <Card>
               <CardHeader>
                 <div>

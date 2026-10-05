@@ -87,7 +87,7 @@ export function BudgetView({ profile, categories, actuals, month, today, live }:
           <div className="text-muted-foreground mt-3 flex justify-end gap-6 text-sm tabular-nums">
             <span>Budgeted {fmtMoney(totalBudget)}</span>
             <span>Actual {fmtMoney(totalActual)}</span>
-            <span className={cn(totalBudget - totalActual < 0 ? "text-[#a52a2a] dark:text-[#f08080]" : null)}>Left {fmtMoney(totalBudget - totalActual)}</span>
+            <span className={cn(totalBudget - totalActual < 0 ? "text-destructive" : null)}>Left {fmtMoney(totalBudget - totalActual)}</span>
           </div>
         </CardContent>
       </Card>
@@ -158,7 +158,7 @@ function CategoryRow({ category, actual, liveActual, month }: { category: Budget
           </Button>
         </div>
       </TableCell>
-      <TableCell className={cn("text-right tabular-nums", left < 0 ? "text-[#a52a2a] dark:text-[#f08080]" : "text-muted-foreground")}>
+      <TableCell className={cn("text-right tabular-nums", left < 0 ? "text-destructive" : "text-muted-foreground")}>
         {effective != null ? fmtMoney(left) : "—"}
         {!actual && liveActual != null ? <span className="text-muted-foreground ml-1 text-[10px]">auto</span> : null}
       </TableCell>
@@ -267,7 +267,7 @@ function LiveCashFlow({ live, today, profile }: { live: BudgetLive; today: strin
                 <TableCell className="text-right tabular-nums">{fmtMoney(m.fixed)}</TableCell>
                 <TableCell className="text-right tabular-nums">{fmtMoney(m.variable)}</TableCell>
                 <TableCell className="text-right tabular-nums">{fmtMoney(m.loanPayments)}</TableCell>
-                <TableCell className={cn("text-right tabular-nums", m.income - m.spending - m.loanPayments < 0 ? "text-[#a52a2a] dark:text-[#f08080]" : null)}>{fmtMoney(m.income - m.spending - m.loanPayments)}</TableCell>
+                <TableCell className={cn("text-right tabular-nums", m.income - m.spending - m.loanPayments < 0 ? "text-destructive" : null)}>{fmtMoney(m.income - m.spending - m.loanPayments)}</TableCell>
               </TableRow>
             ))}
             {basis.length ? (

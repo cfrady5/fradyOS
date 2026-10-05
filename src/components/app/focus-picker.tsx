@@ -74,7 +74,7 @@ function FocusPickerBody({ current, onClose }: { current: string[]; onClose: () 
         <Search className="text-muted-foreground absolute top-2.5 left-2.5 size-4" />
         <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Filter tasks…" className="pl-8" autoFocus />
       </div>
-      <div className="max-h-[50vh] overflow-y-auto rounded-md border">
+      <div className="border-border max-h-[50vh] overflow-y-auto rounded-lg border">
         {state.loading ? (
           <div className="text-muted-foreground flex items-center gap-2 p-4 text-sm">
             <Loader2 className="size-4 animate-spin" /> Loading tasks…

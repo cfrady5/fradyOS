@@ -111,7 +111,7 @@ export function ScenariosView({ inputs, accounts, scenarios, loadId }: { inputs:
   return (
     <div className="flex flex-col gap-6">
       <div className="grid gap-4 lg:grid-cols-5">
-        <Card className="lg:col-span-2">
+        <Card className="min-w-0 lg:col-span-2">
           <CardHeader>
             <div>
               <CardTitle>Build a scenario</CardTitle>
@@ -166,7 +166,7 @@ export function ScenariosView({ inputs, accounts, scenarios, loadId }: { inputs:
           </CardContent>
         </Card>
 
-        <div className="flex flex-col gap-4 lg:col-span-3">
+        <div className="flex min-w-0 flex-col gap-4 lg:col-span-3">
           <Card>
             <CardHeader className="items-center">
               <div>
@@ -259,7 +259,7 @@ export function ScenariosView({ inputs, accounts, scenarios, loadId }: { inputs:
                     <span className="text-muted-foreground ml-2 text-xs">{s.assumptions.changes.length} change{s.assumptions.changes.length === 1 ? "" : "s"}{editingId === s.id ? " · editing" : ""}</span>
                   </button>
                   <Button variant="ghost" size="icon-xs" aria-label={s.is_favorite ? "Unfavorite" : "Favorite"} onClick={() => toggleFavorite(s)}>
-                    <Star className={cn(s.is_favorite ? "fill-current text-[#eda100]" : null)} />
+                    <Star className={cn(s.is_favorite ? "fill-current text-warning" : null)} />
                   </Button>
                   <Button variant="ghost" size="icon-xs" aria-label="Delete" onClick={() => remove(s)}>
                     <Trash2 />

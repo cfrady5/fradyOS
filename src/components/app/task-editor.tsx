@@ -140,7 +140,7 @@ export function TaskEditor({ detail, onChanged, onClose }: { detail: TaskDetail;
 
   return (
     <div className="flex flex-col">
-      <div className="sticky top-0 z-10 flex items-center gap-2 border-b bg-background/95 px-4 py-2.5 backdrop-blur">
+      <div className="border-border bg-card/95 sticky top-0 z-10 flex flex-wrap items-center gap-2 border-b py-2.5 pr-14 pl-4 backdrop-blur">
         <TaskStatusBadge status={t.status} />
         <PriorityBadge priority={t.priority} />
         {!isDone ? <DueBadge date={t.due_date} time={t.due_time} today={today} /> : null}
@@ -159,7 +159,7 @@ export function TaskEditor({ detail, onChanged, onClose }: { detail: TaskDetail;
               })
             }
           >
-            <Star className={t.focus_rank ? "fill-amber-400 text-amber-400" : ""} />
+            <Star className={t.focus_rank ? "fill-warning text-warning" : ""} />
           </Button>
           {isDone ? (
             <Button variant="outline" size="sm" onClick={reopen} disabled={pending}>
@@ -224,7 +224,7 @@ export function TaskEditor({ detail, onChanged, onClose }: { detail: TaskDetail;
         {eventLinked ? (
           <p className="text-muted-foreground text-xs">
             Event:{" "}
-            <Link href={`/events/${eventLinked.id}`} className="text-primary hover:underline">
+            <Link href={`/events/${eventLinked.id}`} className="text-primary-soft hover:underline">
               {eventLinked.name}
             </Link>
             {eventLinked.start_date ? ` · ${formatDate(eventLinked.start_date, "medium", today)}` : ""}

@@ -33,7 +33,7 @@ export function ApplyTemplateDialog({ open, onOpenChange, event, templates, item
         {templates.length === 0 ? (
           <Alert>
             <AlertDescription>
-              No templates yet. <Link href="/settings?tab=templates" className="text-primary hover:underline">Create one in Settings</Link>.
+              No templates yet. <Link href="/settings?tab=templates" className="text-primary-soft hover:underline">Create one in Settings</Link>.
             </AlertDescription>
           </Alert>
         ) : (
@@ -118,7 +118,7 @@ function ApplyTemplateBody({ event, templates, items, existing, socialBoardName,
         ) : null}
       </div>
       {rows.length === 0 ? (
-        <p className="text-muted-foreground text-sm">This template has no milestones. <Link href="/settings?tab=templates" className="text-primary hover:underline">Add some</Link>.</p>
+        <p className="text-muted-foreground text-sm">This template has no milestones. <Link href="/settings?tab=templates" className="text-primary-soft hover:underline">Add some</Link>.</p>
       ) : (
         <div className="max-h-[50vh] overflow-y-auto rounded-md border">
           <table className="w-full text-sm">

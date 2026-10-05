@@ -58,7 +58,7 @@ export function TaskCalendar({ tasks, month, onMonthChange }: { tasks: TaskWithR
         </div>
       </div>
       <div className="overflow-hidden rounded-lg border">
-        <div className="bg-muted/50 grid grid-cols-7 text-center text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+        <div className="bg-background/60 text-subtle-foreground grid grid-cols-7 text-center text-[11px] font-semibold tracking-wide uppercase">
           {weekdayNames(weekStartsOn).map((d) => (
             <div key={d} className="py-1.5">{d}</div>
           ))}

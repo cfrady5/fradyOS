@@ -12,6 +12,17 @@ export function isPublicPath(pathname: string) {
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
 
+  // Preview mode (local only, never on Vercel): no session, every page renders seeded demo data.
+  if (process.env.FRADYOS_PREVIEW === "1" && !process.env.VERCEL) {
+    if (request.nextUrl.pathname === "/login") {
+      const url = request.nextUrl.clone();
+      url.pathname = "/";
+      url.search = "";
+      return NextResponse.redirect(url);
+    }
+    return supabaseResponse;
+  }
+
   if (!isSupabaseConfigured()) {
     // Let the setup page explain what is missing instead of crashing.
     if (request.nextUrl.pathname.startsWith("/setup")) return supabaseResponse;
