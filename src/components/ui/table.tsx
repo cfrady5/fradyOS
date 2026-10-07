@@ -10,7 +10,7 @@ function Table({ className, ...props }: React.ComponentProps<"table">) {
 }
 
 function TableHeader({ className, ...props }: React.ComponentProps<"thead">) {
-  return <thead data-slot="table-header" className={cn("[&_tr]:border-b", className)} {...props} />;
+  return <thead data-slot="table-header" className={cn("[&_tr]:border-line-1 [&_tr]:border-b", className)} {...props} />;
 }
 
 function TableBody({ className, ...props }: React.ComponentProps<"tbody">) {
@@ -18,36 +18,19 @@ function TableBody({ className, ...props }: React.ComponentProps<"tbody">) {
 }
 
 function TableRow({ className, ...props }: React.ComponentProps<"tr">) {
-  return (
-    <tr
-      data-slot="table-row"
-      className={cn("hover:bg-accent/40 data-[state=selected]:bg-accent border-b border-border/70 transition-colors", className)}
-      {...props}
-    />
-  );
+  return <tr data-slot="table-row" className={cn("hover:bg-surface-hover data-[state=selected]:bg-brand/8 border-line-1 border-b transition-colors duration-150", className)} {...props} />;
 }
 
 function TableHead({ className, ...props }: React.ComponentProps<"th">) {
-  return (
-    <th
-      data-slot="table-head"
-      className={cn(
-        "text-subtle-foreground h-9 px-2 text-left align-middle text-[11px] font-semibold uppercase tracking-wide whitespace-nowrap [&:has([role=checkbox])]:pr-0",
-        className,
-      )}
-      {...props}
-    />
-  );
+  return <th data-slot="table-head" className={cn("eyebrow h-9 px-2.5 text-left align-middle whitespace-nowrap [&:has([role=checkbox])]:pr-0", className)} {...props} />;
 }
 
 function TableCell({ className, ...props }: React.ComponentProps<"td">) {
-  return (
-    <td
-      data-slot="table-cell"
-      className={cn("p-2 align-middle whitespace-nowrap nums [&:has([role=checkbox])]:pr-0", className)}
-      {...props}
-    />
-  );
+  return <td data-slot="table-cell" className={cn("px-2.5 py-2.5 align-middle whitespace-nowrap [&:has([role=checkbox])]:pr-0", className)} {...props} />;
 }
 
-export { Table, TableHeader, TableBody, TableHead, TableRow, TableCell };
+function TableCaption({ className, ...props }: React.ComponentProps<"caption">) {
+  return <caption data-slot="table-caption" className={cn("text-text-2 mt-4 text-sm", className)} {...props} />;
+}
+
+export { Table, TableHeader, TableBody, TableHead, TableRow, TableCell, TableCaption };

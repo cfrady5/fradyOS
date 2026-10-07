@@ -39,7 +39,13 @@ const RELATIONS: Record<string, Record<string, { table: string; fk: string; many
 let tables: Record<string, Row[]> | null = null;
 let seq = 1000;
 function db() {
-  if (!tables) tables = seedTables();
+  if (!tables) {
+    tables = seedTables();
+    // FRADYOS_PREVIEW_EMPTY=1 keeps only the profile and work areas so empty states can be reviewed.
+    if (process.env.FRADYOS_PREVIEW_EMPTY === "1") {
+      for (const name of Object.keys(tables)) if (name !== "profiles" && name !== "work_areas") tables[name] = [];
+    }
+  }
   return tables;
 }
 function rows(table: string): Row[] {

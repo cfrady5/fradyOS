@@ -8,16 +8,54 @@ function Tabs({ className, ...props }: React.ComponentProps<typeof TabsPrimitive
   return <TabsPrimitive.Root data-slot="tabs" className={cn("flex min-w-0 max-w-full flex-col gap-3", className)} {...props} />;
 }
 
-function TabsList({ className, ...props }: React.ComponentProps<typeof TabsPrimitive.List>) {
+/**
+ * Segmented control. The active background is a single indicator element that slides between
+ * triggers, so switching views reads as one piece moving rather than two things blinking.
+ */
+function TabsList({ className, children, ...props }: React.ComponentProps<typeof TabsPrimitive.List>) {
+  const ref = React.useRef<HTMLDivElement>(null);
+  const [indicator, setIndicator] = React.useState<{ left: number; width: number } | null>(null);
+
+  React.useEffect(() => {
+    const list = ref.current;
+    if (!list) return;
+    let frame = 0;
+    const measure = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        const active = list.querySelector<HTMLElement>('[data-slot="tabs-trigger"][data-state="active"]');
+        setIndicator(active ? { left: active.offsetLeft, width: active.offsetWidth } : null);
+      });
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(list);
+    const mo = new MutationObserver(measure);
+    mo.observe(list, { attributes: true, subtree: true, attributeFilter: ["data-state"], childList: true });
+    return () => {
+      cancelAnimationFrame(frame);
+      ro.disconnect();
+      mo.disconnect();
+    };
+  }, []);
+
   return (
     <TabsPrimitive.List
+      ref={ref}
       data-slot="tabs-list"
-      className={cn(
-        "bg-background text-muted-foreground border-border inline-flex h-9 w-fit max-w-full items-center justify-start overflow-x-auto rounded-lg border p-[3px] [scrollbar-width:none]",
-        className,
-      )}
+      className={cn("bg-surface-1 border-line-1 text-text-2 relative inline-flex h-9 w-fit max-w-full items-center justify-start overflow-x-auto rounded-md border p-1 [scrollbar-width:none]", className)}
       {...props}
-    />
+    >
+      {indicator ? (
+        <span
+          aria-hidden
+          data-slot="tabs-indicator"
+          className="bg-surface-3 motion-safe:transition-[left,width] pointer-events-none absolute top-1 bottom-1 rounded-[6px] duration-200 ease-out"
+          style={{ left: indicator.left, width: indicator.width }}
+        />
+      ) : null}
+      {children}
+    </TabsPrimitive.List>
   );
 }
 
@@ -26,7 +64,9 @@ function TabsTrigger({ className, ...props }: React.ComponentProps<typeof TabsPr
     <TabsPrimitive.Trigger
       data-slot="tabs-trigger"
       className={cn(
-        "data-[state=active]:bg-secondary data-[state=active]:text-foreground hover:text-foreground focus-visible:border-ring focus-visible:ring-ring/35 inline-flex h-[calc(100%-1px)] flex-1 items-center justify-center gap-1.5 rounded-md border border-transparent px-3 py-1 text-xs font-medium whitespace-nowrap transition-[color,background-color,box-shadow] focus-visible:ring-[3px] focus-visible:outline-1 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        "hover:text-foreground data-[state=active]:text-foreground focus-visible:ring-brand/30 relative z-10 inline-flex h-full flex-1 items-center justify-center gap-1.5 rounded-[6px] px-3 text-[13px] font-medium whitespace-nowrap transition-colors duration-150 outline-none focus-visible:ring-[3px] disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        // Fallback tint before the indicator has been measured (first paint, reduced motion).
+        "data-[state=active]:[&:not(:has(~[data-slot=tabs-indicator]))]:bg-surface-3",
         className,
       )}
       {...props}
@@ -35,7 +75,7 @@ function TabsTrigger({ className, ...props }: React.ComponentProps<typeof TabsPr
 }
 
 function TabsContent({ className, ...props }: React.ComponentProps<typeof TabsPrimitive.Content>) {
-  return <TabsPrimitive.Content data-slot="tabs-content" className={cn("flex-1 outline-none", className)} {...props} />;
+  return <TabsPrimitive.Content data-slot="tabs-content" className={cn("motion-safe:animate-fade-in flex-1 outline-none", className)} {...props} />;
 }
 
 export { Tabs, TabsList, TabsTrigger, TabsContent };

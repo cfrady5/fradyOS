@@ -26,10 +26,11 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/settings", label: "Settings", icon: Settings, key: "s", group: "system" },
 ];
 
-export const NAV_GROUPS: { key: NavGroup; label: string | null }[] = [
-  { key: "work", label: "Work" },
-  { key: "money", label: "Money" },
-  { key: "system", label: null },
+/** Navigation groups carry a quiet two-digit index ("01 Work") that page eyebrows reuse for orientation. */
+export const NAV_GROUPS: { key: NavGroup; label: string | null; index: string | null }[] = [
+  { key: "work", label: "Work", index: "01" },
+  { key: "money", label: "Money", index: "02" },
+  { key: "system", label: null, index: null },
 ];
 
 /** Items shown in the mobile bottom bar (the rest live behind "More"). */
@@ -38,4 +39,12 @@ export const MOBILE_NAV_ITEMS = NAV_ITEMS.filter((i) => i.mobile);
 export function isActive(pathname: string, href: string) {
   if (href === "/") return pathname === "/";
   return pathname === href || pathname.startsWith(href + "/");
+}
+
+/** Where a path sits in the navigation: its item, its group and whether it is a nested page. */
+export function navCrumb(pathname: string) {
+  const item = NAV_ITEMS.find((i) => isActive(pathname, i.href));
+  if (!item) return null;
+  const group = NAV_GROUPS.find((g) => g.key === item.group) ?? NAV_GROUPS[0];
+  return { item, group, nested: pathname !== item.href };
 }
