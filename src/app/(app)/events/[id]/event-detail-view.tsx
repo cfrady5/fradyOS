@@ -2,18 +2,18 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { toast } from "sonner";
-import { ArrowLeft, ExternalLink, Lock, Pencil, Plus, Trash2, Archive, AlertTriangle, CalendarClock, Check, Loader2, Wand2, MapPin, User, Globe, UploadCloud } from "lucide-react";
+import { ArrowLeft, ExternalLink, Lock, Pencil, Plus, Trash2, Archive, AlertTriangle, CalendarClock, Check, Wand2, MapPin, User, Globe, UploadCloud } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { EmptyState } from "@/components/ui/empty-state";
-import { AreaDot, SectionHeader, SocialPostRow, TaskRow } from "@/components/app/items";
+import { AreaTag, DateBlock, MetaRow, PageHeader, RowList, SectionHeader, SocialPostRow, TaskRow } from "@/components/app/items";
+import { navCrumb } from "@/components/app/nav";
 import { EventDialog } from "@/components/app/event-dialog";
 import { AttachmentsList, NotesList } from "@/components/app/detail-parts";
 import { AreaSelect, Field, ProjectSelect } from "@/components/app/form-fields";
@@ -29,9 +29,11 @@ import type { EventDetail } from "@/lib/data/events";
 import type { TaskWithRefs } from "@/lib/types";
 import { formatDate, formatDateRange, formatTime, formatTimestamp } from "@/lib/dates";
 import { proposeDateChanges } from "@/lib/templates";
+import { cn } from "@/lib/utils";
 
 export function EventDetailView({ detail }: { detail: EventDetail }) {
   const router = useRouter();
+  const pathname = usePathname();
   const { today, timezone } = useWorkspace();
   const { openQuickAdd } = useShell();
   const [editOpen, setEditOpen] = React.useState(false);
@@ -39,6 +41,7 @@ export function EventDetailView({ detail }: { detail: EventDetail }) {
   const [pending, startTransition] = React.useTransition();
   const e = detail.event;
   const isMonday = e.source === "monday";
+  const crumb = navCrumb(pathname);
 
   const [local, setLocal] = React.useState({ work_area_id: e.work_area_id, project_id: e.project_id, local_notes: e.local_notes ?? "" });
   const localDirty = local.work_area_id !== e.work_area_id || local.project_id !== e.project_id || local.local_notes !== (e.local_notes ?? "");
@@ -59,6 +62,8 @@ export function EventDetailView({ detail }: { detail: EventDetail }) {
   const [deselected, setDeselected] = React.useState<Set<string>>(new Set());
   const selected = new Set(proposals.map((p) => p.id).filter((id) => !deselected.has(id)));
   const flagged = e.sync_flag !== "none" && !e.review_dismissed_at;
+  const pendingPosts = detail.posts.filter((p) => p.status !== "published").length;
+  const unsentPosts = detail.posts.filter((p) => !p.monday_item_id).length;
 
   function applyProposals(mode: "accept" | "keep") {
     const task_ids = proposals.filter((p) => p.kind === "task" && selected.has(p.id)).map((p) => p.id);
@@ -73,58 +78,68 @@ export function EventDetailView({ detail }: { detail: EventDetail }) {
 
   return (
     <div className="mx-auto max-w-6xl">
-      <div className="mb-4">
-        <Link href="/events" className="text-muted-foreground inline-flex items-center gap-1 text-xs hover:underline">
-          <ArrowLeft className="size-3" /> Events
-        </Link>
-      </div>
-
-      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-xl font-semibold tracking-tight md:text-2xl">{e.name}</h1>
-            {isMonday ? (
-              <Badge variant="muted"><Lock /> Synced from Monday.com</Badge>
-            ) : (
-              <Badge variant="secondary">Manual</Badge>
-            )}
-            {e.status ? <Badge variant="outline">{e.status}</Badge> : null}
-          </div>
-          <div className="text-muted-foreground mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
-            <span className="inline-flex items-center gap-1"><CalendarClock className="size-3.5" /> {e.start_date ? formatDateRange(e.start_date, e.end_date, today) : "No date"}{e.start_time ? ` · ${formatTime(e.start_time)}` : ""}</span>
-            {e.location ? <span className="inline-flex items-center gap-1"><MapPin className="size-3.5" /> {e.location}</span> : null}
-            {e.owner ? <span className="inline-flex items-center gap-1"><User className="size-3.5" /> {e.owner}</span> : null}
-            {e.program ? <span>{e.program}</span> : null}
-            {e.website_url ? (
-              <a href={e.website_url} target="_blank" rel="noreferrer noopener" className="text-primary inline-flex items-center gap-1 hover:underline"><Globe className="size-3.5" /> Event website</a>
+      <PageHeader
+        eyebrow={
+          <>
+            {crumb?.group.index ? <span className="index">{crumb.group.index}</span> : null}
+            {crumb?.group.label ? <span>{crumb.group.label}</span> : null}
+            <span className="text-line-3" aria-hidden>
+              /
+            </span>
+            <Link href="/events" className="hover:text-text-1 focus-visible:ring-brand/40 inline-flex items-center gap-1 rounded-sm transition-colors outline-none focus-visible:ring-2">
+              <ArrowLeft className="size-3" aria-hidden /> Events
+            </Link>
+          </>
+        }
+        title={
+          <span className="flex items-center gap-3">
+            <DateBlock date={e.start_date} />
+            <span className="min-w-0">{e.name}</span>
+          </span>
+        }
+        actions={
+          <>
+            {!isMonday ? (
+              <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}><Pencil /> Edit</Button>
             ) : null}
-            {e.monday_item_url ? (
-              <a href={e.monday_item_url} target="_blank" rel="noreferrer noopener" className="text-primary inline-flex items-center gap-1 hover:underline"><ExternalLink className="size-3.5" /> Open in Monday.com</a>
-            ) : null}
-          </div>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {!isMonday ? (
-            <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}><Pencil /> Edit</Button>
-          ) : null}
-          <Button variant="outline" size="sm" onClick={() => setTemplateOpen(true)} disabled={!e.start_date} title={!e.start_date ? "Add a start date first" : undefined}><Wand2 /> Apply template</Button>
-          <Button variant="ghost" size="sm" onClick={() => startTransition(async () => { const r = await archiveEvent(e.id, !e.is_archived); if (!r.ok) toast.error(r.error); else { toast.success(e.is_archived ? "Restored" : "Archived"); router.refresh(); } })}>
-            <Archive /> {e.is_archived ? "Restore" : "Archive"}
-          </Button>
-          {!isMonday || e.sync_flag === "removed" ? (
-            <Button variant="ghost" size="sm" className="text-destructive" onClick={() => { if (!window.confirm("Delete this event? Linked tasks and posts are kept.")) return; startTransition(async () => { const r = await deleteEvent(e.id); if (!r.ok) toast.error(r.error); else { toast.success("Event deleted"); router.push("/events"); } }); }}>
-              <Trash2 /> Delete
+            <Button variant="outline" size="sm" onClick={() => setTemplateOpen(true)} disabled={!e.start_date} title={!e.start_date ? "Add a start date first" : undefined}><Wand2 /> Apply template</Button>
+            <Button variant="ghost" size="sm" onClick={() => startTransition(async () => { const r = await archiveEvent(e.id, !e.is_archived); if (!r.ok) toast.error(r.error); else { toast.success(e.is_archived ? "Restored" : "Archived"); router.refresh(); } })}>
+              <Archive /> {e.is_archived ? "Restore" : "Archive"}
             </Button>
+            {!isMonday || e.sync_flag === "removed" ? (
+              <Button variant="ghost" size="sm" className="text-danger" onClick={() => { if (!window.confirm("Delete this event? Linked tasks and posts are kept.")) return; startTransition(async () => { const r = await deleteEvent(e.id); if (!r.ok) toast.error(r.error); else { toast.success("Event deleted"); router.push("/events"); } }); }}>
+                <Trash2 /> Delete
+              </Button>
+            ) : null}
+          </>
+        }
+      >
+        <MetaRow className="-mt-1">
+          {isMonday ? (
+            <Badge variant="muted"><Lock /> Synced from Monday.com</Badge>
+          ) : (
+            <Badge variant="secondary">Manual</Badge>
+          )}
+          {e.status ? <Badge variant="outline">{e.status}</Badge> : null}
+          <span className="nums inline-flex items-center gap-1"><CalendarClock className="size-3" aria-hidden /> {e.start_date ? formatDateRange(e.start_date, e.end_date, today) : "No date"}{e.start_time ? ` · ${formatTime(e.start_time)}` : ""}</span>
+          {e.location ? <span className="inline-flex items-center gap-1"><MapPin className="size-3" aria-hidden /> {e.location}</span> : null}
+          {e.owner ? <span className="inline-flex items-center gap-1"><User className="size-3" aria-hidden /> {e.owner}</span> : null}
+          {e.program ? <span>{e.program}</span> : null}
+          {e.website_url ? (
+            <a href={e.website_url} target="_blank" rel="noreferrer noopener" className="text-brand-soft inline-flex items-center gap-1 hover:underline"><Globe className="size-3" aria-hidden /> Event website</a>
           ) : null}
-        </div>
-      </div>
+          {e.monday_item_url ? (
+            <a href={e.monday_item_url} target="_blank" rel="noreferrer noopener" className="text-brand-soft inline-flex items-center gap-1 hover:underline"><ExternalLink className="size-3" aria-hidden /> Open in Monday.com</a>
+          ) : null}
+        </MetaRow>
+      </PageHeader>
 
       {flagged ? (
-        <Alert variant="destructive" className="mb-4">
+        <Alert variant="warning" className="mb-4">
           <AlertTriangle />
           <AlertTitle>{e.sync_flag === "removed" ? "This item was removed from the Monday.com board" : "This event looks canceled in Monday.com"}</AlertTitle>
           <AlertDescription>
-            <p>{e.sync_flag_reason}{e.sync_flag_at ? ` · noticed ${formatTimestamp(e.sync_flag_at, timezone)}` : ""}. Your {openTasks.length} open prep task{openTasks.length === 1 ? "" : "s"} and {detail.posts.filter((p) => p.status !== "published").length} pending post{detail.posts.filter((p) => p.status !== "published").length === 1 ? "" : "s"} were left untouched.</p>
+            <p>{e.sync_flag_reason}{e.sync_flag_at ? ` · noticed ${formatTimestamp(e.sync_flag_at, timezone)}` : ""}. Your {openTasks.length} open prep task{openTasks.length === 1 ? "" : "s"} and {pendingPosts} pending post{pendingPosts === 1 ? "" : "s"} were left untouched.</p>
             <div className="mt-2 flex flex-wrap gap-2">
               <Button size="sm" variant="outline" disabled={pending} onClick={() => startTransition(async () => { const r = await dismissEventFlag(e.id); if (!r.ok) toast.error(r.error); else router.refresh(); })}><Check /> Keep and dismiss</Button>
               <Button size="sm" variant="outline" disabled={pending} onClick={() => startTransition(async () => { const r = await archiveEvent(e.id); if (!r.ok) toast.error(r.error); else { toast.success("Archived"); router.refresh(); } })}><Archive /> Archive event</Button>
@@ -134,11 +149,11 @@ export function EventDetailView({ detail }: { detail: EventDetail }) {
       ) : null}
 
       {e.dates_changed_at && e.previous_start_date !== undefined && (e.previous_start_date !== e.start_date || e.previous_end_date !== e.end_date) ? (
-        <Alert variant="warning" className="mb-4">
+        <Alert variant="info" className="mb-4">
           <CalendarClock />
           <AlertTitle>Event dates changed</AlertTitle>
           <AlertDescription>
-            <p>
+            <p className="nums">
               {formatDateRange(e.previous_start_date, e.previous_end_date, today) || "No date"} → {formatDateRange(e.start_date, e.end_date, today) || "No date"} ({formatTimestamp(e.dates_changed_at, timezone)}).
               {proposals.length === 0 ? " No unfinished template-based items need moving." : ""}
             </p>
@@ -148,17 +163,19 @@ export function EventDetailView({ detail }: { detail: EventDetail }) {
       ) : null}
 
       {proposals.length ? (
-        <div className="border-warning/40 bg-warning/10 mb-4 rounded-xl border p-3">
-          <p className="text-sm font-semibold">Proposed date changes ({proposals.length})</p>
-          <p className="text-muted-foreground mb-2 text-xs">The event moved. These unfinished items were created from a template and have not been manually overridden. Completed work and manual dates are never changed.</p>
-          <ul className="flex flex-col gap-1">
+        <section className="border-line-1 bg-surface-1 mb-6 rounded-lg border px-4 py-3" aria-labelledby="event-proposals">
+          <p id="event-proposals" className="text-heading text-text-1 flex items-center gap-2">
+            Proposed date changes <span className="index">{proposals.length}</span>
+          </p>
+          <p className="text-text-2 text-meta mt-1">The event moved. These unfinished items were created from a template and have not been manually overridden. Completed work and manual dates are never changed.</p>
+          <ul className="hairline-rows mt-2">
             {proposals.map((p) => (
-              <li key={p.id} className="bg-card border-border/70 flex items-start gap-2 rounded-lg border px-2.5 py-1.5 text-sm">
+              <li key={p.id} className="flex items-start gap-3 py-2 text-sm">
                 <Checkbox checked={selected.has(p.id)} onCheckedChange={(v) => setDeselected((s) => { const n = new Set(s); if (v) n.delete(p.id); else n.add(p.id); return n; })} aria-label={`Select ${p.title}`} className="mt-0.5" />
                 <div className="min-w-0 flex-1">
-                  <span className="font-medium">{p.title}</span> <span className="text-muted-foreground text-xs">({p.kind === "task" ? "task" : "post"})</span>
-                  <div className="text-muted-foreground text-xs tabular-nums">
-                    {p.kind === "task" ? "Due" : "Publish"} {p.current.date ? formatDate(p.current.date, "medium", today) : "none"} → <span className="text-foreground font-medium">{formatDate(p.proposed.date, "medium", today)}</span>
+                  <span className="text-text-1 font-medium">{p.title}</span> <span className="text-text-3 text-meta">({p.kind === "task" ? "task" : "post"})</span>
+                  <div className="text-text-3 text-meta nums">
+                    {p.kind === "task" ? "Due" : "Publish"} {p.current.date ? formatDate(p.current.date, "medium", today) : "none"} → <span className="text-text-1 font-medium">{formatDate(p.proposed.date, "medium", today)}</span>
                     {p.kind === "social" && (p.proposed.draft || p.proposed.approval) ? (
                       <span> · draft {p.proposed.draft ? formatDate(p.proposed.draft, "short", today) : "—"} · approval {p.proposed.approval ? formatDate(p.proposed.approval, "short", today) : "—"}</span>
                     ) : null}
@@ -167,84 +184,98 @@ export function EventDetailView({ detail }: { detail: EventDetail }) {
               </li>
             ))}
           </ul>
-          <div className="mt-2 flex flex-wrap gap-2">
-            <Button size="sm" disabled={pending || selected.size === 0} onClick={() => applyProposals("accept")}>{pending ? <Loader2 className="animate-spin" /> : <Check />} Apply selected</Button>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Button size="sm" loading={pending} disabled={pending || selected.size === 0} onClick={() => applyProposals("accept")}>{pending ? null : <Check />} Apply selected</Button>
             <Button size="sm" variant="outline" disabled={pending || selected.size === 0} onClick={() => applyProposals("keep")}>Keep current dates for selected</Button>
           </div>
-        </div>
+        </section>
       ) : null}
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <div className="flex flex-col gap-4 lg:col-span-2">
-          <section>
-            <SectionHeader title="Preparation checklist" count={openTasks.length} hint={detail.tasks.length ? `${doneTasks.length}/${detail.tasks.length} done` : undefined} action={<Button size="sm" variant="outline" onClick={() => openQuickAdd({ event_id: e.id, work_area_id: e.work_area_id, project_id: e.project_id, due_date: e.start_date })}><Plus /> Add prep task</Button>} />
-            {detail.tasks.length ? <Progress value={pct} className="mb-2" /> : null}
+      <div className="grid gap-x-10 gap-y-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,20rem)] lg:items-start">
+        <div className="flex min-w-0 flex-col gap-8">
+          <section aria-labelledby="event-prep">
+            <SectionHeader
+              title={<span id="event-prep">Preparation checklist</span>}
+              count={openTasks.length}
+              hint={detail.tasks.length ? `${doneTasks.length}/${detail.tasks.length} done` : undefined}
+              action={
+                <Button size="sm" variant="ghost" onClick={() => openQuickAdd({ event_id: e.id, work_area_id: e.work_area_id, project_id: e.project_id, due_date: e.start_date })}>
+                  <Plus /> Add prep task
+                </Button>
+              }
+            />
+            {detail.tasks.length ? <Progress value={pct} className="mt-3 mb-1" aria-label={`${pct}% of preparation tasks done`} /> : null}
             {openTasks.length ? (
-              <div className="flex flex-col gap-1.5">
+              <RowList className="mt-1">
                 {openTasks.map((t) => (
                   <TaskRow key={t.id} task={t} onToggleComplete={toggle} />
                 ))}
-              </div>
+              </RowList>
             ) : (
-              <EmptyState compact title="No open preparation tasks" description={e.start_date ? "Apply a template to generate milestones, or add tasks one by one." : "Add a start date to use templates."} action={e.start_date ? <Button size="sm" variant="outline" onClick={() => setTemplateOpen(true)}><Wand2 /> Apply template</Button> : undefined} />
+              <EmptyState className="mt-3" title="No open preparation tasks" description={e.start_date ? "Apply a template to generate milestones, or add tasks one by one." : "Add a start date to use templates."} action={e.start_date ? <Button size="sm" variant="outline" onClick={() => setTemplateOpen(true)}><Wand2 /> Apply template</Button> : undefined} />
             )}
             {doneTasks.length ? (
-              <details className="mt-2">
-                <summary className="text-muted-foreground cursor-pointer text-xs">{doneTasks.length} completed</summary>
-                <div className="mt-1.5 flex flex-col gap-1.5">
+              <details className="mt-3">
+                <summary className="text-text-3 text-meta cursor-pointer">{doneTasks.length} completed</summary>
+                <RowList className="mt-1">
                   {doneTasks.map((t) => (
                     <TaskRow key={t.id} task={t} onToggleComplete={toggle} dense />
                   ))}
-                </div>
+                </RowList>
               </details>
             ) : null}
           </section>
 
-          <section>
+          <section aria-labelledby="event-social">
             <SectionHeader
-              title="Social media plan"
+              title={<span id="event-social">Social media plan</span>}
               count={detail.posts.length}
               action={
-                <div className="flex items-center gap-1.5">
-                  {detail.socialBoard && detail.posts.some((p) => !p.monday_item_id) ? (
-                    <Button size="sm" variant="outline" disabled={pending} onClick={() => startTransition(async () => { const r = await sendEventPostsToMonday(e.id); if (!r.ok) return void toast.error(r.error, { duration: 8000 }); toast.success(`Sent ${r.data.pushed} post${r.data.pushed === 1 ? "" : "s"} to Monday.com`); if (r.data.errors.length) toast.warning(r.data.errors[0], { duration: 10000 }); router.refresh(); })}>
-                      <UploadCloud /> Send {detail.posts.filter((p) => !p.monday_item_id).length} to Monday
+                <>
+                  {detail.socialBoard && unsentPosts ? (
+                    <Button size="sm" variant="ghost" disabled={pending} onClick={() => startTransition(async () => { const r = await sendEventPostsToMonday(e.id); if (!r.ok) return void toast.error(r.error, { duration: 8000 }); toast.success(`Sent ${r.data.pushed} post${r.data.pushed === 1 ? "" : "s"} to Monday.com`); if (r.data.errors.length) toast.warning(r.data.errors[0], { duration: 10000 }); router.refresh(); })}>
+                      <UploadCloud /> Send {unsentPosts} to Monday
                     </Button>
                   ) : null}
-                  <NewSocialPostButton preset={{ event_id: e.id, work_area_id: e.work_area_id, project_id: e.project_id, publish_date: e.start_date }} />
-                </div>
+                  <NewSocialPostButton variant="ghost" preset={{ event_id: e.id, work_area_id: e.work_area_id, project_id: e.project_id, publish_date: e.start_date }} />
+                </>
               }
             />
             {detail.posts.length ? (
-              <div className="flex flex-col gap-1.5">
+              <RowList className="mt-1">
                 {detail.posts.map((p) => (
                   <SocialPostRow key={p.id} post={p} />
                 ))}
-              </div>
+              </RowList>
             ) : (
-              <EmptyState compact title="No posts planned" description="Templates can create announcement, reminder, day-of and recap posts with draft and approval deadlines." />
+              <EmptyState className="mt-3" title="No posts planned" description="Templates can create announcement, reminder, day-of and recap posts with draft and approval deadlines." />
             )}
           </section>
         </div>
 
-        <div className="flex flex-col gap-4">
-          <section className="bg-card border-border/80 rounded-xl border p-4">
-            <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{isMonday ? "Imported details (read-only)" : "Details"}</h2>
-            <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
-              <dt className="text-muted-foreground">Dates</dt><dd>{e.start_date ? formatDateRange(e.start_date, e.end_date, today) : "—"}</dd>
-              <dt className="text-muted-foreground">Time</dt><dd>{e.start_time ? formatTime(e.start_time) : "—"}</dd>
-              <dt className="text-muted-foreground">Location</dt><dd>{e.location ?? "—"}</dd>
-              <dt className="text-muted-foreground">Program</dt><dd>{e.program ?? "—"}</dd>
-              <dt className="text-muted-foreground">Owner</dt><dd>{e.owner ?? "—"}</dd>
-              <dt className="text-muted-foreground">Status</dt><dd>{e.status ?? "—"}</dd>
-              <dt className="text-muted-foreground">Website</dt><dd className="truncate">{e.website_url ? <a href={e.website_url} className="text-primary-soft hover:underline" target="_blank" rel="noreferrer noopener">{e.website_url}</a> : "—"}</dd>
-              {isMonday ? (<><dt className="text-muted-foreground">Board group</dt><dd>{e.monday_group ?? "—"}</dd><dt className="text-muted-foreground">Last synced</dt><dd>{e.monday_synced_at ? formatTimestamp(e.monday_synced_at, timezone) : "—"}</dd></>) : null}
+        <aside className="flex min-w-0 flex-col gap-8">
+          <section aria-labelledby="event-details">
+            <SectionHeader as="h3" title={<span id="event-details">{isMonday ? "Imported details (read-only)" : "Details"}</span>} />
+            <dl className="hairline-rows text-sm">
+              <DetailRow label="Dates" nums>{e.start_date ? formatDateRange(e.start_date, e.end_date, today) : "—"}</DetailRow>
+              <DetailRow label="Time" nums>{e.start_time ? formatTime(e.start_time) : "—"}</DetailRow>
+              <DetailRow label="Location">{e.location ?? "—"}</DetailRow>
+              <DetailRow label="Program">{e.program ?? "—"}</DetailRow>
+              <DetailRow label="Owner">{e.owner ?? "—"}</DetailRow>
+              <DetailRow label="Status">{e.status ?? "—"}</DetailRow>
+              <DetailRow label="Website">{e.website_url ? <a href={e.website_url} className="text-brand-soft hover:underline" target="_blank" rel="noreferrer noopener">{e.website_url}</a> : "—"}</DetailRow>
+              {isMonday ? (
+                <>
+                  <DetailRow label="Board group">{e.monday_group ?? "—"}</DetailRow>
+                  <DetailRow label="Last synced" nums>{e.monday_synced_at ? formatTimestamp(e.monday_synced_at, timezone) : "—"}</DetailRow>
+                </>
+              ) : null}
             </dl>
-            {e.notes ? <p className="mt-2 whitespace-pre-wrap text-sm">{e.notes}</p> : null}
+            {e.notes ? <p className="text-text-2 mt-3 text-sm whitespace-pre-wrap">{e.notes}</p> : null}
           </section>
 
-          <section className="bg-card border-border/80 flex flex-col gap-3 rounded-xl border p-4">
-            <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">My local settings</h2>
+          <section className="border-line-1 bg-surface-1 flex flex-col gap-3 rounded-lg border p-4" aria-labelledby="event-local">
+            <h3 id="event-local" className="text-heading text-text-1">My local settings</h3>
             <Field label="Work area">
               <AreaSelect value={local.work_area_id} onChange={(v) => setLocal({ ...local, work_area_id: v })} />
             </Field>
@@ -255,27 +286,45 @@ export function EventDetailView({ detail }: { detail: EventDetail }) {
               <Textarea value={local.local_notes} onChange={(ev) => setLocal({ ...local, local_notes: ev.target.value })} rows={3} />
             </Field>
             {localDirty ? (
-              <Button size="sm" disabled={pending} onClick={() => startTransition(async () => { const r = await updateEvent(e.id, { work_area_id: local.work_area_id, project_id: local.project_id, local_notes: local.local_notes || null }); if (!r.ok) toast.error(r.error); else { toast.success("Saved"); router.refresh(); } })}>
-                {pending ? <Loader2 className="animate-spin" /> : <Check />} Save
+              <Button size="sm" className="w-fit" loading={pending} disabled={pending} onClick={() => startTransition(async () => { const r = await updateEvent(e.id, { work_area_id: local.work_area_id, project_id: local.project_id, local_notes: local.local_notes || null }); if (!r.ok) toast.error(r.error); else { toast.success("Saved"); router.refresh(); } })}>
+                {pending ? null : <Check />} Save
               </Button>
             ) : null}
-            {e.work_area ? <p className="text-muted-foreground inline-flex items-center gap-1 text-xs"><AreaDot color={e.work_area.color} /> {e.work_area.name}{e.project ? ` · ${e.project.name}` : ""}</p> : null}
+            {e.work_area ? (
+              <p className="text-text-3 text-meta flex flex-wrap items-center gap-2">
+                <AreaTag name={e.work_area.name} color={e.work_area.color} />
+                {e.project ? <span>· {e.project.name}</span> : null}
+              </p>
+            ) : null}
           </section>
 
-          <Separator />
-          <section>
-            <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Notes</h2>
-            <NotesList parent={{ event_id: e.id }} notes={detail.notes} onChanged={() => router.refresh()} />
+          <section aria-labelledby="event-notes">
+            <SectionHeader as="h3" title={<span id="event-notes">Notes</span>} count={detail.notes.length} />
+            <div className="mt-3">
+              <NotesList parent={{ event_id: e.id }} notes={detail.notes} onChanged={() => router.refresh()} />
+            </div>
           </section>
-          <section>
-            <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Attachments</h2>
-            <AttachmentsList parent={{ event_id: e.id }} attachments={detail.attachments} onChanged={() => router.refresh()} />
+          <section aria-labelledby="event-attachments">
+            <SectionHeader as="h3" title={<span id="event-attachments">Attachments</span>} count={detail.attachments.length} />
+            <div className="mt-3">
+              <AttachmentsList parent={{ event_id: e.id }} attachments={detail.attachments} onChanged={() => router.refresh()} />
+            </div>
           </section>
-        </div>
+        </aside>
       </div>
 
       {!isMonday ? <EventDialog open={editOpen} onOpenChange={setEditOpen} event={e} /> : null}
       <ApplyTemplateDialog open={templateOpen} onOpenChange={setTemplateOpen} event={e} templates={detail.templates} items={detail.templateItems} existing={{ tasks: detail.tasks, posts: detail.posts }} socialBoardName={detail.socialBoard?.board_name ?? (detail.socialBoard ? `board #${detail.socialBoard.board_id}` : null)} />
+    </div>
+  );
+}
+
+/** One label/value line in the details list. */
+function DetailRow({ label, children, nums = false }: { label: string; children: React.ReactNode; nums?: boolean }) {
+  return (
+    <div className="flex items-baseline gap-3 py-1.5">
+      <dt className="text-text-3 text-meta w-20 shrink-0">{label}</dt>
+      <dd className={cn("text-text-1 min-w-0 flex-1 truncate", nums && "nums")}>{children}</dd>
     </div>
   );
 }

@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Loader2, Trash2 } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -167,11 +167,11 @@ function AccountForm({ account, debt, defaultType, onClose }: { account?: Financ
       </div>
       <DialogFooter className="flex-row items-center justify-between sm:justify-between">
         {account && !live ? (
-          <Button type="button" variant="ghost" size="sm" className="text-destructive" onClick={remove} disabled={pending}>
+          <Button type="button" variant="ghost" size="sm" className="text-danger" onClick={remove} disabled={pending}>
             <Trash2 /> Delete
           </Button>
         ) : account && live ? (
-          <span className="text-muted-foreground text-xs">Linked to {account.institution ?? "a bank"}. Remove the bank connection to make this a manual account.</span>
+          <span className="text-text-2 text-xs">Linked to {account.institution ?? "a bank"}. Remove the bank connection to make this a manual account.</span>
         ) : (
           <span />
         )}
@@ -179,8 +179,8 @@ function AccountForm({ account, debt, defaultType, onClose }: { account?: Financ
           <Button type="button" variant="outline" onClick={onClose} disabled={pending}>
             Cancel
           </Button>
-          <Button type="submit" disabled={pending}>
-            {pending ? <Loader2 className="animate-spin" /> : null} {account ? "Save" : "Add account"}
+          <Button loading={pending} type="submit" disabled={pending}>
+            {account ? "Save" : "Add account"}
           </Button>
         </div>
       </DialogFooter>

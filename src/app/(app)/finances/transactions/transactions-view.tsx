@@ -4,17 +4,18 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { toast } from "sonner";
-import { ChevronLeft, ChevronRight, CheckSquare, Loader2, Plus, Receipt, Repeat, Trash2, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, CheckSquare, Loader2, Plus, Receipt, Repeat, Search, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { NativeSelect } from "@/components/ui/native-select";
-import { Card, CardContent } from "@/components/ui/card";
+import { FilterBar } from "@/components/app/filter-bar";
+import { Metric, MetricStrip } from "@/components/app/metric";
+import { BulkBar, SelectCheckbox } from "@/components/finance/bulk";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { EmptyState } from "@/components/ui/empty-state";
-import { StatTile } from "@/components/finance/bits";
 import { TransactionDialog } from "@/components/finance/transaction-dialog";
 import { deleteTransactions, patchTransactions } from "@/actions/finance";
 import { matchRecurring } from "@/lib/finance/recurring";
@@ -91,9 +92,9 @@ export function TransactionsView({ transactions, months, month, accounts, catego
   const monthOptions = Array.from(new Set([month, ...months])).sort().reverse();
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-7">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-muted-foreground max-w-2xl text-sm">
+        <p className="text-text-2 max-w-2xl text-sm">
           Every movement across your accounts: imported statements, synced bank data and entries by hand. Assign categories here and the{" "}
           <Link href="/finances/budget" className="underline underline-offset-2">
             Budget
@@ -106,27 +107,32 @@ export function TransactionsView({ transactions, months, month, accounts, catego
         </p>
         <div className="flex flex-wrap items-center gap-2">
           {transactions.length ? (
-            <Button variant={selecting ? "secondary" : "outline"} onClick={() => (selecting ? exitSelect() : setSelecting(true))} aria-pressed={selecting}>
+            <Button variant={selecting ? "secondary" : "outline"} size="sm" onClick={() => (selecting ? exitSelect() : setSelecting(true))} aria-pressed={selecting}>
               {selecting ? <X /> : <CheckSquare />} {selecting ? "Done" : "Select"}
             </Button>
           ) : null}
-          <Button onClick={() => setAdding(true)} disabled={!accounts.some((a) => !a.is_archived)}>
+          <Button size="sm" onClick={() => setAdding(true)} disabled={!accounts.some((a) => !a.is_archived)}>
             <Plus /> Add transaction
           </Button>
         </div>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-        <StatTile label="Money in" value={fmtMoney(sums.income)} sub={formatDate(month, "monthYear")} />
-        <StatTile label="Spending" value={fmtMoney(sums.spending)} sub="expenses" />
-        <StatTile label="Debt payments" value={fmtMoney(sums.payments)} sub="loans and cards" />
-        <StatTile label="Moved" value={fmtMoney(sums.moved)} sub="transfers and savings" />
-        <StatTile label="Net" value={fmtMoney(net)} sub="in minus everything out" tone={net < 0 ? "serious" : undefined} />
-      </div>
+      <MetricStrip cols={5}>
+        <Metric size="sm" label="Money in" tag={formatDate(month, "monthYear")} value={fmtMoney(sums.income)} muted={sums.income === 0} tone={sums.income > 0 ? "good" : "neutral"} />
+        <Metric size="sm" label="Spending" value={fmtMoney(sums.spending)} muted={sums.spending === 0} sub="expenses" />
+        <Metric size="sm" label="Debt payments" value={fmtMoney(sums.payments)} muted={sums.payments === 0} sub="loans and cards" />
+        <Metric size="sm" label="Moved" value={fmtMoney(sums.moved)} muted={sums.moved === 0} sub="transfers and savings" />
+        <Metric size="sm" label="Net" value={fmtMoney(net)} tone={net < 0 ? "serious" : "neutral"} sub="in minus everything out" />
+      </MetricStrip>
 
-      <Card>
-        <CardContent className="flex flex-col gap-3">
-          <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-col gap-3">
+        <FilterBar
+          activeCount={(account ? 1 : 0) + (type ? 1 : 0)}
+          onReset={() => {
+            setAccount("");
+            setType("");
+          }}
+          view={
             <div className="flex items-center gap-1">
               <Button variant="outline" size="icon-sm" aria-label="Previous month" onClick={() => go(addMonths(month, -1))}>
                 <ChevronLeft />
@@ -142,39 +148,47 @@ export function TransactionsView({ transactions, months, month, accounts, catego
                 <ChevronRight />
               </Button>
             </div>
-            <NativeSelect aria-label="Account" value={account} onChange={(e) => setAccount(e.target.value)} className="h-8 w-44">
-              <option value="">All accounts</option>
-              {accounts.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.name}
-                </option>
-              ))}
-            </NativeSelect>
-            <NativeSelect aria-label="Type" value={type} onChange={(e) => setType(e.target.value)} className="h-8 w-36">
-              <option value="">All types</option>
-              {TRANSACTION_TYPES.map((t) => (
-                <option key={t.value} value={t.value}>
-                  {t.label}
-                </option>
-              ))}
-            </NativeSelect>
-            <Input aria-label="Search transactions" placeholder="Search" value={query} onChange={(e) => setQuery(e.target.value)} className="h-8 w-full sm:w-56" />
-            <span className="text-muted-foreground ml-auto text-xs">{visible.length === transactions.length ? `${transactions.length} rows` : `${visible.length} of ${transactions.length} rows`}</span>
-          </div>
-          {selecting ? (
-            <div className="flex flex-wrap items-center gap-2 text-sm">
-              <Checkbox id="select-all-tx" checked={visibleIds.length && selectedVisible.length === visibleIds.length ? true : selectedVisible.length ? "indeterminate" : false} onCheckedChange={(v) => setSelected(v ? new Set(visibleIds) : new Set())} />
-              <label htmlFor="select-all-tx" className="cursor-pointer select-none">
-                Select all {visibleIds.length}
-              </label>
-              <span className="text-muted-foreground text-xs">Tick rows, then set a category or type, or delete, from the bar at the bottom.</span>
+          }
+          search={
+            <div className="relative w-full sm:w-56">
+              <Search className="text-text-3 pointer-events-none absolute top-2 left-2.5 size-4" aria-hidden />
+              <Input aria-label="Search transactions" placeholder="Search" value={query} onChange={(e) => setQuery(e.target.value)} className="h-8 pl-8" />
             </div>
-          ) : null}
+          }
+        >
+          <NativeSelect aria-label="Account" value={account} onChange={(e) => setAccount(e.target.value)} className="h-8 w-44">
+            <option value="">All accounts</option>
+            {accounts.map((a) => (
+              <option key={a.id} value={a.id}>
+                {a.name}
+              </option>
+            ))}
+          </NativeSelect>
+          <NativeSelect aria-label="Type" value={type} onChange={(e) => setType(e.target.value)} className="h-8 w-36">
+            <option value="">All types</option>
+            {TRANSACTION_TYPES.map((t) => (
+              <option key={t.value} value={t.value}>
+                {t.label}
+              </option>
+            ))}
+          </NativeSelect>
+          <span className="index ml-auto">{visible.length === transactions.length ? `${transactions.length} rows` : `${visible.length} of ${transactions.length} rows`}</span>
+        </FilterBar>
+        {selecting ? (
+          <div className="flex flex-wrap items-center gap-2 text-sm">
+            <Checkbox id="select-all-tx" checked={visibleIds.length && selectedVisible.length === visibleIds.length ? true : selectedVisible.length ? "indeterminate" : false} onCheckedChange={(v) => setSelected(v ? new Set(visibleIds) : new Set())} />
+            <label htmlFor="select-all-tx" className="text-text-1 cursor-pointer select-none">
+              Select all {visibleIds.length}
+            </label>
+            <span className="text-text-3 text-meta">Tick rows, then set a category or type, or delete, from the bar at the bottom.</span>
+          </div>
+        ) : null}
 
+        <div className="border-line-1 bg-surface-1 rounded-lg border">
           {transactions.length === 0 ? (
-            <EmptyState icon={<Receipt />} title={`No transactions in ${formatDate(month, "monthYear")}`} description="Connect a bank on the Accounts page, import a statement, or add entries by hand." action={<Button onClick={() => setAdding(true)} disabled={!accounts.length}><Plus /> Add transaction</Button>} compact />
+            <EmptyState variant="page" className="border-0 bg-transparent" icon={<Receipt />} title={`No transactions in ${formatDate(month, "monthYear")}`} description="Connect a bank on the Accounts page, import a statement, or add entries by hand." action={<Button onClick={() => setAdding(true)} disabled={!accounts.length}><Plus /> Add transaction</Button>} />
           ) : visible.length === 0 ? (
-            <p className="text-muted-foreground py-6 text-center text-sm">Nothing matches these filters.</p>
+            <p className="text-text-3 py-8 text-center text-sm">Nothing matches these filters.</p>
           ) : (
             <Table>
               <TableHeader>
@@ -194,13 +208,13 @@ export function TransactionsView({ transactions, months, month, accounts, catego
               </TableBody>
             </Table>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {selecting && selectedVisible.length ? (
-        <div className="bg-card border-border fixed inset-x-3 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-40 mx-auto flex max-w-4xl flex-wrap items-center gap-2 rounded-xl border p-2.5 pr-16 shadow-2xl shadow-black/50 md:inset-x-auto md:right-8 md:bottom-6 md:left-[calc(15rem+2rem)] md:pr-2.5" role="toolbar" aria-label="Bulk transaction actions">
+        <BulkBar label="Bulk transaction actions" className="pr-16 md:pr-2">
           <div className="flex flex-wrap items-center gap-2 text-sm">
-            <span className="nums font-medium">{selectedVisible.length} selected</span>
+            <span className="nums text-text-1 px-1 font-semibold">{selectedVisible.length} selected</span>
             <NativeSelect aria-label="Set category" value="" onChange={(e) => bulkPatch({ category_id: e.target.value === "__none" ? null : e.target.value })} className="h-8 w-44" disabled={pending}>
               <option value="">Set category…</option>
               <option value="__none">No category</option>
@@ -218,11 +232,11 @@ export function TransactionsView({ transactions, months, month, accounts, catego
                 </option>
               ))}
             </NativeSelect>
-            <Button variant="destructive" size="sm" onClick={() => setConfirmDelete(true)} disabled={pending}>
-              {pending ? <Loader2 className="animate-spin" /> : <Trash2 />} Delete
+            <Button variant="destructive" size="sm" onClick={() => setConfirmDelete(true)} loading={pending} disabled={pending}>
+              {pending ? null : <Trash2 />} Delete
             </Button>
           </div>
-        </div>
+        </BulkBar>
       ) : null}
 
       <Dialog open={confirmDelete} onOpenChange={setConfirmDelete}>
@@ -235,8 +249,8 @@ export function TransactionsView({ transactions, months, month, accounts, catego
             <Button variant="outline" onClick={() => setConfirmDelete(false)} disabled={pending}>
               Cancel
             </Button>
-            <Button variant="destructive" onClick={bulkDelete} disabled={pending}>
-              {pending ? <Loader2 className="animate-spin" /> : <Trash2 />} Delete {selectedVisible.length}
+            <Button variant="destructive" onClick={bulkDelete} loading={pending} disabled={pending}>
+              {pending ? null : <Trash2 />} Delete {selectedVisible.length}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -265,21 +279,22 @@ function Row({ t, accountName, categories, recurring, today, selecting, checked,
     <TableRow data-state={checked ? "selected" : undefined} className={cn(t.pending ? "opacity-60" : null)}>
       {selecting ? (
         <TableCell>
-          <Checkbox aria-label={`Select ${label}`} checked={checked} onCheckedChange={(v) => onToggle(Boolean(v))} />
+          <SelectCheckbox aria-label={`Select ${label}`} checked={checked} onCheckedChange={(v) => onToggle(Boolean(v))} />
         </TableCell>
       ) : null}
-      <TableCell className="text-muted-foreground nums text-xs whitespace-nowrap">{formatDate(t.transaction_date, "short", today)}</TableCell>
+      <TableCell className="text-text-3 nums text-meta whitespace-nowrap">{formatDate(t.transaction_date, "short", today)}</TableCell>
       <TableCell className="max-w-[18rem] md:max-w-md">
         <div className="flex flex-wrap items-center gap-1.5">
-          <span className="truncate font-medium">{label}</span>
+          <span className="text-text-1 truncate font-medium">{label}</span>
           {hit ? (
             <Badge variant="outline" className="gap-1" title={`Matches recurring item “${hit.name}”`}>
               <Repeat /> {hit.name}
             </Badge>
           ) : null}
           {t.pending ? <Badge variant="muted">pending</Badge> : null}
+          {t.source && t.source !== "manual" ? <Badge variant="muted">{t.source === "plaid" ? "Connected" : "Import"}</Badge> : null}
         </div>
-        <div className="text-muted-foreground truncate text-xs" title={detail ?? undefined}>
+        <div className="text-text-3 text-meta truncate" title={detail ?? undefined}>
           {accountName}
           {detail ? ` · ${detail}` : ""}
         </div>
@@ -298,13 +313,13 @@ function Row({ t, accountName, categories, recurring, today, selecting, checked,
                 </option>
               ))}
             </NativeSelect>
-            {pending ? <Loader2 className="text-muted-foreground size-3.5 animate-spin" /> : null}
+            {pending ? <Loader2 className="text-text-3 size-3.5 animate-spin" aria-label="Saving" /> : null}
           </div>
         ) : (
-          <span className="text-muted-foreground text-xs">{t.transaction_type === "income" ? "Income" : "Transfer"}</span>
+          <span className="text-text-3 text-meta">{t.transaction_type === "income" ? "Income" : "Transfer"}</span>
         )}
       </TableCell>
-      <TableCell className={cn("nums text-right whitespace-nowrap", t.amount > 0 ? "text-success" : null)}>{fmtMoney(t.amount, { cents: true, sign: true })}</TableCell>
+      <TableCell className={cn("nums text-text-1 text-right whitespace-nowrap", t.amount > 0 ? "text-success" : null)}>{fmtMoney(t.amount, { cents: true, sign: true })}</TableCell>
     </TableRow>
   );
 }

@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { toast } from "sonner";
-import { Loader2, Plus, Trash2, GripVertical, Check } from "lucide-react";
+import { Plus, Trash2, Check, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { NativeSelect } from "@/components/ui/native-select";
@@ -11,13 +11,14 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { PageHeader } from "@/components/app/items";
+import { AreaTag, PageHeader } from "@/components/app/items";
 import { Field } from "@/components/app/form-fields";
 import { updateProfile } from "@/actions/settings";
 import { createWorkArea, deleteWorkArea, reorderWorkAreas, updateWorkArea } from "@/actions/work-areas";
 import type { EventTemplate, EventTemplateItem, MondayConnection, MondaySyncRun, Profile, WorkArea } from "@/lib/types";
 import { MondaySettings } from "@/components/app/monday-settings";
 import { TemplatesSettings } from "@/components/app/templates-settings";
+import { cn } from "@/lib/utils";
 
 const TIMEZONES = [
   "America/Indiana/Indianapolis",
@@ -54,12 +55,12 @@ export function SettingsView(props: {
     <div className="mx-auto max-w-4xl">
       <PageHeader title="Settings" description="Workspace preferences, work areas, integrations and reminders." />
       <Tabs value={props.tab} onValueChange={(v) => router.push(`${pathname}?tab=${v}`)}>
-        <TabsList className="flex-wrap">
-          <TabsTrigger value="general">General</TabsTrigger>
-          <TabsTrigger value="areas">Work areas</TabsTrigger>
-          <TabsTrigger value="monday">Monday.com</TabsTrigger>
-          <TabsTrigger value="templates">Event templates</TabsTrigger>
-          <TabsTrigger value="reminders">Reminders</TabsTrigger>
+        <TabsList className="h-auto flex-wrap" aria-label="Settings sections">
+          <TabsTrigger value="general" className="h-7 flex-none">General</TabsTrigger>
+          <TabsTrigger value="areas" className="h-7 flex-none">Work areas</TabsTrigger>
+          <TabsTrigger value="monday" className="h-7 flex-none">Monday.com</TabsTrigger>
+          <TabsTrigger value="templates" className="h-7 flex-none">Event templates</TabsTrigger>
+          <TabsTrigger value="reminders" className="h-7 flex-none">Reminders</TabsTrigger>
         </TabsList>
         <TabsContent value="general">
           <GeneralSettings profile={props.profile} email={props.email} />
@@ -115,6 +116,7 @@ function GeneralSettings({ profile, email }: { profile: Profile; email: string |
         </div>
         <div>
           <Button
+            loading={pending}
             disabled={pending}
             onClick={() =>
               startTransition(async () => {
@@ -125,7 +127,7 @@ function GeneralSettings({ profile, email }: { profile: Profile; email: string |
               })
             }
           >
-            {pending ? <Loader2 className="animate-spin" /> : null} Save
+            Save
           </Button>
         </div>
       </CardContent>
@@ -162,13 +164,13 @@ function WorkAreasSettings({ workAreas }: { workAreas: WorkArea[] }) {
         </div>
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
-        <ul className="flex flex-col gap-1.5">
+        <ul className="hairline-rows border-line-1 rounded-md border">
           {sorted.map((a, i) => (
             <WorkAreaRow key={a.id} area={a} index={i} total={sorted.length} onMove={moveItem} />
           ))}
         </ul>
         <form
-          className="flex flex-wrap items-end gap-2"
+          className="flex flex-wrap items-end gap-2 pt-1"
           onSubmit={(e) => {
             e.preventDefault();
             startTransition(async () => {
@@ -184,7 +186,7 @@ function WorkAreasSettings({ workAreas }: { workAreas: WorkArea[] }) {
             <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Consulting" className="w-56" />
           </Field>
           <Field label="Color">
-            <input type="color" value={color} onChange={(e) => setColor(e.target.value)} className="h-9 w-12 cursor-pointer rounded-md border bg-transparent p-1" aria-label="Color" />
+            <ColorField value={color} onChange={setColor} label="New work area color" />
           </Field>
           <Button type="submit" disabled={pending || !name.trim()}>
             <Plus /> Add
@@ -202,25 +204,25 @@ function WorkAreaRow({ area, index, total, onMove }: { area: WorkArea; index: nu
   const [pending, startTransition] = React.useTransition();
   const dirty = name !== area.name || color !== area.color;
   return (
-    <li className="flex flex-wrap items-center gap-2 rounded-md border p-2">
+    <li className="flex flex-wrap items-center gap-2 px-2 py-2">
       <div className="flex flex-col">
-        <button type="button" className="text-muted-foreground disabled:opacity-30" disabled={index === 0} aria-label="Move up" onClick={() => onMove(index, index - 1)}>▲</button>
-        <button type="button" className="text-muted-foreground disabled:opacity-30" disabled={index === total - 1} aria-label="Move down" onClick={() => onMove(index, index + 1)}>▼</button>
+        <button type="button" className="text-text-3 hover:text-text-1 focus-visible:ring-brand/40 flex size-5 items-center justify-center rounded-sm outline-none focus-visible:ring-2 disabled:opacity-30" disabled={index === 0} aria-label={`Move ${area.name} up`} onClick={() => onMove(index, index - 1)}><ChevronUp className="size-3.5" /></button>
+        <button type="button" className="text-text-3 hover:text-text-1 focus-visible:ring-brand/40 flex size-5 items-center justify-center rounded-sm outline-none focus-visible:ring-2 disabled:opacity-30" disabled={index === total - 1} aria-label={`Move ${area.name} down`} onClick={() => onMove(index, index + 1)}><ChevronDown className="size-3.5" /></button>
       </div>
-      <GripVertical className="text-muted-foreground size-4" aria-hidden />
-      <input type="color" value={color} onChange={(e) => setColor(e.target.value)} className="h-8 w-10 cursor-pointer rounded-md border bg-transparent p-0.5" aria-label={`${area.name} color`} />
-      <Input value={name} onChange={(e) => setName(e.target.value)} className="w-56" aria-label="Work area name" />
-      {area.is_archived ? <span className="text-muted-foreground text-xs">Archived</span> : null}
+      <ColorField value={color} onChange={setColor} label={`${area.name} color`} />
+      <Input value={name} onChange={(e) => setName(e.target.value)} className="w-48" aria-label="Work area name" />
+      <AreaTag name={name || area.name} color={color} className="text-meta" />
+      {area.is_archived ? <span className="index">Archived</span> : null}
       <div className="ml-auto flex items-center gap-1">
         {dirty ? (
-          <Button size="sm" disabled={pending} onClick={() => startTransition(async () => { const r = await updateWorkArea(area.id, { name, color }); if (!r.ok) toast.error(r.error); else { toast.success("Saved"); router.refresh(); } })}>
-            <Check /> Save
+          <Button size="sm" loading={pending} disabled={pending} onClick={() => startTransition(async () => { const r = await updateWorkArea(area.id, { name, color }); if (!r.ok) toast.error(r.error); else { toast.success("Saved"); router.refresh(); } })}>
+            {pending ? null : <Check />} Save
           </Button>
         ) : null}
         <Button size="sm" variant="ghost" disabled={pending} onClick={() => startTransition(async () => { const r = await updateWorkArea(area.id, { is_archived: !area.is_archived }); if (!r.ok) toast.error(r.error); else router.refresh(); })}>
           {area.is_archived ? "Restore" : "Archive"}
         </Button>
-        <Button size="icon-sm" variant="ghost" className="text-destructive" aria-label="Delete work area" disabled={pending} onClick={() => { if (!window.confirm(`Delete “${area.name}”? Projects and tasks keep their data but lose this label.`)) return; startTransition(async () => { const r = await deleteWorkArea(area.id); if (!r.ok) toast.error(r.error); else { toast.success("Deleted"); router.refresh(); } }); }}>
+        <Button size="icon-sm" variant="ghost" className="text-danger hover:text-danger" aria-label={`Delete ${area.name}`} disabled={pending} onClick={() => { if (!window.confirm(`Delete “${area.name}”? Projects and tasks keep their data but lose this label.`)) return; startTransition(async () => { const r = await deleteWorkArea(area.id); if (!r.ok) toast.error(r.error); else { toast.success("Deleted"); router.refresh(); } }); }}>
           <Trash2 />
         </Button>
       </div>
@@ -258,7 +260,7 @@ function ReminderSettings({ profile, emailConfigured, cronConfigured, adminConfi
               <Input type="number" min={0} max={60} value={form.reminder_days_before_event} onChange={(e) => setForm({ ...form, reminder_days_before_event: Number(e.target.value) })} />
             </Field>
           </div>
-          <p className="text-muted-foreground text-xs">Overdue tasks, follow-ups due today, late deliveries and flagged events are always included.</p>
+          <p className="text-text-3 text-meta">Overdue tasks, follow-ups due today, late deliveries and flagged events are always included.</p>
         </CardContent>
       </Card>
       <Card>
@@ -293,6 +295,7 @@ function ReminderSettings({ profile, emailConfigured, cronConfigured, adminConfi
       </Card>
       <div>
         <Button
+          loading={pending}
           disabled={pending}
           onClick={() =>
             startTransition(async () => {
@@ -303,9 +306,38 @@ function ReminderSettings({ profile, emailConfigured, cronConfigured, adminConfi
             })
           }
         >
-          {pending ? <Loader2 className="animate-spin" /> : null} Save reminder settings
+          Save reminder settings
         </Button>
       </div>
+    </div>
+  );
+}
+
+const AREA_PRESETS: { name: string; color: string }[] = [
+  { name: "ARI", color: "#4f8cff" },
+  { name: "Northwestern Mutual", color: "#2fb59b" },
+  { name: "Personal", color: "#b08cff" },
+];
+
+/** Colour picker with the three brand presets as swatches. Picking a swatch only changes the field. */
+function ColorField({ value, onChange, label }: { value: string; onChange: (v: string) => void; label: string }) {
+  return (
+    <div className="flex items-center gap-1.5" role="group" aria-label={label}>
+      {AREA_PRESETS.map((p) => (
+        <button
+          key={p.color}
+          type="button"
+          title={p.name}
+          aria-label={`${p.name} preset`}
+          aria-pressed={value.toLowerCase() === p.color}
+          onClick={() => onChange(p.color)}
+          className={cn("focus-visible:ring-brand/40 flex size-6 items-center justify-center rounded-full border border-transparent outline-none transition-transform hover:scale-110 focus-visible:ring-2 aria-pressed:border-white/70")}
+          style={{ backgroundColor: p.color }}
+        >
+          {value.toLowerCase() === p.color ? <Check className="size-3 text-white" strokeWidth={3} aria-hidden /> : null}
+        </button>
+      ))}
+      <input type="color" value={value} onChange={(e) => onChange(e.target.value)} className="border-line-2 hover:border-line-3 h-7 w-9 cursor-pointer rounded-md border bg-transparent p-0.5" aria-label={`${label} (custom)`} />
     </div>
   );
 }

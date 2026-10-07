@@ -2,8 +2,10 @@
 
 import * as React from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Loader2 } from "lucide-react";
+import { AlertCircle } from "lucide-react";
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
+import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/empty-state";
 import { loadTask } from "@/actions/tasks";
 import { loadSocialPost } from "@/actions/social";
 import type { TaskDetail } from "@/lib/data/tasks";
@@ -66,23 +68,49 @@ function ItemSheetBody({ taskId, postId, onClose }: { taskId: string | null; pos
 
   if (state.loading) {
     return (
-      <div className="text-muted-foreground flex items-center gap-2 p-6 text-sm">
-        <Loader2 className="size-4 animate-spin" /> Loading…
+      <div className="flex flex-col gap-4 p-4" aria-busy="true" aria-live="polite">
+        <span className="sr-only">Loading…</span>
+        <div className="flex items-center gap-2">
+          <Skeleton className="h-5 w-16" />
+          <Skeleton className="h-5 w-12" />
+          <Skeleton className="ml-auto h-8 w-24" />
+        </div>
+        <Skeleton className="h-10 w-full" />
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {[0, 1, 2, 3].map((i) => (
+            <Skeleton key={i} className="h-9" />
+          ))}
+        </div>
+        <Skeleton className="h-20 w-full" />
+        <div className="hairline-rows">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="flex items-center gap-3 py-2.5">
+              <Skeleton className="size-[18px] rounded-full" />
+              <Skeleton className="h-4 flex-1" />
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
   if (state.error) {
     return (
-      <div className="flex flex-col items-start gap-3 p-6">
-        <p className="text-destructive text-sm">{state.error}</p>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={() => reload()}>
-            Retry
-          </Button>
-          <Button variant="ghost" size="sm" onClick={onClose}>
-            Close
-          </Button>
-        </div>
+      <div className="p-4">
+        <EmptyState
+          icon={<AlertCircle />}
+          title="Couldn't load this item"
+          description={state.error}
+          action={
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={() => reload()}>
+                Retry
+              </Button>
+              <Button variant="ghost" size="sm" onClick={onClose}>
+                Close
+              </Button>
+            </div>
+          }
+        />
       </div>
     );
   }

@@ -65,19 +65,49 @@ export function ShortcutsHelp({ open, onOpenChange }: { open: boolean; onOpenCha
           <DialogTitle>Keyboard shortcuts</DialogTitle>
           <DialogDescription>Work faster without leaving the keyboard.</DialogDescription>
         </DialogHeader>
-        <dl className="grid grid-cols-[auto_1fr] items-center gap-x-4 gap-y-2 text-sm">
-          <dt><Kbd>N</Kbd></dt><dd>Quick add a task</dd>
-          <dt><Kbd>⌘K</Kbd> / <Kbd>/</Kbd></dt><dd>Search everything</dd>
-          <dt><Kbd>?</Kbd></dt><dd>Show this help</dd>
-          {NAV_ITEMS.map((n) => (
-            <React.Fragment key={n.href}>
-              <dt><Kbd>G</Kbd> then <Kbd>{n.key.toUpperCase()}</Kbd></dt>
-              <dd>Go to {n.label}</dd>
-            </React.Fragment>
-          ))}
-          <dt><Kbd>Esc</Kbd></dt><dd>Close dialogs and panels</dd>
-        </dl>
+        <div className="flex flex-col gap-4">
+          <section>
+            <p className="eyebrow mb-2">Actions</p>
+            <dl className="hairline-rows text-sm">
+              <ShortcutRow keys={[["N"]]}>Quick add a task</ShortcutRow>
+              <ShortcutRow keys={[["⌘", "K"], ["/"]]}>Search everything</ShortcutRow>
+              <ShortcutRow keys={[["?"]]}>Show this help</ShortcutRow>
+              <ShortcutRow keys={[["Esc"]]}>Close dialogs and panels</ShortcutRow>
+            </dl>
+          </section>
+          <section>
+            <p className="eyebrow mb-2">Navigation</p>
+            <dl className="hairline-rows text-sm">
+              {NAV_ITEMS.map((n) => (
+                <ShortcutRow key={n.href} keys={[["G", n.key.toUpperCase()]]}>
+                  Go to {n.label}
+                </ShortcutRow>
+              ))}
+            </dl>
+          </section>
+        </div>
       </DialogContent>
     </Dialog>
+  );
+}
+
+/** One shortcut line: description on the left, key chords on the right. */
+function ShortcutRow({ keys, children }: { keys: string[][]; children: React.ReactNode }) {
+  return (
+    <div className="flex items-center justify-between gap-4 py-1.5">
+      <dd className="text-text-2 m-0">{children}</dd>
+      <dt className="flex items-center gap-1.5">
+        {keys.map((chord, i) => (
+          <React.Fragment key={i}>
+            {i > 0 ? <span className="text-text-3 text-meta">or</span> : null}
+            <span className="inline-flex items-center gap-0.5">
+              {chord.map((k) => (
+                <Kbd key={k}>{k}</Kbd>
+              ))}
+            </span>
+          </React.Fragment>
+        ))}
+      </dt>
+    </div>
   );
 }

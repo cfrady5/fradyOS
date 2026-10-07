@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { CheckCircle2, ChevronDown, ChevronUp, Loader2, RotateCcw, Star, Trash2, History } from "lucide-react";
+import { CheckCircle2, ChevronDown, ChevronUp, RotateCcw, Star, Trash2, History } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -140,7 +140,7 @@ export function TaskEditor({ detail, onChanged, onClose }: { detail: TaskDetail;
 
   return (
     <div className="flex flex-col">
-      <div className="border-border bg-card/95 sticky top-0 z-10 flex flex-wrap items-center gap-2 border-b py-2.5 pr-14 pl-4 backdrop-blur">
+      <div className="border-line-1 bg-surface-1/90 text-meta sticky top-0 z-10 flex flex-wrap items-center gap-2.5 border-b py-2.5 pr-14 pl-4 backdrop-blur">
         <TaskStatusBadge status={t.status} />
         <PriorityBadge priority={t.priority} />
         {!isDone ? <DueBadge date={t.due_date} time={t.due_time} today={today} /> : null}
@@ -174,7 +174,7 @@ export function TaskEditor({ detail, onChanged, onClose }: { detail: TaskDetail;
       </div>
 
       <div className="flex flex-col gap-4 p-4">
-        <Input value={form.title} onChange={(e) => set("title", e.target.value)} className="h-10 text-base font-medium" aria-label="Title" />
+        <Input value={form.title} onChange={(e) => set("title", e.target.value)} className="text-text-1 h-10 text-base font-medium" aria-label="Title" />
 
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <Field label="Status">
@@ -216,15 +216,15 @@ export function TaskEditor({ detail, onChanged, onClose }: { detail: TaskDetail;
         </div>
 
         {t.template_item_id && t.anchor_date ? (
-          <p className="text-muted-foreground text-xs">
+          <p className="text-text-3 text-meta">
             Created from an event template ({(t.offset_days ?? 0) >= 0 ? "+" : ""}{t.offset_days ?? 0} days from the event start).{" "}
             {t.date_overridden ? "Date manually overridden; it will not be moved automatically." : "If the event moves, a new date will be proposed."}
           </p>
         ) : null}
         {eventLinked ? (
-          <p className="text-muted-foreground text-xs">
+          <p className="text-text-3 text-meta">
             Event:{" "}
-            <Link href={`/events/${eventLinked.id}`} className="text-primary-soft hover:underline">
+            <Link href={`/events/${eventLinked.id}`} className="text-brand-soft hover:underline">
               {eventLinked.name}
             </Link>
             {eventLinked.start_date ? ` · ${formatDate(eventLinked.start_date, "medium", today)}` : ""}
@@ -232,8 +232,8 @@ export function TaskEditor({ detail, onChanged, onClose }: { detail: TaskDetail;
         ) : null}
 
         {form.status === "waiting" ? (
-          <div className="grid grid-cols-1 gap-3 rounded-md border border-warning/40 bg-warning/10 p-3 sm:grid-cols-2">
-            <p className="text-xs font-semibold sm:col-span-2">Waiting on someone</p>
+          <div className="border-warning/30 bg-warning/8 grid grid-cols-1 gap-3 rounded-lg border p-3 sm:grid-cols-2">
+            <p className="eyebrow text-warning sm:col-span-2">Waiting on someone</p>
             <Field label="Person responsible">
               <Input value={form.waiting_person} onChange={(e) => set("waiting_person", e.target.value)} placeholder="Name" />
             </Field>
@@ -250,7 +250,7 @@ export function TaskEditor({ detail, onChanged, onClose }: { detail: TaskDetail;
               <DateInput value={form.waiting_followup_date} onChange={(v) => set("waiting_followup_date", v)} />
             </Field>
             <Field label="Last follow-up">
-              <Input value={t.waiting_last_followup_date ? formatDate(t.waiting_last_followup_date, "medium", today) : "Not yet"} readOnly className="bg-muted/50" />
+              <Input value={t.waiting_last_followup_date ? formatDate(t.waiting_last_followup_date, "medium", today) : "Not yet"} readOnly />
             </Field>
             <Field label="Follow-up notes" className="sm:col-span-2">
               <Textarea value={form.waiting_notes} onChange={(e) => set("waiting_notes", e.target.value)} rows={3} />
@@ -262,7 +262,7 @@ export function TaskEditor({ detail, onChanged, onClose }: { detail: TaskDetail;
           <Textarea value={form.description} onChange={(e) => set("description", e.target.value)} rows={3} placeholder="Details, context, definition of done…" />
         </Field>
 
-        <button type="button" onClick={() => setShowAdvanced((v) => !v)} className="text-muted-foreground hover:text-foreground inline-flex w-fit items-center gap-1 text-xs font-medium">
+        <button type="button" onClick={() => setShowAdvanced((v) => !v)} aria-expanded={showAdvanced} className="text-text-2 hover:text-text-1 focus-visible:ring-brand/40 inline-flex w-fit items-center gap-1 rounded-sm text-xs font-medium transition-colors outline-none focus-visible:ring-2">
           {showAdvanced ? <ChevronUp className="size-3.5" /> : <ChevronDown className="size-3.5" />}
           {showAdvanced ? "Hide" : "Show"} effort, links and recurrence
         </button>
@@ -283,13 +283,13 @@ export function TaskEditor({ detail, onChanged, onClose }: { detail: TaskDetail;
         ) : null}
 
         <div className="flex items-center justify-between gap-2">
-          <Button variant="ghost" size="sm" className="text-destructive" onClick={remove} disabled={pending}>
+          <Button variant="ghost" size="sm" className="text-danger hover:text-danger" onClick={remove} disabled={pending}>
             <Trash2 /> Delete
           </Button>
           <div className="flex items-center gap-2">
-            {dirty ? <span className="text-muted-foreground text-xs">Unsaved changes</span> : null}
-            <Button onClick={save} disabled={pending || !dirty}>
-              {pending ? <Loader2 className="animate-spin" /> : null} Save
+            {dirty ? <span className="text-text-3 text-meta">Unsaved changes</span> : null}
+            <Button onClick={save} loading={pending} disabled={pending || !dirty}>
+              Save
             </Button>
           </div>
         </div>
@@ -297,31 +297,31 @@ export function TaskEditor({ detail, onChanged, onClose }: { detail: TaskDetail;
         <Separator />
 
         <section>
-          <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Subtasks</h3>
+          <h3 className="eyebrow mb-2">Subtasks</h3>
           <SubtasksList taskId={t.id} subtasks={detail.subtasks} onChanged={onChanged} />
         </section>
         <section>
-          <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Notes</h3>
+          <h3 className="eyebrow mb-2">Notes</h3>
           <NotesList parent={{ task_id: t.id }} notes={detail.notes} onChanged={onChanged} />
         </section>
         <section>
-          <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Attachments</h3>
+          <h3 className="eyebrow mb-2">Attachments</h3>
           <AttachmentsList parent={{ task_id: t.id }} attachments={detail.attachments} onChanged={onChanged} />
         </section>
 
         <Separator />
-        <section className="text-muted-foreground text-xs">
-          <button type="button" className="inline-flex items-center gap-1 font-medium hover:text-foreground" onClick={() => setShowHistory((v) => !v)}>
-            <History className="size-3.5" /> History {showHistory ? "▾" : "▸"}
+        <section className="text-text-3 text-meta">
+          <button type="button" aria-expanded={showHistory} className="hover:text-text-1 focus-visible:ring-brand/40 inline-flex items-center gap-1 rounded-sm font-medium transition-colors outline-none focus-visible:ring-2" onClick={() => setShowHistory((v) => !v)}>
+            <History className="size-3.5" aria-hidden /> History {showHistory ? <ChevronUp className="size-3" aria-hidden /> : <ChevronDown className="size-3" aria-hidden />}
           </button>
           <p className="mt-1">
             Created {formatTimestamp(t.created_at, timezone, { withYear: true })}
             {t.completed_at ? ` · Completed ${formatTimestamp(t.completed_at, timezone, { withYear: true })}` : ""}
           </p>
           {showHistory ? (
-            <ul className="mt-2 flex flex-col gap-1">
+            <ul className="hairline-rows mt-2">
               {detail.activity.map((a) => (
-                <li key={a.id} className="flex flex-wrap items-center gap-1.5">
+                <li key={a.id} className="flex flex-wrap items-center gap-1.5 py-1.5">
                   <Badge variant="muted">{a.kind.replace(/_/g, " ")}</Badge>
                   {a.from_status || a.to_status ? (
                     <span>
@@ -329,7 +329,7 @@ export function TaskEditor({ detail, onChanged, onClose }: { detail: TaskDetail;
                     </span>
                   ) : null}
                   {a.detail ? <span>{a.detail}</span> : null}
-                  <span className="ml-auto tabular-nums">{formatTimestamp(a.created_at, timezone, { withYear: true })}</span>
+                  <span className="ml-auto nums">{formatTimestamp(a.created_at, timezone, { withYear: true })}</span>
                 </li>
               ))}
               {detail.activity.length === 0 ? <li>No activity yet.</li> : null}

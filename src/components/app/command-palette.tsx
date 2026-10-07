@@ -4,6 +4,7 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { FolderKanban, CheckSquare, CalendarDays, Megaphone, Plus, Loader2 } from "lucide-react";
 import { CommandDialog, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandSeparator } from "@/components/ui/command";
+import { Kbd } from "@/components/ui/kbd";
 import { searchWorkspace, type SearchHit } from "@/actions/search";
 import { NAV_ITEMS } from "./nav";
 import { useOpenItem } from "@/hooks/use-open-item";
@@ -69,11 +70,11 @@ function PaletteBody({ onClose }: { onClose: () => void }) {
       <CommandInput placeholder="Search projects, tasks, events, posts…" value={query} onValueChange={setQuery} />
       <CommandList>
         {searching ? (
-          <div className="text-muted-foreground flex items-center gap-2 px-3 py-4 text-sm">
-            <Loader2 className="size-4 animate-spin" /> Searching…
+          <div className="text-text-3 flex items-center gap-2 px-3 py-4 text-sm" aria-live="polite">
+            <Loader2 className="size-4 animate-spin" aria-hidden /> Searching…
           </div>
         ) : null}
-        {error ? <div className="text-destructive px-3 py-3 text-sm">{error}</div> : null}
+        {error ? <div className="text-danger px-3 py-3 text-sm">{error}</div> : null}
         {!searching && !tooShort && hits.length === 0 && !error ? <CommandEmpty>No matches for “{q}”.</CommandEmpty> : null}
         {groups
           .filter((g) => g.items.length)
@@ -84,9 +85,9 @@ function PaletteBody({ onClose }: { onClose: () => void }) {
                 {g.items.map((h) => (
                   <CommandItem key={`${h.kind}-${h.id}`} value={`${h.kind}-${h.id}`} onSelect={() => go(h)}>
                     <Icon />
-                    <span className="min-w-0 flex-1 truncate">{h.title}</span>
-                    {h.subtitle ? <span className="text-muted-foreground max-w-[40%] truncate text-xs">{h.subtitle}</span> : null}
-                    {h.date_hint ? <span className="text-muted-foreground text-xs tabular-nums">{formatDate(h.date_hint, "short", today)}</span> : null}
+                    <span className="text-text-1 min-w-0 flex-1 truncate">{h.title}</span>
+                    {h.subtitle ? <span className="text-text-3 text-meta max-w-[40%] truncate">{h.subtitle}</span> : null}
+                    {h.date_hint ? <span className="text-text-3 nums text-meta">{formatDate(h.date_hint, "short", today)}</span> : null}
                   </CommandItem>
                 ))}
               </CommandGroup>
@@ -119,6 +120,18 @@ function PaletteBody({ onClose }: { onClose: () => void }) {
           </>
         )}
       </CommandList>
+      <div className="border-line-1 text-text-3 text-meta flex items-center gap-3 border-t px-3 py-2">
+        <span className="inline-flex items-center gap-1">
+          <Kbd>↑</Kbd>
+          <Kbd>↓</Kbd> navigate
+        </span>
+        <span className="inline-flex items-center gap-1">
+          <Kbd>↵</Kbd> open
+        </span>
+        <span className="inline-flex items-center gap-1">
+          <Kbd>Esc</Kbd> close
+        </span>
+      </div>
     </>
   );
 }

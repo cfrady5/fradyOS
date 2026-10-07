@@ -3,13 +3,14 @@
 import * as React from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
-import { CheckSquare, LayoutList, Columns3, CalendarDays, Plus, X, Search } from "lucide-react";
+import { CheckSquare, LayoutList, Columns3, CalendarDays, Plus, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { NativeSelect } from "@/components/ui/native-select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EmptyState } from "@/components/ui/empty-state";
-import { PageHeader, TaskRow, SectionHeader } from "@/components/app/items";
+import { PageHeader, RowList, SectionHeader, TaskRow } from "@/components/app/items";
+import { FilterBar } from "@/components/app/filter-bar";
 import { useShell } from "@/components/app/app-shell";
 import { useWorkspace } from "@/components/app/workspace-provider";
 import { completeTask, reopenTask } from "@/actions/tasks";
@@ -62,95 +63,93 @@ export function TasksView({ tasks, view, month, params }: { tasks: TaskWithRefs[
     <div className="mx-auto max-w-6xl">
       <PageHeader
         title="Tasks"
-        description="Everything open, grouped the way you work. Completed work lives under Completed."
+        description="Everything open, grouped the way you work."
         actions={
           <Button onClick={() => openQuickAdd({ project_id: params.project, work_area_id: params.area })}>
             <Plus /> New task
           </Button>
         }
       >
-        <div className="flex flex-col gap-2">
-          <div className="flex flex-wrap items-center gap-2">
+        <FilterBar
+          activeCount={activeFilters}
+          onReset={() => setParams({ area: null, project: null, status: null, priority: null, due: null })}
+          view={
             <Tabs value={view} onValueChange={(v) => setParams({ view: v === "list" ? null : v })}>
-              <TabsList>
+              <TabsList aria-label="View">
                 <TabsTrigger value="list"><LayoutList /> List</TabsTrigger>
                 <TabsTrigger value="board"><Columns3 /> Board</TabsTrigger>
                 <TabsTrigger value="calendar"><CalendarDays /> Calendar</TabsTrigger>
               </TabsList>
             </Tabs>
-            <div className="relative ml-auto w-full sm:w-56">
-              <Search className="text-muted-foreground absolute top-2.5 left-2.5 size-4" />
+          }
+          search={
+            <div className="relative w-full sm:w-56">
+              <Search className="text-text-3 pointer-events-none absolute top-2.5 left-2.5 size-4" aria-hidden />
               <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search titles…" className="pl-8" aria-label="Search tasks" />
             </div>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <NativeSelect className="w-40" value={params.area ?? ""} onChange={(e) => setParams({ area: e.target.value || null, project: null })} aria-label="Work area">
-              <option value="">All work areas</option>
-              {workAreas.map((a) => (
-                <option key={a.id} value={a.id}>{a.name}</option>
+          }
+        >
+          <NativeSelect className="w-40" value={params.area ?? ""} onChange={(e) => setParams({ area: e.target.value || null, project: null })} aria-label="Work area">
+            <option value="">All work areas</option>
+            {workAreas.map((a) => (
+              <option key={a.id} value={a.id}>{a.name}</option>
+            ))}
+          </NativeSelect>
+          <NativeSelect className="w-44" value={params.project ?? ""} onChange={(e) => setParams({ project: e.target.value || null })} aria-label="Project">
+            <option value="">All projects</option>
+            {visibleProjects.map((p) => (
+              <option key={p.id} value={p.id}>{p.name}</option>
+            ))}
+          </NativeSelect>
+          {view !== "board" ? (
+            <NativeSelect className="w-40" value={params.status ?? ""} onChange={(e) => setParams({ status: e.target.value || null })} aria-label="Status">
+              <option value="">Open</option>
+              {TASK_STATUSES.map((s) => (
+                <option key={s.value} value={s.value}>{s.label}</option>
               ))}
+              <option value="all">All incl. completed</option>
             </NativeSelect>
-            <NativeSelect className="w-44" value={params.project ?? ""} onChange={(e) => setParams({ project: e.target.value || null })} aria-label="Project">
-              <option value="">All projects</option>
-              {visibleProjects.map((p) => (
-                <option key={p.id} value={p.id}>{p.name}</option>
-              ))}
+          ) : null}
+          <NativeSelect className="w-32" value={params.priority ?? ""} onChange={(e) => setParams({ priority: e.target.value || null })} aria-label="Priority">
+            <option value="">Any priority</option>
+            {PRIORITIES.map((p) => (
+              <option key={p.value} value={p.value}>{p.label}</option>
+            ))}
+          </NativeSelect>
+          {view !== "calendar" ? (
+            <NativeSelect className="w-36" value={params.due ?? ""} onChange={(e) => setParams({ due: e.target.value || null })} aria-label="Due date">
+              <option value="">Any due date</option>
+              <option value="overdue">Overdue</option>
+              <option value="today">Due today</option>
+              <option value="week">Next 7 days</option>
+              <option value="month">Next 30 days</option>
+              <option value="none">No due date</option>
             </NativeSelect>
-            {view !== "board" ? (
-              <NativeSelect className="w-40" value={params.status ?? ""} onChange={(e) => setParams({ status: e.target.value || null })} aria-label="Status">
-                <option value="">Open</option>
-                {TASK_STATUSES.map((s) => (
-                  <option key={s.value} value={s.value}>{s.label}</option>
-                ))}
-                <option value="all">All incl. completed</option>
-              </NativeSelect>
-            ) : null}
-            <NativeSelect className="w-32" value={params.priority ?? ""} onChange={(e) => setParams({ priority: e.target.value || null })} aria-label="Priority">
-              <option value="">Any priority</option>
-              {PRIORITIES.map((p) => (
-                <option key={p.value} value={p.value}>{p.label}</option>
-              ))}
+          ) : null}
+          {view === "list" ? (
+            <NativeSelect className="w-40" value={group} onChange={(e) => setGroup(e.target.value as typeof group)} aria-label="Group by">
+              <option value="due">Group: due date</option>
+              <option value="status">Group: status</option>
+              <option value="project">Group: project</option>
+              <option value="area">Group: work area</option>
             </NativeSelect>
-            {view !== "calendar" ? (
-              <NativeSelect className="w-36" value={params.due ?? ""} onChange={(e) => setParams({ due: e.target.value || null })} aria-label="Due date">
-                <option value="">Any due date</option>
-                <option value="overdue">Overdue</option>
-                <option value="today">Due today</option>
-                <option value="week">Next 7 days</option>
-                <option value="month">Next 30 days</option>
-                <option value="none">No due date</option>
-              </NativeSelect>
-            ) : null}
-            {view === "list" ? (
-              <NativeSelect className="w-40" value={group} onChange={(e) => setGroup(e.target.value as typeof group)} aria-label="Group by">
-                <option value="due">Group: due date</option>
-                <option value="status">Group: status</option>
-                <option value="project">Group: project</option>
-                <option value="area">Group: work area</option>
-              </NativeSelect>
-            ) : null}
-            {activeFilters ? (
-              <Button variant="ghost" size="sm" onClick={() => setParams({ area: null, project: null, status: null, priority: null, due: null })}>
-                <X /> Clear filters
-              </Button>
-            ) : null}
-          </div>
-        </div>
+          ) : null}
+        </FilterBar>
       </PageHeader>
 
       {view === "list" ? (
         tasks.length === 0 ? (
           <EmptyState icon={<CheckSquare />} title={activeFilters || params.q ? "No tasks match these filters" : "No open tasks"} description={activeFilters || params.q ? "Try clearing a filter." : "Press N anywhere to capture a task."} action={<Button onClick={() => openQuickAdd()}><Plus /> New task</Button>} />
         ) : (
-          <div className="flex flex-col gap-5">
+          <div className="flex flex-col gap-7">
             {groupTasks(tasks, group, today).map((g) => (
-              <section key={g.key}>
+              <section key={g.key} aria-label={g.label}>
                 <SectionHeader title={g.label} count={g.tasks.length} />
-                <div className="flex flex-col gap-1.5">
+                <RowList>
                   {g.tasks.map((t) => (
                     <TaskRow key={t.id} task={t} onToggleComplete={toggle} />
                   ))}
-                </div>
+                </RowList>
               </section>
             ))}
           </div>

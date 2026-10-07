@@ -50,15 +50,17 @@ export function NotificationsPopover({ initial }: { initial: Notification[] }) {
         <Button variant="ghost" size="icon" aria-label={`Notifications${unread ? `, ${unread} unread` : ""}`} className="relative">
           <Bell />
           {unread ? (
-            <span className="bg-destructive text-destructive-foreground absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-semibold tabular-nums">
+            <span className="bg-danger text-destructive-foreground absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-semibold nums">
               {unread > 99 ? "99+" : unread}
             </span>
           ) : null}
         </Button>
       </PopoverTrigger>
       <PopoverContent align="end" className="w-[min(92vw,380px)] p-0">
-        <div className="border-border flex items-center justify-between border-b px-3 py-2">
-          <p className="text-sm font-semibold">Notifications</p>
+        <div className="border-line-1 flex items-center justify-between border-b px-3 py-2">
+          <p className="text-heading flex items-center gap-2">
+            Notifications {unread ? <span className="index">{unread}</span> : null}
+          </p>
           <div className="flex items-center gap-1">
             {unread ? (
               <Button
@@ -79,21 +81,21 @@ export function NotificationsPopover({ initial }: { initial: Notification[] }) {
         </div>
         <div className="max-h-[60vh] overflow-y-auto">
           {items.length === 0 ? (
-            <p className="text-muted-foreground px-3 py-8 text-center text-sm">You&apos;re all caught up.</p>
+            <p className="text-text-3 px-3 py-8 text-center text-sm">You&apos;re all caught up.</p>
           ) : (
-            <ul className="divide-y">
+            <ul className="divide-line-1 divide-y">
               {items.map((n) => (
-                <li key={n.id} className={cn("flex items-start gap-2 px-3 py-2.5", kindTone(n.kind))}>
+                <li key={n.id} className={cn("hover:bg-surface-hover flex items-start gap-2 px-3 py-2.5 transition-colors", kindTone(n.kind))}>
                   <div className="min-w-0 flex-1">
                     {n.href ? (
-                      <Link href={n.href} onClick={() => { setOpen(false); dismiss(n.id); }} className="block text-sm font-medium leading-5 hover:underline">
+                      <Link href={n.href} onClick={() => { setOpen(false); dismiss(n.id); }} className="text-text-1 block text-sm leading-5 font-medium hover:underline">
                         {n.title}
                       </Link>
                     ) : (
-                      <p className="text-sm font-medium leading-5">{n.title}</p>
+                      <p className="text-text-1 text-sm leading-5 font-medium">{n.title}</p>
                     )}
-                    {n.body ? <p className="text-muted-foreground text-xs">{n.body}</p> : null}
-                    <p className="text-muted-foreground mt-0.5 text-[11px]">{timeAgo(n.created_at)}</p>
+                    {n.body ? <p className="text-text-2 text-meta">{n.body}</p> : null}
+                    <p className="text-text-3 mt-0.5 text-[11px]">{timeAgo(n.created_at)}</p>
                   </div>
                   <Button variant="ghost" size="icon-xs" aria-label="Mark read" onClick={() => dismiss(n.id)}>
                     <Check />
@@ -103,8 +105,8 @@ export function NotificationsPopover({ initial }: { initial: Notification[] }) {
             </ul>
           )}
         </div>
-        <div className="border-t px-3 py-2 text-center">
-          <Link href="/settings?tab=reminders" className="text-muted-foreground text-xs hover:underline" onClick={() => setOpen(false)}>
+        <div className="border-line-1 border-t px-3 py-2 text-center">
+          <Link href="/settings?tab=reminders" className="text-text-3 hover:text-text-1 text-meta transition-colors hover:underline" onClick={() => setOpen(false)}>
             Reminder settings
           </Link>
         </div>
@@ -114,8 +116,8 @@ export function NotificationsPopover({ initial }: { initial: Notification[] }) {
 }
 
 function kindTone(kind: string) {
-  if (kind.includes("overdue")) return "border-l-2 border-l-destructive";
+  if (kind.includes("overdue")) return "border-l-2 border-l-danger";
   if (kind.includes("followup")) return "border-l-2 border-l-warning";
-  if (kind.startsWith("event")) return "border-l-2 border-l-primary";
+  if (kind.startsWith("event")) return "border-l-2 border-l-brand";
   return "";
 }

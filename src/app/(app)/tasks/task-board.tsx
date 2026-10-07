@@ -46,7 +46,7 @@ export function TaskBoard({ tasks }: { tasks: TaskWithRefs[] }) {
         return (
           <div
             key={col.value}
-            className={cn("bg-muted/40 flex w-72 shrink-0 flex-col rounded-lg border p-2 transition-colors", dragOver === col.value && "bg-accent ring-2 ring-ring/40")}
+            className={cn("bg-surface-1 border-line-1 flex w-72 shrink-0 flex-col rounded-lg border p-2 transition-colors duration-150", dragOver === col.value && "border-brand/50 bg-surface-2")}
             onDragOver={(e) => {
               e.preventDefault();
               if (dragOver !== col.value) setDragOver(col.value);
@@ -60,17 +60,17 @@ export function TaskBoard({ tasks }: { tasks: TaskWithRefs[] }) {
             }}
             aria-label={`${col.label} column`}
           >
-            <div className="mb-2 flex items-center justify-between px-1">
-              <h3 className="text-xs font-semibold uppercase tracking-wide">{col.label}</h3>
-              <span className="text-muted-foreground text-xs tabular-nums">{items.length}</span>
+            <div className="border-line-1 mb-2 flex h-8 items-center justify-between border-b px-1.5">
+              <h3 className="eyebrow">{col.label}</h3>
+              <span className="index">{items.length}</span>
             </div>
             <div className="flex min-h-16 flex-col gap-1.5">
               {items.map((t) => (
-                <div key={t.id} draggable onDragStart={(e) => { e.dataTransfer.setData("text/task-id", t.id); e.dataTransfer.effectAllowed = "move"; }} className="group/card cursor-grab active:cursor-grabbing">
-                  <TaskRow task={t} onToggleComplete={toggle} dense trailing={<GripVertical className="text-muted-foreground/50 size-4" aria-hidden />} />
+                <div key={t.id} draggable onDragStart={(e) => { e.dataTransfer.setData("text/task-id", t.id); e.dataTransfer.effectAllowed = "move"; }} className="group/card border-line-1 bg-surface-0/40 hover:border-line-2 cursor-grab rounded-md border px-1 transition-colors active:cursor-grabbing">
+                  <TaskRow task={t} onToggleComplete={toggle} dense trailing={<GripVertical className="text-text-3 size-4 opacity-50 group-hover/card:opacity-100" aria-hidden />} />
                 </div>
               ))}
-              {items.length === 0 ? <p className="text-muted-foreground px-1 py-3 text-center text-xs">Drop tasks here</p> : null}
+              {items.length === 0 ? <p className="text-text-3 border-line-1 rounded-md border border-dashed px-1 py-3 text-center text-xs">Drop tasks here</p> : null}
             </div>
           </div>
         );

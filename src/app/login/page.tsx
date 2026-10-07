@@ -11,13 +11,13 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
   const next = typeof sp.next === "string" ? sp.next : "/";
   const allowSignup = await isSignupAllowed();
   return (
-    <main className="flex min-h-svh items-center justify-center bg-background px-4 py-10">
-      <div className="w-full max-w-sm">
-        <div className="mb-6 text-center">
-          <h1>
-            <Wordmark size="lg" className="text-3xl" />
-          </h1>
-          <p className="text-muted-foreground mt-2 text-sm">Your personal command center. Sign in to continue.</p>
+    <main className="bg-surface-0 flex min-h-svh flex-col px-4 py-8 sm:items-center sm:justify-center">
+      <div className="motion-safe:animate-page-in w-full max-w-sm sm:mx-auto">
+        <div className="mb-8">
+          <Wordmark size="md" />
+          <p className="eyebrow mt-6 mb-2">Personal command center</p>
+          <h1 className="text-display text-text-1">Welcome back.</h1>
+          <p className="text-text-2 mt-2 text-sm">Sign in to pick up where you left off.</p>
         </div>
         <LoginForm initialError={error} next={next} allowSignup={allowSignup} />
       </div>

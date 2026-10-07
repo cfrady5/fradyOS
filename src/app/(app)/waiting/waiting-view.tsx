@@ -8,7 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { NativeSelect } from "@/components/ui/native-select";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { PageHeader, SectionHeader, AreaDot } from "@/components/app/items";
+import { AreaTag, PageHeader, RowList, SectionHeader } from "@/components/app/items";
+import { FilterBar } from "@/components/app/filter-bar";
 import { WaitingActions } from "@/components/app/waiting-actions";
 import { useShell } from "@/components/app/app-shell";
 import { useWorkspace } from "@/components/app/workspace-provider";
@@ -45,14 +46,14 @@ export function WaitingView({ tasks, received, area, showReceived }: { tasks: Ta
     <div className="mx-auto max-w-6xl">
       <PageHeader
         title="Waiting On"
-        description="Deliverables other people owe you. Their delivery deadline and your follow-up date are tracked separately. Nothing is sent automatically."
+        description="Deliverables other people owe you. Their deadline and your follow-up are tracked separately; nothing is sent automatically."
         actions={
           <Button onClick={() => openQuickAdd({ status: "waiting", work_area_id: area })}>
             <Plus /> Add waiting item
           </Button>
         }
       >
-        <div className="flex flex-wrap items-center gap-2">
+        <FilterBar activeCount={area ? 1 : 0} onReset={() => setParams({ area: null })}>
           <NativeSelect className="w-44" value={area ?? ""} onChange={(e) => setParams({ area: e.target.value || null })} aria-label="Work area">
             <option value="">All work areas</option>
             {workAreas.map((a) => (
@@ -62,41 +63,41 @@ export function WaitingView({ tasks, received, area, showReceived }: { tasks: Ta
           <Button variant="ghost" size="sm" onClick={() => setParams({ received: showReceived ? null : "1" })}>
             {showReceived ? "Hide received" : "Show recently received"}
           </Button>
-        </div>
+        </FilterBar>
       </PageHeader>
 
       {tasks.length === 0 ? (
         <EmptyState icon={<Hourglass />} title="You're not waiting on anyone" description="When you hand something off, set the task status to “Waiting on Someone” and record who owes what, when they promised it, and when you'll follow up." action={<Button onClick={() => openQuickAdd({ status: "waiting" })}><Plus /> Add waiting item</Button>} />
       ) : (
-        <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-7">
           {attention.length ? (
             <section>
-              <SectionHeader title={<span className="text-destructive">Needs attention</span>} count={attention.length} hint="late deliveries or follow-ups due" />
+              <SectionHeader title={<span className="text-danger">Needs attention</span>} count={attention.length} hint="late deliveries or follow-ups due" />
               <WaitingTable tasks={attention} today={today} taskHref={taskHref} />
             </section>
           ) : null}
           <section>
             <SectionHeader title="On track" count={onTrack.length} />
-            {onTrack.length ? <WaitingTable tasks={onTrack} today={today} taskHref={taskHref} /> : <p className="text-muted-foreground text-xs">Everything else is waiting on a future date.</p>}
+            {onTrack.length ? <WaitingTable tasks={onTrack} today={today} taskHref={taskHref} /> : <p className="text-text-3 text-meta py-1.5">Everything else is waiting on a future date.</p>}
           </section>
         </div>
       )}
 
       {showReceived ? (
-        <section className="mt-6">
+        <section className="mt-7">
           <SectionHeader title="Recently received" count={received.length} />
           {received.length ? (
-            <ul className="flex flex-col gap-1.5">
+            <RowList>
               {received.map((t) => (
-                <li key={t.id} className="flex flex-wrap items-center gap-2 border-border/70 bg-card rounded-lg border px-3 py-2 text-sm">
-                  <Link href={taskHref(t.id)} scroll={false} className="font-medium hover:underline">{t.title}</Link>
-                  <span className="text-muted-foreground text-xs">from {t.waiting_person ?? "someone"} · received {formatTimestamp(t.waiting_received_at, timezone)}</span>
+                <div key={t.id} className="hover:bg-surface-hover flex flex-wrap items-center gap-x-2.5 gap-y-1 rounded-md px-2 py-2 text-sm transition-colors">
+                  <Link href={taskHref(t.id)} scroll={false} className="text-text-1 font-medium hover:underline">{t.title}</Link>
+                  <span className="text-text-3 text-meta">from {t.waiting_person ?? "someone"} · received {formatTimestamp(t.waiting_received_at, timezone)}</span>
                   <Badge variant={t.status === "completed" ? "success" : "secondary"} className="ml-auto">{t.status === "completed" ? "Completed" : "Back in To Do"}</Badge>
-                </li>
+                </div>
               ))}
-            </ul>
+            </RowList>
           ) : (
-            <p className="text-muted-foreground text-xs">Nothing marked received yet.</p>
+            <p className="text-text-3 text-meta py-1.5">Nothing marked received yet.</p>
           )}
         </section>
       ) : null}
@@ -106,7 +107,7 @@ export function WaitingView({ tasks, received, area, showReceived }: { tasks: Ta
 
 function WaitingTable({ tasks, today, taskHref }: { tasks: TaskWithRefs[]; today: string; taskHref: (id: string) => string }) {
   return (
-    <div className="rounded-lg border bg-card">
+    <div className="border-line-1 bg-surface-1 mt-3 rounded-lg border">
       <Table>
         <TableHeader>
           <TableRow>
@@ -124,29 +125,29 @@ function WaitingTable({ tasks, today, taskHref }: { tasks: TaskWithRefs[]; today
             const lateDelivery = t.waiting_expected_date && t.waiting_expected_date < today;
             const followupDue = t.waiting_followup_date && t.waiting_followup_date <= today;
             return (
-              <TableRow key={t.id} className={cn(lateDelivery && "bg-destructive/5")}>
+              <TableRow key={t.id} className={cn(lateDelivery && "bg-danger/6")}>
                 <TableCell className="max-w-xs whitespace-normal align-top">
-                  <Link href={taskHref(t.id)} scroll={false} className="font-medium hover:underline">{t.title}</Link>
-                  {t.waiting_need ? <p className="text-muted-foreground text-xs">Need: {t.waiting_need}</p> : null}
-                  <p className="text-muted-foreground mt-0.5 flex flex-wrap items-center gap-x-2 text-xs">
-                    {t.work_area ? <span className="inline-flex items-center gap-1"><AreaDot color={t.work_area.color} /> {t.work_area.name}</span> : null}
+                  <Link href={taskHref(t.id)} scroll={false} className="text-text-1 font-medium hover:underline">{t.title}</Link>
+                  {t.waiting_need ? <p className="text-text-2 text-meta">Need: {t.waiting_need}</p> : null}
+                  <p className="text-text-3 text-meta mt-0.5 flex flex-wrap items-center gap-x-2.5">
+                    {t.work_area ? <AreaTag name={t.work_area.name} color={t.work_area.color} /> : null}
                     {t.project ? <span>{t.project.name}</span> : null}
-                    {t.event ? <span>📅 {t.event.name}</span> : null}
+                    {t.event ? <span>{t.event.name}</span> : null}
                   </p>
                 </TableCell>
-                <TableCell className="align-top">{t.waiting_person ?? <span className="text-muted-foreground">—</span>}</TableCell>
-                <TableCell className="align-top tabular-nums">{t.waiting_requested_date ? formatDate(t.waiting_requested_date, "medium", today) : "—"}</TableCell>
+                <TableCell className="align-top">{t.waiting_person ?? <span className="text-text-3">—</span>}</TableCell>
+                <TableCell className="align-top nums">{t.waiting_requested_date ? formatDate(t.waiting_requested_date, "medium", today) : "—"}</TableCell>
                 <TableCell className="align-top">
                   {t.waiting_expected_date ? (
-                    <Badge variant={lateDelivery ? "destructive" : "muted"} className="tabular-nums">{lateDelivery ? "Late · " : ""}{relativeDayLabel(t.waiting_expected_date, today)}</Badge>
-                  ) : <span className="text-muted-foreground">—</span>}
+                    <Badge variant={lateDelivery ? "destructive" : "muted"} className="nums">{lateDelivery ? "Late · " : ""}{relativeDayLabel(t.waiting_expected_date, today)}</Badge>
+                  ) : <span className="text-text-3">—</span>}
                 </TableCell>
                 <TableCell className="align-top">
                   {t.waiting_followup_date ? (
-                    <Badge variant={followupDue ? "warning" : "secondary"} className="tabular-nums">{t.waiting_followup_date === today ? "Today" : relativeDayLabel(t.waiting_followup_date, today)}</Badge>
-                  ) : <span className="text-muted-foreground">Not scheduled</span>}
+                    <Badge variant={followupDue ? "warning" : "secondary"} className="nums">{t.waiting_followup_date === today ? "Today" : relativeDayLabel(t.waiting_followup_date, today)}</Badge>
+                  ) : <span className="text-text-3">Not scheduled</span>}
                 </TableCell>
-                <TableCell className="align-top tabular-nums">{t.waiting_last_followup_date ? relativeDayLabel(t.waiting_last_followup_date, today) : <span className="text-muted-foreground">Never</span>}</TableCell>
+                <TableCell className="align-top nums">{t.waiting_last_followup_date ? relativeDayLabel(t.waiting_last_followup_date, today) : <span className="text-text-3">Never</span>}</TableCell>
                 <TableCell className="align-top text-right">
                   <div className="flex justify-end"><WaitingActions task={t} compact /></div>
                 </TableCell>

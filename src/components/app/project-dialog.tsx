@@ -3,7 +3,6 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -114,8 +113,8 @@ function ProjectForm({ project, defaultAreaId, onClose }: { project?: Project; d
             <Button type="button" variant="ghost" onClick={onClose}>
               Cancel
             </Button>
-            <Button type="submit" disabled={pending}>
-              {pending ? <Loader2 className="animate-spin" /> : null} {project ? "Save" : "Create project"}
+            <Button loading={pending} type="submit" disabled={pending}>
+              {project ? "Save" : "Create project"}
             </Button>
           </DialogFooter>
         </form>

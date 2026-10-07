@@ -77,10 +77,10 @@ export function CalendarView({ items, view, date, from, to, preset, types }: { i
     <div className="mx-auto max-w-7xl">
       <PageHeader
         title="Calendar"
-        description="Events, deadlines, planned work, follow-ups and social publishing in one place. Imported Monday.com dates are read-only here."
+        description="Events, deadlines, planned work, follow-ups and social publishing in one place. Monday.com dates are read-only here."
         actions={
           <Tabs value={view} onValueChange={(v) => setParams({ view: v === "month" ? null : v })}>
-            <TabsList>
+            <TabsList aria-label="View">
               <TabsTrigger value="month">Month</TabsTrigger>
               <TabsTrigger value="week">Week</TabsTrigger>
               <TabsTrigger value="agenda">Agenda</TabsTrigger>
@@ -88,13 +88,13 @@ export function CalendarView({ items, view, date, from, to, preset, types }: { i
           </Tabs>
         }
       >
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-2.5">
           <div className="flex flex-wrap items-center gap-1.5">
             <Button variant="outline" size="icon-sm" aria-label="Previous" onClick={() => setParams({ date: step(date, -1) })}><ChevronLeft /></Button>
             <Button variant="outline" size="icon-sm" aria-label="Next" onClick={() => setParams({ date: step(date, 1) })}><ChevronRight /></Button>
             <Button variant="ghost" size="sm" onClick={() => setParams({ date: null })}>Today</Button>
-            <h2 className="ml-1 text-sm font-semibold">{title}</h2>
-            <div className="ml-auto flex items-center gap-1">
+            <h2 className="text-heading nums ml-1">{title}</h2>
+            <div className="ml-auto flex items-center gap-1" role="group" aria-label="Preset">
               {(["all", "content", "work"] as const).map((p) => (
                 <Button key={p} size="sm" variant={preset === p || (!preset && !types && p === "all") ? "secondary" : "ghost"} onClick={() => setParams({ preset: p === "all" ? null : p, types: null })}>
                   {p === "all" ? "Everything" : p === "content" ? "Content" : "My work"}
@@ -104,7 +104,7 @@ export function CalendarView({ items, view, date, from, to, preset, types }: { i
           </div>
           <div className="flex flex-wrap gap-1.5" role="group" aria-label="Item types">
             {ALL_KINDS.map((k) => (
-              <button key={k} type="button" aria-pressed={active.has(k)} onClick={() => toggleKind(k)} className={cn("rounded-full border px-2 py-0.5 text-[11px] font-medium transition-opacity", KIND_META[k].className, !active.has(k) && "opacity-35")}>
+              <button key={k} type="button" aria-pressed={active.has(k)} onClick={() => toggleKind(k)} className={cn("focus-visible:ring-brand/40 rounded-full border px-2 py-0.5 text-[11px] font-medium transition-opacity outline-none focus-visible:ring-2", KIND_META[k].className, !active.has(k) && "opacity-35")}>
                 {KIND_META[k].label}
               </button>
             ))}
@@ -133,12 +133,12 @@ function Chip({ item, onOpen, compact = false }: { item: CalendarItem; onOpen: (
       onDragStart={draggable ? (e) => e.dataTransfer.setData("text/task-id", item.entityId) : undefined}
       onClick={() => onOpen(item)}
       title={`${meta.short}: ${item.title}${item.subtitle ? ` · ${item.subtitle}` : ""}`}
-      className={cn("flex w-full items-center gap-1 truncate rounded border px-1 py-0.5 text-left text-[11px] leading-4 outline-none focus-visible:ring-2 focus-visible:ring-ring/60", meta.className, item.done && "line-through opacity-60", draggable && "cursor-grab")}
+      className={cn("focus-visible:ring-brand/40 flex w-full items-center gap-1 truncate rounded-sm border px-1 py-0.5 text-left text-[11px] leading-4 outline-none focus-visible:ring-2", meta.className, item.done && "line-through opacity-60", draggable && "cursor-grab")}
     >
       {item.readOnly ? <Lock className="size-2.5 shrink-0" aria-label="Read-only" /> : null}
       {!compact ? <span className="shrink-0 opacity-70">{meta.short}</span> : null}
       <span className="truncate">{item.title}</span>
-      {item.time ? <span className="ml-auto shrink-0 tabular-nums opacity-70">{formatTime(item.time).replace(":00", "")}</span> : null}
+      {item.time ? <span className="ml-auto shrink-0 nums opacity-70">{formatTime(item.time).replace(":00", "")}</span> : null}
     </button>
   );
 }
@@ -152,26 +152,26 @@ function MonthGrid({ date, items, today, weekStartsOn, onOpen, onDropPlanned }: 
   const month = date.slice(0, 7);
   const [over, setOver] = React.useState<string | null>(null);
   return (
-    <div className="border-border/80 bg-card overflow-hidden rounded-xl border">
-      <div className="bg-background/60 text-subtle-foreground grid grid-cols-7 text-center text-[11px] font-semibold tracking-wide uppercase">
-        {weekdayNames(weekStartsOn).map((d) => <div key={d} className="py-1.5">{d}</div>)}
+    <div className="border-line-1 bg-surface-1 overflow-hidden rounded-lg border">
+      <div className="grid grid-cols-7 text-center">
+        {weekdayNames(weekStartsOn).map((d) => <div key={d} className="eyebrow py-2">{d}</div>)}
       </div>
       {weeks.map((week, wi) => (
-        <div key={wi} className="border-border/70 grid grid-cols-7 border-t">
+        <div key={wi} className="border-line-1 grid grid-cols-7 border-t">
           {week.map((day) => {
             const dayItems = itemsOn(items, day);
             const inMonth = day.startsWith(month);
             const shown = dayItems.slice(0, 5);
             return (
-              <div key={day} className={cn("border-border/70 min-h-24 border-r p-1 last:border-r-0 md:min-h-28", !inMonth && "bg-background/40", over === day && "bg-accent")}
+              <div key={day} className={cn("border-line-1 min-h-20 border-r p-1 transition-colors last:border-r-0 md:min-h-28", !inMonth && "bg-surface-0/60", over === day && "bg-surface-hover")}
                 onDragOver={(e) => { e.preventDefault(); if (over !== day) setOver(day); }}
                 onDragLeave={() => setOver(null)}
                 onDrop={(e) => { e.preventDefault(); setOver(null); const id = e.dataTransfer.getData("text/task-id"); if (id) onDropPlanned(day, id); }}
               >
-                <div className={cn("mb-1 flex size-6 items-center justify-center rounded-full text-xs tabular-nums", day === today && "bg-primary text-primary-foreground font-semibold", !inMonth && "text-muted-foreground")}>{parseInt(day.slice(8), 10)}</div>
+                <div className={cn("nums mb-1 flex size-6 items-center justify-center rounded-full text-xs", day === today ? "bg-brand font-semibold text-white" : inMonth ? "text-text-2" : "text-text-3")}>{parseInt(day.slice(8), 10)}</div>
                 <div className="flex flex-col gap-0.5">
                   {shown.map((i) => <Chip key={i.id} item={i} onOpen={onOpen} compact />)}
-                  {dayItems.length > shown.length ? <Link href={`/calendar?view=agenda&date=${day}`} className="text-muted-foreground px-1 text-[11px] hover:underline">+{dayItems.length - shown.length} more</Link> : null}
+                  {dayItems.length > shown.length ? <Link href={`/calendar?view=agenda&date=${day}`} className="index hover:text-text-1 px-1 hover:underline">+{dayItems.length - shown.length} more</Link> : null}
                 </div>
               </div>
             );
@@ -190,15 +190,15 @@ function WeekGrid({ date, items, today, weekStartsOn, onOpen, onDropPlanned }: {
       {days.map((day) => {
         const dayItems = itemsOn(items, day);
         return (
-          <div key={day} className={cn("bg-card border-border/80 min-h-40 rounded-xl border p-2.5", over === day && "bg-accent")}
+          <div key={day} className={cn("bg-surface-1 border-line-1 min-h-40 rounded-lg border p-2.5 transition-colors", over === day && "bg-surface-hover")}
             onDragOver={(e) => { e.preventDefault(); if (over !== day) setOver(day); }}
             onDragLeave={() => setOver(null)}
             onDrop={(e) => { e.preventDefault(); setOver(null); const id = e.dataTransfer.getData("text/task-id"); if (id) onDropPlanned(day, id); }}
           >
-            <p className={cn("mb-1.5 text-xs font-semibold", day === today && "text-primary")}>{relativeDayLabel(day, today) === formatDate(day, "medium", today) ? formatDate(day, "weekday", today) : `${relativeDayLabel(day, today)} · ${formatDate(day, "monthDay")}`}</p>
+            <p className={cn("eyebrow mb-2", day === today && "text-brand-soft")}>{relativeDayLabel(day, today) === formatDate(day, "medium", today) ? formatDate(day, "weekday", today) : `${relativeDayLabel(day, today)} · ${formatDate(day, "monthDay")}`}</p>
             <div className="flex flex-col gap-1">
               {dayItems.map((i) => <Chip key={i.id} item={i} onOpen={onOpen} />)}
-              {dayItems.length === 0 ? <p className="text-muted-foreground text-[11px]">—</p> : null}
+              {dayItems.length === 0 ? <p className="text-text-3 text-[11px]">—</p> : null}
             </div>
           </div>
         );
@@ -211,21 +211,21 @@ function Agenda({ from, to, items, today, onOpen }: { from: string; to: string; 
   const days = eachDay(from, to).map((day) => ({ day, items: itemsOn(items, day) })).filter((d) => d.items.length);
   if (!days.length) return <EmptyState icon={<CalendarRange />} title="Nothing scheduled in this range" description="Adjust the filters or move to another period." />;
   return (
-    <div className="flex flex-col gap-3">
+    <div className="hairline-rows">
       {days.map(({ day, items: dayItems }) => (
-        <section key={day} className="grid grid-cols-1 gap-1 sm:grid-cols-[10rem_1fr]">
-          <h3 className={cn("text-sm font-semibold", day === today && "text-primary")}>
+        <section key={day} className="grid grid-cols-1 gap-2 py-3 first:pt-0 sm:grid-cols-[10rem_1fr]">
+          <h3 className={cn("text-heading", day === today && "text-brand-soft")}>
             {relativeDayLabel(day, today)}
-            <span className="text-muted-foreground block text-xs font-normal">{formatDate(day, "weekday", today)}</span>
+            <span className="text-text-3 text-meta block font-normal">{formatDate(day, "weekday", today)}</span>
           </h3>
           <div className="flex flex-col gap-1">
             {dayItems.map((i) => (
-              <button key={i.id} type="button" onClick={() => onOpen(i)} className={cn("border-border/70 bg-card hover:border-border hover:bg-accent/30 flex items-center gap-2 rounded-lg border px-2.5 py-1.5 text-left text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring", i.done && "opacity-60")}>
-                <span className={cn("rounded border px-1.5 py-0.5 text-[10px] font-medium", KIND_META[i.kind].className)}>{KIND_META[i.kind].short}</span>
-                {i.readOnly ? <Lock className="text-muted-foreground size-3" aria-label="Read-only" /> : null}
-                <span className={cn("min-w-0 flex-1 truncate", i.done && "line-through")}>{i.title}</span>
-                {i.subtitle ? <span className="text-muted-foreground hidden truncate text-xs sm:inline">{i.subtitle}</span> : null}
-                {i.time ? <span className="text-muted-foreground text-xs tabular-nums">{formatTime(i.time)}</span> : null}
+              <button key={i.id} type="button" onClick={() => onOpen(i)} className={cn("hover:bg-surface-hover focus-visible:ring-brand/40 flex items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors outline-none focus-visible:ring-2", i.done && "opacity-60")}>
+                <span className={cn("rounded-sm border px-1.5 py-0.5 text-[10px] font-medium", KIND_META[i.kind].className)}>{KIND_META[i.kind].short}</span>
+                {i.readOnly ? <Lock className="text-text-3 size-3" aria-label="Read-only" /> : null}
+                <span className={cn("text-text-1 min-w-0 flex-1 truncate", i.done && "line-through")}>{i.title}</span>
+                {i.subtitle ? <span className="text-text-3 text-meta hidden truncate sm:inline">{i.subtitle}</span> : null}
+                {i.time ? <span className="text-text-3 nums text-meta">{formatTime(i.time)}</span> : null}
               </button>
             ))}
           </div>

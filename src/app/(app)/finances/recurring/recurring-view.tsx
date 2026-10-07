@@ -4,13 +4,14 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { CalendarClock, Loader2, Pencil, Plus, Repeat } from "lucide-react";
+import { Pencil, Plus, Repeat } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { RowList, SectionHeader } from "@/components/app/items";
+import { Metric, MetricStrip } from "@/components/app/metric";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { EmptyState } from "@/components/ui/empty-state";
-import { StatTile } from "@/components/finance/bits";
 import { RecurringDialog } from "@/components/finance/recurring-dialog";
 import { applyRecurringToProfile } from "@/actions/finance";
 import { cadenceMeta, kindLabel, monthlyAmount, nextOccurrence, observe, projectionFigures, totals, upcoming } from "@/lib/finance/recurring";
@@ -45,24 +46,24 @@ export function RecurringView({ items, accounts, categories, profile, recent, to
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-7">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-muted-foreground max-w-2xl text-sm">Everything that repeats: pay, bills, loan payments, automatic savings. Amounts are per occurrence; totals are monthly equivalents. Transactions whose description matches an item are counted as that item.</p>
-        <Button onClick={() => setDialog({ open: true })}>
+        <p className="text-text-2 max-w-2xl text-sm">Everything that repeats: pay, bills, loan payments, automatic savings. Amounts are per occurrence; totals are monthly equivalents. Transactions whose description matches an item are counted as that item.</p>
+        <Button size="sm" onClick={() => setDialog({ open: true })}>
           <Plus /> Add recurring
         </Button>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <StatTile label="Recurring income" value={fmtMoney(t.income)} sub={t.variableIncome ? `per month · ${fmtMoney(t.variableIncome)} of it varies` : "per month"} />
-        <StatTile label="Recurring outgoing" value={fmtMoney(t.outgoing)} sub={`per month · ${fmtMoney(t.byKind.expense)} bills · ${fmtMoney(t.byKind.debt)} debt · ${fmtMoney(t.byKind.savings + t.byKind.investing)} saved`} />
-        <StatTile label="Left after recurring" value={fmtMoney(t.net)} sub="before variable spending" tone={t.net < 0 ? "critical" : undefined} />
-        <StatTile label="Next 7 days" value={fmtMoney(next7.filter((x) => x.item.kind !== "income").reduce((s, x) => s + x.item.amount, 0))} sub={`${next7.length} item${next7.length === 1 ? "" : "s"} due · ${fmtMoney(next7.filter((x) => x.item.kind === "income").reduce((s, x) => s + x.item.amount, 0))} coming in`} />
-      </div>
+      <MetricStrip cols={4}>
+        <Metric size="sm" label="Recurring income" tag="Monthly" value={fmtMoney(t.income)} muted={t.income === 0} sub={t.variableIncome ? `${fmtMoney(t.variableIncome)} of it varies` : "per month"} />
+        <Metric size="sm" label="Recurring outgoing" tag="Monthly" value={fmtMoney(t.outgoing)} muted={t.outgoing === 0} sub={`${fmtMoney(t.byKind.expense)} bills · ${fmtMoney(t.byKind.debt)} debt · ${fmtMoney(t.byKind.savings + t.byKind.investing)} saved`} />
+        <Metric size="sm" label="Left after recurring" tag="Monthly" value={fmtMoney(t.net)} tone={t.net < 0 ? "critical" : "neutral"} sub="before variable spending" />
+        <Metric size="sm" label="Next 7 days" tag="Upcoming" value={fmtMoney(next7.filter((x) => x.item.kind !== "income").reduce((s, x) => s + x.item.amount, 0))} muted={next7.length === 0} sub={`${next7.length} item${next7.length === 1 ? "" : "s"} due · ${fmtMoney(next7.filter((x) => x.item.kind === "income").reduce((s, x) => s + x.item.amount, 0))} coming in`} />
+      </MetricStrip>
 
       <Card>
-        <CardHeader className="items-center">
-          <div>
+        <CardHeader className="flex-col sm:flex-row sm:items-center">
+          <div className="min-w-0">
             <CardTitle className="flex items-center gap-2">
               <Repeat className="size-4" /> Projection assumptions
             </CardTitle>
@@ -75,45 +76,39 @@ export function RecurringView({ items, accounts, categories, profile, recent, to
               page.
             </CardDescription>
           </div>
-          <Button size="sm" variant={differs ? "default" : "outline"} onClick={apply} disabled={pending || !differs}>
-            {pending ? <Loader2 className="animate-spin" /> : null} {differs ? "Use in projection" : "Projection matches"}
+          <Button size="sm" className="w-full shrink-0 sm:w-auto" variant={differs ? "default" : "outline"} onClick={apply} loading={pending} disabled={pending || !differs}>
+            {differs ? "Use in projection" : "Projection matches"}
           </Button>
         </CardHeader>
       </Card>
 
       {items.length === 0 ? (
-        <EmptyState icon={<Repeat />} title="Nothing recurring yet" description="Add your paychecks, loan payments, subscriptions and automatic transfers. The Transactions page can tell you what repeats." action={<Button onClick={() => setDialog({ open: true })}><Plus /> Add recurring</Button>} />
+        <EmptyState variant="page" icon={<Repeat />} title="Nothing recurring yet" description="Add your paychecks, loan payments, subscriptions and automatic transfers. The Transactions page can tell you what repeats." action={<Button onClick={() => setDialog({ open: true })}><Plus /> Add recurring</Button>} />
       ) : (
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_280px]">
-          <div className="flex min-w-0 flex-col gap-6">
+        <div className="grid gap-x-10 gap-y-7 lg:grid-cols-[minmax(0,1fr)_18rem]">
+          <div className="flex min-w-0 flex-col gap-7">
             <RecurringTable title="Income" items={income} observations={observations} today={today} accountName={accountName} categoryName={categoryName} onEdit={(item) => setDialog({ open: true, item })} onAdd={() => setDialog({ open: true, defaultKind: "income" })} />
             <RecurringTable title="Bills, payments and transfers" items={outgoing} observations={observations} today={today} accountName={accountName} categoryName={categoryName} showKind onEdit={(item) => setDialog({ open: true, item })} onAdd={() => setDialog({ open: true, defaultKind: "expense" })} />
           </div>
-          <Card className="h-fit">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-sm">
-                <CalendarClock className="size-4" /> Next 30 days
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {next30.length === 0 ? (
-                <p className="text-muted-foreground text-sm">Nothing scheduled. Give items a next date to see them here.</p>
-              ) : (
-                <ul className="flex flex-col divide-y divide-border/70">
-                  {next30.slice(0, 20).map((x, i) => (
-                    <li key={`${x.item.id}-${x.date}-${i}`} className="flex items-center justify-between gap-2 py-1.5 text-sm">
-                      <div className="min-w-0">
-                        <div className="truncate">{x.item.name}</div>
-                        <div className="text-muted-foreground text-xs">{formatDate(x.date, "weekday", today)}</div>
-                      </div>
-                      <span className={cn("nums shrink-0 text-sm", x.item.kind === "income" ? "text-success" : null)}>{x.item.kind === "income" ? "+" : "−"}{fmtMoney(x.item.amount, { cents: true })}</span>
-                    </li>
-                  ))}
-                  {next30.length > 20 ? <li className="text-muted-foreground pt-1.5 text-xs">+{next30.length - 20} more</li> : null}
-                </ul>
-              )}
-            </CardContent>
-          </Card>
+          <section aria-labelledby="recurring-next">
+            <SectionHeader as="h3" title={<span id="recurring-next">Next 30 days</span>} count={next30.length} />
+            {next30.length === 0 ? (
+              <p className="text-text-3 text-meta py-1.5">Nothing scheduled. Give items a next date to see them here.</p>
+            ) : (
+              <RowList>
+                {next30.slice(0, 20).map((x, i) => (
+                  <div key={`${x.item.id}-${x.date}-${i}`} className="flex items-center justify-between gap-2 px-2 py-2 text-sm">
+                    <div className="min-w-0">
+                      <div className="text-text-1 truncate font-medium">{x.item.name}</div>
+                      <div className="text-text-3 nums text-meta">{formatDate(x.date, "weekday", today)}</div>
+                    </div>
+                    <span className={cn("nums shrink-0 text-sm", x.item.kind === "income" ? "text-success" : "text-text-1")}>{x.item.kind === "income" ? "+" : "−"}{fmtMoney(x.item.amount, { cents: true })}</span>
+                  </div>
+                ))}
+                {next30.length > 20 ? <p className="index px-2 pt-2">+{next30.length - 20} more</p> : null}
+              </RowList>
+            )}
+          </section>
         </div>
       )}
 
@@ -125,19 +120,20 @@ export function RecurringView({ items, accounts, categories, profile, recent, to
 function RecurringTable({ title, items, observations, today, accountName, categoryName, showKind, onEdit, onAdd }: { title: string; items: RecurringItem[]; observations: ReturnType<typeof observe>; today: string; accountName: Map<string, string>; categoryName: Map<string, string>; showKind?: boolean; onEdit: (item: RecurringItem) => void; onAdd: () => void }) {
   const total = items.filter((i) => i.is_active).reduce((s, i) => s + monthlyAmount(i), 0);
   return (
-    <Card>
-      <CardHeader className="items-center">
-        <div>
-          <CardTitle>{title}</CardTitle>
-          <CardDescription className="mt-1">{fmtMoney(total)} a month across {items.filter((i) => i.is_active).length} active item{items.filter((i) => i.is_active).length === 1 ? "" : "s"}.</CardDescription>
-        </div>
-        <Button variant="outline" size="sm" onClick={onAdd}>
-          <Plus /> Add
-        </Button>
-      </CardHeader>
-      <CardContent>
+    <section aria-label={title}>
+      <SectionHeader
+        title={title}
+        count={items.length}
+        hint={`${fmtMoney(total)} a month across ${items.filter((i) => i.is_active).length} active`}
+        action={
+          <Button variant="ghost" size="sm" onClick={onAdd}>
+            <Plus /> Add
+          </Button>
+        }
+      />
+      <div className="border-line-1 bg-surface-1 mt-3 rounded-lg border">
         {items.length === 0 ? (
-          <p className="text-muted-foreground text-sm">Nothing here yet.</p>
+          <p className="text-text-3 px-4 py-6 text-center text-sm">Nothing here yet.</p>
         ) : (
           <Table>
             <TableHeader>
@@ -160,23 +156,23 @@ function RecurringTable({ title, items, observations, today, accountName, catego
                   <TableRow key={item.id} className={cn(!item.is_active ? "opacity-60" : null)}>
                     <TableCell>
                       <div className="flex flex-wrap items-center gap-1.5">
-                        <button type="button" className="text-left font-medium hover:underline" onClick={() => onEdit(item)}>
+                        <button type="button" className="text-text-1 focus-visible:ring-brand/40 rounded-sm text-left font-medium outline-none hover:underline focus-visible:ring-2" onClick={() => onEdit(item)}>
                           {item.name}
                         </button>
                         {item.is_variable ? <Badge variant="warning">varies</Badge> : null}
                         {!item.is_active ? <Badge variant="muted">paused</Badge> : null}
                         {item.is_active && !item.in_projection ? <Badge variant="muted" title="Tracked here but not counted by “Use in projection”">not in projection</Badge> : null}
                       </div>
-                      <div className="text-muted-foreground text-xs">
+                      <div className="text-text-3 text-meta">
                         {[item.account_id ? accountName.get(item.account_id) : null, item.category_id ? categoryName.get(item.category_id) : null].filter(Boolean).join(" · ") || (item.notes ? item.notes.slice(0, 80) : "")}
                       </div>
                     </TableCell>
-                    {showKind ? <TableCell className="text-muted-foreground text-xs">{kindLabel(item.kind)}</TableCell> : null}
-                    <TableCell className="text-muted-foreground text-xs">{cadenceMeta(item.cadence).label.replace("Every ", "")}</TableCell>
+                    {showKind ? <TableCell className="text-text-3 text-meta">{kindLabel(item.kind)}</TableCell> : null}
+                    <TableCell className="text-text-3 text-meta">{cadenceMeta(item.cadence).label.replace("Every ", "")}</TableCell>
                     <TableCell className="nums text-right">{fmtMoney(item.amount, { cents: true })}</TableCell>
-                    <TableCell className="nums text-right font-medium">{fmtMoney(monthlyAmount(item), { cents: true })}</TableCell>
-                    <TableCell className="text-muted-foreground text-xs">{next ? formatDate(next, "monthDay", today) : "—"}</TableCell>
-                    <TableCell className="text-muted-foreground text-xs">
+                    <TableCell className="nums text-text-1 text-right font-medium">{fmtMoney(monthlyAmount(item), { cents: true })}</TableCell>
+                    <TableCell className="text-text-3 nums text-meta">{next ? formatDate(next, "monthDay", today) : "—"}</TableCell>
+                    <TableCell className="text-text-3 nums text-meta">
                       {obs ? (
                         <>
                           {obs.count}× · last {formatDate(obs.lastDate!, "monthDay", today)} · {fmtMoney(obs.lastAmount, { cents: true })}
@@ -199,7 +195,7 @@ function RecurringTable({ title, items, observations, today, accountName, catego
             </TableBody>
           </Table>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </section>
   );
 }

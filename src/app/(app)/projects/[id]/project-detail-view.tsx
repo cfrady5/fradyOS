@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Separator } from "@/components/ui/separator";
-import { AreaDot, EventRow, PriorityBadge, SectionHeader, SocialPostRow, TaskRow } from "@/components/app/items";
+import { AreaTag, EventRow, PageHeader, PriorityBadge, RowList, SectionHeader, SocialPostRow, TaskRow } from "@/components/app/items";
 import { ProjectDialog } from "@/components/app/project-dialog";
 import { AttachmentsList, NotesList } from "@/components/app/detail-parts";
 import { WaitingActions } from "@/components/app/waiting-actions";
@@ -60,53 +60,53 @@ export function ProjectDetailView({ detail }: { detail: ProjectDetail }) {
 
   return (
     <div className="mx-auto max-w-6xl">
-      <div className="mb-4">
-        <Link href="/projects" className="text-muted-foreground inline-flex items-center gap-1 text-xs hover:underline">
-          <ArrowLeft className="size-3" /> Projects
-        </Link>
-      </div>
-      <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-xl font-semibold tracking-tight md:text-2xl">{p.name}</h1>
-            <Badge variant={p.status === "active" ? "default" : p.status === "completed" ? "success" : p.status === "on_hold" ? "warning" : "muted"}>{labelFor(PROJECT_STATUSES, p.status)}</Badge>
-            <PriorityBadge priority={p.priority} />
-          </div>
-          <div className="text-muted-foreground mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
-            {p.work_area ? (
-              <span className="inline-flex items-center gap-1">
-                <AreaDot color={p.work_area.color} /> {p.work_area.name}
-              </span>
-            ) : null}
-            {p.target_date ? (
-              <span className={cn(targetBucket === "overdue" && p.status !== "completed" ? "text-destructive" : "")}>Target {formatDate(p.target_date, "weekday", today)}</span>
-            ) : null}
-            {p.completed_at ? <span>Completed {formatTimestamp(p.completed_at, timezone, { withYear: true })}</span> : null}
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
-            <Pencil /> Edit
-          </Button>
-          <Button variant="ghost" size="sm" className="text-destructive" onClick={remove}>
-            <Trash2 /> Delete
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        eyebrow={
+          <Link href="/projects" className="hover:text-text-1 inline-flex items-center gap-1.5 transition-colors">
+            <ArrowLeft className="size-3" aria-hidden /> Projects
+          </Link>
+        }
+        title={
+          <span className="inline-flex flex-wrap items-center gap-x-3 gap-y-1">
+            {p.name}
+            <span className="inline-flex items-center gap-2 text-sm font-normal">
+              <Badge variant={p.status === "active" ? "default" : p.status === "completed" ? "success" : p.status === "on_hold" ? "warning" : "muted"}>{labelFor(PROJECT_STATUSES, p.status)}</Badge>
+              <PriorityBadge priority={p.priority} className="text-meta" />
+            </span>
+          </span>
+        }
+        description={
+          <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
+            {p.work_area ? <AreaTag name={p.work_area.name} color={p.work_area.color} /> : null}
+            {p.target_date ? <span className={cn("nums", targetBucket === "overdue" && p.status !== "completed" ? "text-danger" : "")}>Target {formatDate(p.target_date, "weekday", today)}</span> : null}
+            {p.completed_at ? <span className="nums">Completed {formatTimestamp(p.completed_at, timezone, { withYear: true })}</span> : null}
+          </span>
+        }
+        actions={
+          <>
+            <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
+              <Pencil /> Edit
+            </Button>
+            <Button variant="ghost" size="sm" className="text-danger hover:text-danger" onClick={remove}>
+              <Trash2 /> Delete
+            </Button>
+          </>
+        }
+      />
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <div className="flex flex-col gap-4 lg:col-span-2">
-          <div className="bg-card rounded-lg border p-3">
+      <div className="grid grid-cols-1 gap-x-10 gap-y-7 lg:grid-cols-3">
+        <div className="flex flex-col gap-7 lg:col-span-2">
+          <div className="bg-surface-1 border-line-1 rounded-lg border p-4">
             <div className="flex items-center gap-3">
               <Progress value={pct} className="flex-1" />
-              <span className="text-sm tabular-nums">{pct}%</span>
+              <span className="nums text-sm font-medium">{pct}%</span>
             </div>
-            <div className="text-muted-foreground mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs">
+            <div className="text-text-3 text-meta mt-2 flex flex-wrap gap-x-4 gap-y-1">
               <span>
                 {p.task_done} of {p.task_total} tasks complete
               </span>
               {overdue.length ? (
-                <span className="text-destructive inline-flex items-center gap-1">
+                <span className="text-danger inline-flex items-center gap-1">
                   <AlertCircle className="size-3" /> {overdue.length} overdue
                 </span>
               ) : null}
@@ -118,7 +118,7 @@ export function ProjectDetailView({ detail }: { detail: ProjectDetail }) {
             </div>
             {p.next_action ? (
               <p className="mt-3 text-sm">
-                <span className="text-muted-foreground">Next action:</span> <span className="font-medium">{p.next_action}</span>
+                <span className="text-text-3">Next action</span> <span className="text-text-1 ml-1 font-medium">{p.next_action}</span>
               </p>
             ) : null}
           </div>
@@ -126,24 +126,26 @@ export function ProjectDetailView({ detail }: { detail: ProjectDetail }) {
           <section>
             <SectionHeader title="Tasks" count={open.length} action={<Button size="sm" variant="outline" onClick={() => openQuickAdd({ project_id: p.id, work_area_id: p.work_area_id })}><Plus /> Add task</Button>} />
             {open.length ? (
-              <div className="flex flex-col gap-1.5">
+              <RowList>
                 {open.map((t) => (
                   <TaskRow key={t.id} task={t} onToggleComplete={toggle} showProject={false} />
                 ))}
-              </div>
+              </RowList>
             ) : (
-              <EmptyState compact title="No open tasks" description="Add the next concrete step for this project." />
+              <EmptyState title="No open tasks" description="Add the next concrete step for this project." />
             )}
           </section>
 
           {waiting.length ? (
             <section>
               <SectionHeader title="Waiting on others" count={waiting.length} />
-              <div className="flex flex-col gap-1.5">
+              <div className="mt-2 flex flex-col gap-2">
                 {waiting.map((t) => (
-                  <div key={t.id} className="rounded-md border bg-card p-2.5">
-                    <TaskRow task={t} onToggleComplete={toggle} showProject={false} className="border-0 bg-transparent px-0 py-0 hover:bg-transparent" />
-                    <div className="mt-2">
+                  <div key={t.id} className="border-line-1 bg-surface-1 rounded-lg border px-4 py-2">
+                    <RowList>
+                      <TaskRow task={t} onToggleComplete={toggle} showProject={false} dense />
+                    </RowList>
+                    <div className="mt-2 pb-1">
                       <WaitingActions task={t} compact />
                     </div>
                   </div>
@@ -155,29 +157,29 @@ export function ProjectDetailView({ detail }: { detail: ProjectDetail }) {
           <section>
             <SectionHeader title="Completed" count={done.length} action={done.length ? <Button variant="ghost" size="sm" onClick={() => setShowCompleted((v) => !v)}>{showCompleted ? "Hide" : "Show"}</Button> : undefined} />
             {showCompleted && done.length ? (
-              <div className="flex flex-col gap-1.5">
+              <RowList>
                 {done.map((t) => (
                   <TaskRow key={t.id} task={t} onToggleComplete={toggle} showProject={false} dense />
                 ))}
-              </div>
+              </RowList>
             ) : null}
           </section>
         </div>
 
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-7">
           {p.description ? (
-            <section className="bg-card rounded-lg border p-3">
-              <h2 className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">About</h2>
-              <p className="whitespace-pre-wrap text-sm">{p.description}</p>
+            <section>
+              <h2 className="eyebrow mb-2">About</h2>
+              <p className="text-text-2 text-sm whitespace-pre-wrap">{p.description}</p>
             </section>
           ) : null}
           {p.links.length ? (
-            <section className="bg-card rounded-lg border p-3">
-              <h2 className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Links</h2>
-              <ul className="flex flex-col gap-1">
+            <section>
+              <h2 className="eyebrow mb-2">Links</h2>
+              <ul className="flex flex-col gap-1.5">
                 {p.links.map((l, i) => (
                   <li key={i}>
-                    <a href={l.url} target="_blank" rel="noreferrer noopener" className="text-primary inline-flex items-center gap-1 text-sm hover:underline">
+                    <a href={l.url} target="_blank" rel="noreferrer noopener" className="text-brand-soft inline-flex items-center gap-1 text-sm hover:underline">
                       <ExternalLink className="size-3.5" /> {l.label || l.url}
                     </a>
                   </li>
@@ -189,36 +191,36 @@ export function ProjectDetailView({ detail }: { detail: ProjectDetail }) {
           <section>
             <SectionHeader title="Events" count={detail.events.length} />
             {detail.events.length ? (
-              <div className="flex flex-col gap-1.5">
+              <RowList>
                 {detail.events.map((e) => (
                   <EventRow key={e.id} event={e} />
                 ))}
-              </div>
+              </RowList>
             ) : (
-              <p className="text-muted-foreground text-xs">Link events to this project from the event page.</p>
+              <p className="text-text-3 text-meta py-1.5">Link events to this project from the event page.</p>
             )}
           </section>
 
           <section>
             <SectionHeader title="Social posts" count={detail.posts.length} action={<NewSocialPostButton preset={{ project_id: p.id, work_area_id: p.work_area_id }} size="sm" variant="outline" />} />
             {detail.posts.length ? (
-              <div className="flex flex-col gap-1.5">
+              <RowList>
                 {detail.posts.map((post) => (
                   <SocialPostRow key={post.id} post={post} dense />
                 ))}
-              </div>
+              </RowList>
             ) : (
-              <p className="text-muted-foreground text-xs">No social posts linked yet.</p>
+              <p className="text-text-3 text-meta py-1.5">No social posts linked yet.</p>
             )}
           </section>
 
           <Separator />
           <section>
-            <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Notes</h2>
+            <h2 className="eyebrow mb-2">Notes</h2>
             <NotesList parent={{ project_id: p.id }} notes={detail.notes} onChanged={() => router.refresh()} />
           </section>
           <section>
-            <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Attachments</h2>
+            <h2 className="eyebrow mb-2">Attachments</h2>
             <AttachmentsList parent={{ project_id: p.id }} attachments={detail.attachments} onChanged={() => router.refresh()} />
           </section>
         </div>

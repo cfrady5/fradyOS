@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Loader2, Trash2, Send, ExternalLink, AlertTriangle, UploadCloud } from "lucide-react";
+import { Trash2, Send, ExternalLink, AlertTriangle, UploadCloud } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -135,7 +135,7 @@ export function SocialPostEditor({ detail, onChanged, onClose }: { detail: Socia
 
   return (
     <div className="flex flex-col">
-      <div className="border-border bg-card/95 sticky top-0 z-10 flex flex-wrap items-center gap-2 border-b py-2.5 pr-14 pl-4 backdrop-blur">
+      <div className="border-line-1 bg-surface-1 sticky top-0 z-10 flex flex-wrap items-center gap-2 border-b py-2.5 pr-14 pl-4 backdrop-blur">
         <SocialStatusBadge status={p.status} />
         {next && p.status !== "published" ? <DueBadge date={next.date} today={today} label={next.label} /> : null}
         {p.monday_item_id ? (
@@ -200,9 +200,9 @@ export function SocialPostEditor({ detail, onChanged, onClose }: { detail: Socia
         </div>
 
         {p.event ? (
-          <p className="text-muted-foreground text-xs">
+          <p className="text-text-2 text-xs">
             Event:{" "}
-            <Link href={`/events/${p.event.id}`} className="text-primary-soft hover:underline">
+            <Link href={`/events/${p.event.id}`} className="text-brand-soft hover:underline">
               {p.event.name}
             </Link>
             {p.event.start_date ? ` · ${formatDate(p.event.start_date, "medium", today)}` : ""}
@@ -243,7 +243,7 @@ export function SocialPostEditor({ detail, onChanged, onClose }: { detail: Socia
             <AlertDescription>This LinkedIn draft contains hashtags. Remove them before approval.</AlertDescription>
           </Alert>
         ) : null}
-        <p className="text-muted-foreground -mt-2 text-xs tabular-nums">{form.caption.length} characters</p>
+        <p className="text-text-2 -mt-2 text-xs nums">{form.caption.length} characters</p>
 
         <LinksEditor label="Creative assets and links" value={form.assets} onChange={(v) => set("assets", v)} />
 
@@ -271,27 +271,27 @@ export function SocialPostEditor({ detail, onChanged, onClose }: { detail: Socia
         ) : null}
 
         <div className="flex items-center justify-between gap-2">
-          <Button variant="ghost" size="sm" className="text-destructive" onClick={remove} disabled={pending}>
+          <Button variant="ghost" size="sm" className="text-danger" onClick={remove} disabled={pending}>
             <Trash2 /> Delete
           </Button>
           <div className="flex items-center gap-2">
-            {dirty ? <span className="text-muted-foreground text-xs">Unsaved changes</span> : null}
-            <Button onClick={save} disabled={pending || !dirty}>
-              {pending ? <Loader2 className="animate-spin" /> : null} Save
+            {dirty ? <span className="text-text-2 text-xs">Unsaved changes</span> : null}
+            <Button loading={pending} onClick={save} disabled={pending || !dirty}>
+              Save
             </Button>
           </div>
         </div>
 
         <Separator />
         <section>
-          <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Notes</h3>
+          <h3 className="eyebrow mb-2">Notes</h3>
           <NotesList parent={{ social_post_id: p.id }} notes={detail.notes} onChanged={onChanged} />
         </section>
         <section>
-          <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Attachments</h3>
+          <h3 className="eyebrow mb-2">Attachments</h3>
           <AttachmentsList parent={{ social_post_id: p.id }} attachments={detail.attachments} onChanged={onChanged} />
         </section>
-        <p className="text-muted-foreground text-xs">
+        <p className="text-text-2 text-xs">
           Created {formatTimestamp(p.created_at, timezone, { withYear: true })}
           {p.published_at ? ` · Published ${formatTimestamp(p.published_at, timezone, { withYear: true })}` : ""}
         </p>

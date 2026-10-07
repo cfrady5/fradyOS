@@ -4,7 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Loader2, Wand2 } from "lucide-react";
+import { Wand2 } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,7 +33,7 @@ export function ApplyTemplateDialog({ open, onOpenChange, event, templates, item
         {templates.length === 0 ? (
           <Alert>
             <AlertDescription>
-              No templates yet. <Link href="/settings?tab=templates" className="text-primary-soft hover:underline">Create one in Settings</Link>.
+              No templates yet. <Link href="/settings?tab=templates" className="text-brand-soft hover:underline">Create one in Settings</Link>.
             </AlertDescription>
           </Alert>
         ) : (
@@ -109,7 +109,7 @@ function ApplyTemplateBody({ event, templates, items, existing, socialBoardName,
             ))}
           </NativeSelect>
         </div>
-        <p className="text-muted-foreground text-xs">Event start: <span className="text-foreground font-medium">{event.start_date ? formatDate(event.start_date, "weekday", today) : "—"}</span></p>
+        <p className="text-text-2 text-xs">Event start: <span className="text-foreground font-medium">{event.start_date ? formatDate(event.start_date, "weekday", today) : "—"}</span></p>
         {pastCount ? (
           <label className="ml-auto flex items-center gap-2 text-xs">
             <Checkbox checked={includePast} onCheckedChange={(v) => setIncludePast(v === true)} />
@@ -118,11 +118,11 @@ function ApplyTemplateBody({ event, templates, items, existing, socialBoardName,
         ) : null}
       </div>
       {rows.length === 0 ? (
-        <p className="text-muted-foreground text-sm">This template has no milestones. <Link href="/settings?tab=templates" className="text-primary-soft hover:underline">Add some</Link>.</p>
+        <p className="text-text-2 text-sm">This template has no milestones. <Link href="/settings?tab=templates" className="text-brand-soft hover:underline">Add some</Link>.</p>
       ) : (
         <div className="max-h-[50vh] overflow-y-auto rounded-md border">
           <table className="w-full text-sm">
-            <thead className="bg-muted/50 text-muted-foreground text-xs">
+            <thead className="bg-surface-2 text-text-2 text-xs">
               <tr>
                 <th className="w-8 p-2" />
                 <th className="p-2 text-left">Item</th>
@@ -144,15 +144,15 @@ function ApplyTemplateBody({ event, templates, items, existing, socialBoardName,
                     </div>
                   </td>
                   <td className="p-2 align-top">
-                    <Input type="date" value={r.date} onChange={(e) => e.target.value && update(r.template_item_id, { date: e.target.value })} className="h-8 w-36 tabular-nums" disabled={r.already_applied} />
+                    <Input type="date" value={r.date} onChange={(e) => e.target.value && update(r.template_item_id, { date: e.target.value })} className="h-8 w-36 nums" disabled={r.already_applied} />
                   </td>
                   <td className="p-2 align-top">
                     {r.kind === "social" ? (
                       <div className="flex flex-col gap-1">
-                        <Input type="date" value={r.draft_due_date ?? ""} onChange={(e) => update(r.template_item_id, { draft_due_date: e.target.value || null })} className="h-8 w-36 tabular-nums" disabled={r.already_applied} aria-label="Draft deadline" />
-                        <Input type="date" value={r.approval_due_date ?? ""} onChange={(e) => update(r.template_item_id, { approval_due_date: e.target.value || null })} className="h-8 w-36 tabular-nums" disabled={r.already_applied} aria-label="Approval deadline" />
+                        <Input type="date" value={r.draft_due_date ?? ""} onChange={(e) => update(r.template_item_id, { draft_due_date: e.target.value || null })} className="h-8 w-36 nums" disabled={r.already_applied} aria-label="Draft deadline" />
+                        <Input type="date" value={r.approval_due_date ?? ""} onChange={(e) => update(r.template_item_id, { approval_due_date: e.target.value || null })} className="h-8 w-36 nums" disabled={r.already_applied} aria-label="Approval deadline" />
                       </div>
-                    ) : <span className="text-muted-foreground text-xs">—</span>}
+                    ) : <span className="text-text-2 text-xs">—</span>}
                   </td>
                   <td className="p-2 align-top">
                     {r.kind === "social" ? (
@@ -162,7 +162,7 @@ function ApplyTemplateBody({ event, templates, items, existing, socialBoardName,
                           <option key={p.value} value={p.value}>{p.label}</option>
                         ))}
                       </NativeSelect>
-                    ) : <span className="text-muted-foreground text-xs">—</span>}
+                    ) : <span className="text-text-2 text-xs">—</span>}
                   </td>
                 </tr>
               ))}
@@ -183,8 +183,8 @@ function ApplyTemplateBody({ event, templates, items, existing, socialBoardName,
       ) : null}
       <DialogFooter>
         <Button variant="ghost" onClick={onClose}>Cancel</Button>
-        <Button onClick={apply} disabled={pending || chosenCount === 0}>
-          {pending ? <Loader2 className="animate-spin" /> : <Wand2 />} Create {chosenCount} item{chosenCount === 1 ? "" : "s"}
+        <Button loading={pending} onClick={apply} disabled={pending || chosenCount === 0}>
+          {pending ? null : <Wand2 />} Create {chosenCount} item{chosenCount === 1 ? "" : "s"}
         </Button>
       </DialogFooter>
     </>

@@ -71,33 +71,33 @@ function FocusPickerBody({ current, onClose }: { current: string[]; onClose: () 
   return (
     <>
       <div className="relative">
-        <Search className="text-muted-foreground absolute top-2.5 left-2.5 size-4" />
-        <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Filter tasks…" className="pl-8" autoFocus />
+        <Search className="text-text-3 pointer-events-none absolute top-2.5 left-2.5 size-4" aria-hidden />
+        <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Filter tasks…" className="pl-8" autoFocus aria-label="Filter tasks" />
       </div>
-      <div className="border-border max-h-[50vh] overflow-y-auto rounded-lg border">
+      <div className="border-line-1 max-h-[50vh] overflow-y-auto rounded-lg border">
         {state.loading ? (
-          <div className="text-muted-foreground flex items-center gap-2 p-4 text-sm">
-            <Loader2 className="size-4 animate-spin" /> Loading tasks…
+          <div className="text-text-3 flex items-center gap-2 p-4 text-sm" aria-live="polite">
+            <Loader2 className="size-4 animate-spin" aria-hidden /> Loading tasks…
           </div>
         ) : filtered.length === 0 ? (
-          <p className="text-muted-foreground p-4 text-sm">No open tasks match.</p>
+          <p className="text-text-3 p-4 text-sm">No open tasks match.</p>
         ) : (
-          <ul className="divide-y">
+          <ul className="hairline-rows">
             {filtered.map((t) => {
               const idx = selected.indexOf(t.id);
               const checked = idx >= 0;
               const disabled = !checked && selected.length >= 3;
               return (
                 <li key={t.id}>
-                  <label className={cn("flex cursor-pointer items-center gap-3 px-3 py-2 hover:bg-accent/40", disabled && "opacity-50")}>
+                  <label className={cn("hover:bg-surface-hover flex cursor-pointer items-center gap-3 px-3 py-2 transition-colors", disabled && "opacity-50")}>
                     <Checkbox checked={checked} disabled={disabled} onCheckedChange={() => toggle(t.id)} />
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm font-medium">{t.title}</span>
-                      <span className="text-muted-foreground block truncate text-xs">
+                      <span className="text-text-1 block truncate text-sm font-medium">{t.title}</span>
+                      <span className="text-text-3 text-meta block truncate">
                         {[t.project?.name, t.work_area?.name, t.due_date ? dueLabel(t.due_date, today) : null].filter(Boolean).join(" · ")}
                       </span>
                     </span>
-                    {checked ? <span className="text-muted-foreground text-xs font-semibold tabular-nums">#{idx + 1}</span> : null}
+                    {checked ? <span className="index">{String(idx + 1).padStart(2, "0")}</span> : null}
                   </label>
                 </li>
               );
@@ -109,8 +109,8 @@ function FocusPickerBody({ current, onClose }: { current: string[]; onClose: () 
         <Button variant="ghost" onClick={() => setSelected([])}>
           Clear
         </Button>
-        <Button onClick={save} disabled={pending}>
-          {pending ? <Loader2 className="animate-spin" /> : null} Save priorities
+        <Button onClick={save} loading={pending} disabled={pending}>
+          Save priorities
         </Button>
       </DialogFooter>
     </>

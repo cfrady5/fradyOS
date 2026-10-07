@@ -48,8 +48,8 @@ export function Metric({
 }) {
   const body = (
     <>
-      <div className={cn("flex min-w-0 items-center gap-1.5", align === "right" && "justify-end")}>
-        <span className="eyebrow truncate">{label}</span>
+      <div className={cn("flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1", align === "right" && "justify-end")}>
+        <span className="eyebrow">{label}</span>
         {tag ? <MetricTag>{tag}</MetricTag> : null}
       </div>
       <div

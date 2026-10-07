@@ -3,11 +3,13 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Plus, X, Star, Trash2, Loader2, Save, FlaskConical } from "lucide-react";
+import { Plus, X, Star, Trash2, Save, FlaskConical } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { NativeSelect } from "@/components/ui/native-select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { RowList, SectionHeader } from "@/components/app/items";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Field } from "@/components/app/form-fields";
 import { LineChart } from "@/components/finance/charts";
@@ -109,8 +111,8 @@ export function ScenariosView({ inputs, accounts, scenarios, loadId }: { inputs:
   ];
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="grid gap-4 lg:grid-cols-5">
+    <div className="flex flex-col gap-7">
+      <div className="grid gap-x-6 gap-y-7 lg:grid-cols-5">
         <Card className="min-w-0 lg:col-span-2">
           <CardHeader>
             <div>
@@ -137,12 +139,12 @@ export function ScenariosView({ inputs, accounts, scenarios, loadId }: { inputs:
             </Field>
             <PresetFields key={preset.id} preset={preset} accounts={accounts} onAdd={addFromPreset} />
             <div className="flex flex-col gap-1.5">
-              <span className="text-sm font-medium">Changes in this scenario</span>
+              <span className="eyebrow">Changes in this scenario</span>
               {changes.length ? (
-                <ul className="flex flex-col gap-1">
+                <ul className="hairline-rows border-line-1 rounded-md border">
                   {changes.map((c, i) => (
-                    <li key={i} className="flex items-center gap-2 rounded-md border px-2 py-1 text-xs">
-                      <span className="flex-1">{describeChange(c)}</span>
+                    <li key={i} className="flex items-center gap-2 px-2.5 py-1.5 text-xs">
+                      <span className="text-text-1 flex-1">{describeChange(c)}</span>
                       <Button type="button" variant="ghost" size="icon-xs" aria-label="Remove change" onClick={() => setChanges(changes.filter((_, j) => j !== i))}>
                         <X />
                       </Button>
@@ -150,12 +152,12 @@ export function ScenariosView({ inputs, accounts, scenarios, loadId }: { inputs:
                   ))}
                 </ul>
               ) : (
-                <p className="text-muted-foreground text-xs">No changes yet. Add one from a preset above.</p>
+                <p className="text-text-3 text-meta">No changes yet. Add one from a preset above.</p>
               )}
             </div>
             <div className="flex flex-wrap gap-2">
-              <Button size="sm" onClick={save} disabled={pending || !changes.length}>
-                {pending ? <Loader2 className="animate-spin" /> : <Save />} {editingId ? "Update scenario" : "Save scenario"}
+              <Button size="sm" onClick={save} loading={pending} disabled={pending || !changes.length}>
+                {pending ? null : <Save />} {editingId ? "Update scenario" : "Save scenario"}
               </Button>
               {changes.length || editingId ? (
                 <Button size="sm" variant="ghost" onClick={reset}>
@@ -168,7 +170,7 @@ export function ScenariosView({ inputs, accounts, scenarios, loadId }: { inputs:
 
         <div className="flex min-w-0 flex-col gap-4 lg:col-span-3">
           <Card>
-            <CardHeader className="items-center">
+            <CardHeader className="flex-col sm:flex-row sm:items-center">
               <div>
                 <CardTitle>Side by side</CardTitle>
                 <CardDescription className="mt-1">Baseline is today&rsquo;s plan. Best value in each row is highlighted.</CardDescription>
@@ -209,9 +211,9 @@ export function ScenariosView({ inputs, accounts, scenarios, loadId }: { inputs:
                     }
                     return (
                       <TableRow key={row.label}>
-                        <TableCell className="text-muted-foreground text-xs">{row.label}</TableCell>
+                        <TableCell className="text-text-3 text-meta">{row.label}</TableCell>
                         {results.map((r, k) => (
-                          <TableCell key={k} className={cn("text-right tabular-nums", k === bestIdx ? "font-semibold" : null)}>
+                          <TableCell key={k} className={cn("nums text-right", k === bestIdx ? "text-text-1 font-semibold" : "text-text-2")}>
                             {row.get(r)}
                           </TableCell>
                         ))}
@@ -220,11 +222,11 @@ export function ScenariosView({ inputs, accounts, scenarios, loadId }: { inputs:
                   })}
                   {results[0].goals.map((g) => (
                     <TableRow key={g.id}>
-                      <TableCell className="text-muted-foreground text-xs">Goal · {g.name}</TableCell>
+                      <TableCell className="text-text-3 text-meta">Goal · {g.name}</TableCell>
                       {results.map((r, k) => {
                         const gg = r.goals.find((x) => x.id === g.id);
                         return (
-                          <TableCell key={k} className="text-right text-xs tabular-nums">
+                          <TableCell key={k} className="text-right text-xs nums">
                             <span className="inline-flex items-center gap-1.5">
                               {gg?.projectedDate ? formatDate(gg.projectedDate, "monthYear") : "—"} {gg ? <GoalStatusBadge status={gg.status} /> : null}
                             </span>
@@ -241,39 +243,32 @@ export function ScenariosView({ inputs, accounts, scenarios, loadId }: { inputs:
         </div>
       </div>
 
-      <Card>
-        <CardHeader>
-          <div>
-            <CardTitle>Saved scenarios</CardTitle>
-            <CardDescription className="mt-1">Load one to edit, or tick it to add it to the comparison.</CardDescription>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {scenarios.length ? (
-            <ul className="divide-y">
-              {scenarios.map((s) => (
-                <li key={s.id} className="flex items-center gap-3 py-2 text-sm">
-                  <input type="checkbox" className="size-4" aria-label={`Compare ${s.name}`} checked={compareIds.includes(s.id)} disabled={editingId === s.id} onChange={(e) => setCompareIds((ids) => (e.target.checked ? [...ids, s.id] : ids.filter((x) => x !== s.id)))} />
-                  <button type="button" className="min-w-0 flex-1 text-left hover:underline" onClick={() => load(s)}>
-                    <span className="font-medium">{s.name}</span>
-                    <span className="text-muted-foreground ml-2 text-xs">{s.assumptions.changes.length} change{s.assumptions.changes.length === 1 ? "" : "s"}{editingId === s.id ? " · editing" : ""}</span>
-                  </button>
-                  <Button variant="ghost" size="icon-xs" aria-label={s.is_favorite ? "Unfavorite" : "Favorite"} onClick={() => toggleFavorite(s)}>
-                    <Star className={cn(s.is_favorite ? "fill-current text-warning" : null)} />
-                  </Button>
-                  <Button variant="ghost" size="icon-xs" aria-label="Delete" onClick={() => remove(s)}>
-                    <Trash2 />
-                  </Button>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-muted-foreground flex items-center gap-2 text-sm">
-              <FlaskConical className="size-4" /> Nothing saved yet. Build a scenario and save it to compare later.
-            </p>
-          )}
-        </CardContent>
-      </Card>
+      <section aria-labelledby="scenarios-saved">
+        <SectionHeader title={<span id="scenarios-saved">Saved scenarios</span>} count={scenarios.length} hint="load one to edit, or tick it to add it to the comparison" />
+        {scenarios.length ? (
+          <RowList>
+            {scenarios.map((s) => (
+              <div key={s.id} className="hover:bg-surface-hover flex items-center gap-3 rounded-md px-2 py-2 text-sm transition-colors">
+                <Checkbox aria-label={`Compare ${s.name}`} checked={compareIds.includes(s.id)} disabled={editingId === s.id} onCheckedChange={(v) => setCompareIds((ids) => (v ? [...ids, s.id] : ids.filter((x) => x !== s.id)))} />
+                <button type="button" className="focus-visible:ring-brand/40 min-w-0 flex-1 rounded-sm text-left outline-none hover:underline focus-visible:ring-2" onClick={() => load(s)}>
+                  <span className="text-text-1 font-medium">{s.name}</span>
+                  <span className="text-text-3 text-meta ml-2">{s.assumptions.changes.length} change{s.assumptions.changes.length === 1 ? "" : "s"}{editingId === s.id ? " · editing" : ""}</span>
+                </button>
+                <Button variant="ghost" size="icon-xs" aria-label={s.is_favorite ? `Unfavorite ${s.name}` : `Favorite ${s.name}`} onClick={() => toggleFavorite(s)}>
+                  <Star className={cn(s.is_favorite ? "fill-current text-warning" : null)} />
+                </Button>
+                <Button variant="ghost" size="icon-xs" aria-label={`Delete ${s.name}`} onClick={() => remove(s)}>
+                  <Trash2 />
+                </Button>
+              </div>
+            ))}
+          </RowList>
+        ) : (
+          <p className="text-text-3 text-meta flex items-center gap-2 py-1.5">
+            <FlaskConical className="size-4" /> Nothing saved yet. Build a scenario and save it to compare later.
+          </p>
+        )}
+      </section>
     </div>
   );
 }
@@ -283,7 +278,7 @@ function PresetFields({ preset, accounts, onAdd }: { preset: ScenarioPreset; acc
   const debts = accounts.filter((a) => !a.is_archived && isLiability(a.account_type));
   const assets = accounts.filter((a) => !a.is_archived && !isLiability(a.account_type));
   return (
-    <div className="flex flex-col gap-3 rounded-lg border p-3">
+    <div className="border-line-1 bg-surface-0/50 flex flex-col gap-3 rounded-lg border p-3">
       <div className="grid gap-3 sm:grid-cols-2">
         {preset.fields.map((f) => (
           <Field key={f.key} label={f.label} htmlFor={`pf-${f.key}`} hint={f.hint}>

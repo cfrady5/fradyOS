@@ -50,21 +50,21 @@ export function TaskCalendar({ tasks, month, onMonthChange }: { tasks: TaskWithR
           <Button variant="ghost" size="sm" onClick={() => onMonthChange(today.slice(0, 7))}>
             Today
           </Button>
-          <h2 className="ml-2 text-sm font-semibold">{formatDate(anchor, "monthYear")}</h2>
+          <h2 className="text-heading ml-2">{formatDate(anchor, "monthYear")}</h2>
         </div>
-        <div className="text-muted-foreground hidden items-center gap-3 text-xs sm:flex">
+        <div className="text-text-3 text-meta hidden items-center gap-3 sm:flex">
           <span className="inline-flex items-center gap-1"><CalendarClock className="size-3" /> Deadline</span>
           <span className="inline-flex items-center gap-1"><Hammer className="size-3" /> Planned work (drag to move)</span>
         </div>
       </div>
-      <div className="overflow-hidden rounded-lg border">
-        <div className="bg-background/60 text-subtle-foreground grid grid-cols-7 text-center text-[11px] font-semibold tracking-wide uppercase">
+      <div className="border-line-1 overflow-hidden rounded-lg border">
+        <div className="bg-surface-1 grid grid-cols-7 text-center">
           {weekdayNames(weekStartsOn).map((d) => (
-            <div key={d} className="py-1.5">{d}</div>
+            <div key={d} className="eyebrow py-2">{d}</div>
           ))}
         </div>
         {weeks.map((week, wi) => (
-          <div key={wi} className="grid grid-cols-7 border-t">
+          <div key={wi} className="border-line-1 grid grid-cols-7 border-t">
             {week.map((date) => {
               const inMonth = date.startsWith(month);
               const due = tasks.filter((t) => t.due_date === date);
@@ -73,20 +73,20 @@ export function TaskCalendar({ tasks, month, onMonthChange }: { tasks: TaskWithR
               return (
                 <div
                   key={date}
-                  className={cn("min-h-24 border-r p-1 last:border-r-0", !inMonth && "bg-muted/30 text-muted-foreground", dragOver === date && "bg-accent")}
+                  className={cn("border-line-1 min-h-24 border-r p-1 transition-colors last:border-r-0", !inMonth && "bg-surface-0/60 text-text-3", dragOver === date && "bg-surface-hover")}
                   onDragOver={(e) => { e.preventDefault(); if (dragOver !== date) setDragOver(date); }}
                   onDragLeave={() => setDragOver(null)}
                   onDrop={(e) => { e.preventDefault(); setDragOver(null); const id = e.dataTransfer.getData("text/task-id"); if (id) drop(date, id); }}
                 >
-                  <div className={cn("mb-1 flex size-6 items-center justify-center rounded-full text-xs tabular-nums", isToday && "bg-primary text-primary-foreground font-semibold")}>{parseInt(date.slice(8), 10)}</div>
+                  <div className={cn("nums mb-1 flex size-6 items-center justify-center rounded-full text-xs", isToday ? "bg-brand font-semibold text-white" : "text-text-2")}>{parseInt(date.slice(8), 10)}</div>
                   <div className="flex flex-col gap-0.5">
                     {due.map((t) => (
-                      <button key={"d" + t.id} type="button" draggable onDragStart={(e) => e.dataTransfer.setData("text/task-id", t.id)} onClick={() => openTask(t.id)} className={cn("truncate rounded px-1 py-0.5 text-left text-[11px] leading-4", t.status === "completed" ? "bg-success/15 text-success line-through" : date < today ? "bg-destructive/10 text-destructive" : "bg-primary/10 text-primary")} title={`Deadline: ${t.title}`}>
+                      <button key={"d" + t.id} type="button" draggable onDragStart={(e) => e.dataTransfer.setData("text/task-id", t.id)} onClick={() => openTask(t.id)} className={cn("focus-visible:ring-brand/40 truncate rounded-sm px-1 py-0.5 text-left text-[11px] leading-4 outline-none focus-visible:ring-2", t.status === "completed" ? "bg-success/15 text-success line-through" : date < today ? "bg-danger/12 text-danger" : "bg-brand/12 text-brand-soft")} title={`Deadline: ${t.title}`}>
                         <CalendarClock className="mr-0.5 inline size-3" /> {t.title}
                       </button>
                     ))}
                     {planned.map((t) => (
-                      <button key={"p" + t.id} type="button" draggable onDragStart={(e) => e.dataTransfer.setData("text/task-id", t.id)} onClick={() => openTask(t.id)} className="truncate rounded border border-dashed px-1 py-0.5 text-left text-[11px] leading-4" title={`Planned: ${t.title}`}>
+                      <button key={"p" + t.id} type="button" draggable onDragStart={(e) => e.dataTransfer.setData("text/task-id", t.id)} onClick={() => openTask(t.id)} className="border-line-2 text-text-2 focus-visible:ring-brand/40 truncate rounded-sm border border-dashed px-1 py-0.5 text-left text-[11px] leading-4 outline-none focus-visible:ring-2" title={`Planned: ${t.title}`}>
                         <Hammer className="mr-0.5 inline size-3" /> {t.title}
                       </button>
                     ))}
@@ -97,7 +97,7 @@ export function TaskCalendar({ tasks, month, onMonthChange }: { tasks: TaskWithR
           </div>
         ))}
       </div>
-      <p className="text-muted-foreground mt-2 text-xs sm:hidden">
+      <p className="text-text-3 text-meta mt-2 sm:hidden">
         <Badge variant="muted">Drag</Badge> moves planned work dates only. Deadlines never change from this view.
       </p>
     </div>

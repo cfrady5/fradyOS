@@ -3,7 +3,6 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -119,8 +118,8 @@ function EventForm({ event, defaultAreaId, onClose }: { event?: Event; defaultAr
           ) : null}
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={onClose}>Cancel</Button>
-            <Button type="submit" disabled={pending}>
-              {pending ? <Loader2 className="animate-spin" /> : null} {event ? "Save" : "Create event"}
+            <Button loading={pending} type="submit" disabled={pending}>
+              {event ? "Save" : "Create event"}
             </Button>
           </DialogFooter>
         </form>

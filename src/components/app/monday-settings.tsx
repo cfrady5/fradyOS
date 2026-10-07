@@ -56,10 +56,10 @@ export function MondaySettings({ tokenConfigured, connections, runs, webhookUrl,
                 <li key={r.id} className="flex flex-wrap items-center gap-2 py-1.5">
                   <Badge variant={r.status === "success" ? "success" : r.status === "error" ? "destructive" : "muted"}>{r.status}</Badge>
                   <Badge variant="outline">{r.purpose === "social" ? "social" : "events"}</Badge>
-                  <span className="text-muted-foreground text-xs">{r.trigger}</span>
-                  <span className="tabular-nums">{formatTimestamp(r.started_at, timezone, { withYear: true })}</span>
-                  {r.result ? <span className="text-muted-foreground text-xs">{r.result.items_seen} items · {r.result.created} new · {r.result.updated} updated</span> : null}
-                  {r.error ? <span className="text-destructive text-xs">{r.error}</span> : null}
+                  <span className="text-text-2 text-xs">{r.trigger}</span>
+                  <span className="nums">{formatTimestamp(r.started_at, timezone, { withYear: true })}</span>
+                  {r.result ? <span className="text-text-2 text-xs">{r.result.items_seen} items · {r.result.created} new · {r.result.updated} updated</span> : null}
+                  {r.error ? <span className="text-danger text-xs">{r.error}</span> : null}
                 </li>
               ))}
             </ul>
@@ -178,18 +178,18 @@ function BoardCard({ purpose, tokenConfigured, connection, webhookUrl, cronConfi
           <div className="flex flex-col gap-3">
             <dl className="grid grid-cols-1 gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
               <div>
-                <dt className="text-muted-foreground text-xs">Board</dt>
+                <dt className="text-text-2 text-xs">Board</dt>
                 <dd className="font-medium">
                   {connection.board_url ? <a href={connection.board_url} target="_blank" rel="noreferrer noopener" className="hover:underline">{connection.board_name ?? connection.board_id}</a> : (connection.board_name ?? connection.board_id)}{" "}
-                  <span className="text-muted-foreground font-normal">#{connection.board_id}</span>
+                  <span className="text-text-2 font-normal">#{connection.board_id}</span>
                 </dd>
               </div>
               <div>
-                <dt className="text-muted-foreground text-xs">Last successful sync</dt>
+                <dt className="text-text-2 text-xs">Last successful sync</dt>
                 <dd className="font-medium">{connection.last_success_at ? `${formatTimestamp(connection.last_success_at, timezone, { withYear: true })} (${timeAgo(connection.last_success_at)})` : "Never"}</dd>
               </div>
               <div className="sm:col-span-2">
-                <dt className="text-muted-foreground text-xs">Column mapping</dt>
+                <dt className="text-text-2 text-xs">Column mapping</dt>
                 <dd className="mt-1 flex flex-wrap gap-1">
                   {fields.filter((f) => connection.column_map[f.key as keyof typeof connection.column_map]).map((f) => {
                     const id = connection.column_map[f.key as keyof typeof connection.column_map]!;
@@ -207,7 +207,7 @@ function BoardCard({ purpose, tokenConfigured, connection, webhookUrl, cronConfi
               </Alert>
             ) : null}
             {!isSocial && excludedCount > 0 ? (
-              <p className="text-muted-foreground flex flex-wrap items-center gap-2 text-xs">
+              <p className="text-text-2 flex flex-wrap items-center gap-2 text-xs">
                 <span>{excludedCount} item{excludedCount === 1 ? "" : "s"} deleted locally and kept out of sync.</span>
                 <Button
                   variant="outline"
@@ -227,18 +227,18 @@ function BoardCard({ purpose, tokenConfigured, connection, webhookUrl, cronConfi
               </p>
             ) : null}
             {connection.last_result ? (
-              <p className="text-muted-foreground text-xs">
+              <p className="text-text-2 text-xs">
                 Last run: {connection.last_result.items_seen} items · {connection.last_result.created} new · {connection.last_result.updated} updated{isSocial ? "" : ` · ${connection.last_result.dates_changed} date changes · ${connection.last_result.flagged_canceled} canceled`} · {connection.last_result.flagged_removed} removed · {Math.round(connection.last_result.duration_ms / 100) / 10}s
               </p>
             ) : null}
             <div className="flex flex-wrap items-center gap-2">
-              <Button onClick={sync} disabled={pending || !tokenConfigured}>
-                {pending ? <Loader2 className="animate-spin" /> : <RefreshCw />} Sync now
+              <Button loading={pending} onClick={sync} disabled={pending || !tokenConfigured}>
+                {pending ? null : <RefreshCw />} Sync now
               </Button>
               <Button variant="outline" onClick={() => { setEditing(true); test(); inspect(connection.board_id); }} disabled={!tokenConfigured}>
                 Change board or mapping
               </Button>
-              <Button variant="ghost" className="text-destructive" disabled={pending} onClick={() => { if (window.confirm(`Disconnect this board? ${isSocial ? "Posts stay in FRADY OS but stop syncing." : "Imported events stay in FRADY OS but stop updating."}`)) startTransition(async () => { const r = await disconnectMonday(purpose); if (!r.ok) toast.error(r.error); else { toast.success("Disconnected"); router.refresh(); } }); }}>
+              <Button variant="ghost" className="text-danger" disabled={pending} onClick={() => { if (window.confirm(`Disconnect this board? ${isSocial ? "Posts stay in FRADY OS but stop syncing." : "Imported events stay in FRADY OS but stop updating."}`)) startTransition(async () => { const r = await disconnectMonday(purpose); if (!r.ok) toast.error(r.error); else { toast.success("Disconnected"); router.refresh(); } }); }}>
                 <Unplug /> Disconnect
               </Button>
               <label className="ml-auto flex items-center gap-2 text-sm">
@@ -247,7 +247,7 @@ function BoardCard({ purpose, tokenConfigured, connection, webhookUrl, cronConfi
               </label>
             </div>
             {!cronConfigured || !adminConfigured ? (
-              <p className="text-muted-foreground text-xs">
+              <p className="text-text-2 text-xs">
                 Scheduled sync needs <code>CRON_SECRET</code> and <code>SUPABASE_SECRET_KEY</code>. {!cronConfigured ? "CRON_SECRET is missing." : ""} {!adminConfigured ? "SUPABASE_SECRET_KEY is missing." : ""}
               </p>
             ) : null}
@@ -255,7 +255,7 @@ function BoardCard({ purpose, tokenConfigured, connection, webhookUrl, cronConfi
             <div className="rounded-md border p-3">
               <p className="flex items-center gap-2 text-sm font-medium"><Zap className="size-4" /> Real-time updates (webhook)</p>
               {!webhookUrl ? (
-                <p className="text-muted-foreground mt-1 text-xs">Set <code>MONDAY_WEBHOOK_SECRET</code> (16+ characters) on the server and redeploy to get a webhook URL.</p>
+                <p className="text-text-2 mt-1 text-xs">Set <code>MONDAY_WEBHOOK_SECRET</code> (16+ characters) on the server and redeploy to get a webhook URL.</p>
               ) : (
                 <div className="mt-2 flex flex-col gap-2">
                   <div className="flex items-center gap-2">
@@ -275,7 +275,7 @@ function BoardCard({ purpose, tokenConfigured, connection, webhookUrl, cronConfi
                         {pending ? <Loader2 className="animate-spin" /> : <Zap />} Register webhooks automatically
                       </Button>
                     )}
-                    <span className="text-muted-foreground text-xs">{connection.last_webhook_at ? `Last webhook received ${timeAgo(connection.last_webhook_at)}` : "No webhook received yet"}</span>
+                    <span className="text-text-2 text-xs">{connection.last_webhook_at ? `Last webhook received ${timeAgo(connection.last_webhook_at)}` : "No webhook received yet"}</span>
                   </div>
                 </div>
               )}
@@ -289,7 +289,7 @@ function BoardCard({ purpose, tokenConfigured, connection, webhookUrl, cronConfi
               <Button variant="outline" onClick={test} disabled={pending}>
                 {pending && !boards ? <Loader2 className="animate-spin" /> : <Plug />} {me ? "Refresh boards" : "Test connection & load boards"}
               </Button>
-              {me ? <span className="text-muted-foreground text-xs">Signed in as {me.name}{me.account ? ` · ${me.account}` : ""}</span> : null}
+              {me ? <span className="text-text-2 text-xs">Signed in as {me.name}{me.account ? ` · ${me.account}` : ""}</span> : null}
             </div>
             {boards ? (
               <Field label="Board" hint="Only boards this token can see are listed.">
@@ -304,8 +304,8 @@ function BoardCard({ purpose, tokenConfigured, connection, webhookUrl, cronConfi
             {(schema || (connection && columns.length)) && boardId ? (
               <div className="flex flex-col gap-3">
                 <div className="flex items-center justify-between">
-                  <p className="text-sm font-medium">Map board columns {schema ? <span className="text-muted-foreground font-normal">· {schema.columns.length} columns found</span> : null}</p>
-                  {schema?.url ? <a href={schema.url} target="_blank" rel="noreferrer noopener" className="text-primary inline-flex items-center gap-1 text-xs hover:underline">Open board <ExternalLink className="size-3" /></a> : null}
+                  <p className="text-sm font-medium">Map board columns {schema ? <span className="text-text-2 font-normal">· {schema.columns.length} columns found</span> : null}</p>
+                  {schema?.url ? <a href={schema.url} target="_blank" rel="noreferrer noopener" className="text-brand-soft inline-flex items-center gap-1 text-xs hover:underline">Open board <ExternalLink className="size-3" /></a> : null}
                 </div>
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   {fields.map((f) => {
@@ -330,7 +330,7 @@ function BoardCard({ purpose, tokenConfigured, connection, webhookUrl, cronConfi
                     <Field label="Status labels that mean canceled" hint="Comma-separated. Matching events are flagged for review, never deleted.">
                       <Input value={canceled} onChange={(e) => setCanceled(e.target.value)} />
                     </Field>
-                    <p className="text-muted-foreground text-xs">Program values that match a work area name ({workAreas.map((a) => a.name).join(", ")}) are assigned automatically the first time an event is imported.</p>
+                    <p className="text-text-2 text-xs">Program values that match a work area name ({workAreas.map((a) => a.name).join(", ")}) are assigned automatically the first time an event is imported.</p>
                   </>
                 ) : (
                   <>
@@ -345,7 +345,7 @@ function BoardCard({ purpose, tokenConfigured, connection, webhookUrl, cronConfi
                     {statusColumn ? (
                       <div className="rounded-md border p-3">
                         <p className="text-sm font-medium">Status labels</p>
-                        <p className="text-muted-foreground mb-2 text-xs">Match each FRADY OS status to a label on “{statusColumn.title}”. Unmapped statuses are guessed when reading and never written, so the board never gains surprise labels.</p>
+                        <p className="text-text-2 mb-2 text-xs">Match each FRADY OS status to a label on “{statusColumn.title}”. Unmapped statuses are guessed when reading and never written, so the board never gains surprise labels.</p>
                         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                           {SOCIAL_STATUSES.map((s) => (
                             <Field key={s.value} label={s.label}>
@@ -368,8 +368,8 @@ function BoardCard({ purpose, tokenConfigured, connection, webhookUrl, cronConfi
               </Alert>
             ) : null}
             <div className="flex items-center gap-2">
-              <Button onClick={save} disabled={pending || !boardId || (isSocial ? !map.publish_date : !map.start)}>
-                {pending ? <Loader2 className="animate-spin" /> : null} Save connection
+              <Button loading={pending} onClick={save} disabled={pending || !boardId || (isSocial ? !map.publish_date : !map.start)}>
+                Save connection
               </Button>
               {connection ? <Button variant="ghost" onClick={() => { setEditing(false); setError(null); }}>Cancel</Button> : null}
             </div>

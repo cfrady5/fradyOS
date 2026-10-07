@@ -4,7 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Plus, Flag, Target, CreditCard, TrendingUp, CalendarDays, Check, Pencil, Trash2, Loader2 } from "lucide-react";
+import { Plus, Flag, Target, CreditCard, TrendingUp, CalendarDays, Check, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -60,42 +60,43 @@ export function TimelineView({ entries, today, milestones, goals, events }: { en
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-7">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-muted-foreground text-sm">Projected goal completions, debt payoffs and net worth thresholds, alongside the life events you add.</p>
-        <Button onClick={() => setDialog({ open: true })}>
+        <p className="text-text-2 max-w-2xl text-sm">Projected goal completions, debt payoffs and net worth thresholds, alongside the life events you add.</p>
+        <Button size="sm" onClick={() => setDialog({ open: true })}>
           <Plus /> Add life event
         </Button>
       </div>
       {entries.length === 0 ? (
-        <EmptyState icon={<Flag />} title="Nothing on the timeline yet" description="Add goals and debts, or a life event like a wedding or a move, and they show up here in order." action={<Button onClick={() => setDialog({ open: true })}><Plus /> Add life event</Button>} />
+        <EmptyState variant="page" icon={<Flag />} title="Nothing on the timeline yet" description="Add goals and debts, or a life event like a wedding or a move, and they show up here in order." action={<Button onClick={() => setDialog({ open: true })}><Plus /> Add life event</Button>} />
       ) : (
-        <ol className="relative flex flex-col gap-6 border-l pl-6">
+        <ol className="border-line-2 relative flex flex-col gap-7 border-l pl-6">
           {Array.from(byYear.entries()).map(([year, items]) => (
             <li key={year}>
-              <div className="bg-background text-muted-foreground -ml-6 mb-2 inline-block pr-2 text-xs font-semibold uppercase tracking-wide">
-                <span className="bg-border mr-3 inline-block size-2 rounded-full align-middle" /> {year}
+              <div className="bg-surface-0 -ml-6 mb-2 inline-flex items-center gap-3 pr-2">
+                <span className="bg-line-3 ml-[-4.5px] inline-block size-2 rounded-full" aria-hidden />
+                <span className="index text-text-2">{year}</span>
               </div>
               <ul className="flex flex-col gap-2">
                 {items.map((e) => {
                   const Icon = KIND_ICON[e.kind];
                   const past = e.date ? e.date < today : false;
                   return (
-                    <li key={e.id} className={cn("flex items-start gap-3 rounded-lg border px-3 py-2", e.done ? "opacity-60" : null)}>
-                      <Icon className="text-muted-foreground mt-0.5 size-4 shrink-0" />
+                    <li key={e.id} className={cn("border-line-1 bg-surface-1 hover:border-line-2 flex items-start gap-3 rounded-lg border px-3 py-2.5 transition-colors", e.done ? "opacity-60" : null)}>
+                      <Icon className="text-text-3 mt-0.5 size-4 shrink-0" aria-hidden />
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2 text-sm">
-                          <Link href={e.href} className={cn("font-medium hover:underline", e.done ? "line-through" : null)}>
+                          <Link href={e.href} className={cn("text-text-1 font-medium hover:underline", e.done ? "line-through" : null)}>
                             {e.title}
                           </Link>
                           {e.status ? <GoalStatusBadge status={e.status} /> : null}
                           {e.eventName ? (
-                            <span className="text-muted-foreground inline-flex items-center gap-1 text-xs">
-                              <CalendarDays className="size-3" /> {e.eventName}
+                            <span className="text-text-3 text-meta inline-flex items-center gap-1">
+                              <CalendarDays className="size-3" aria-hidden /> {e.eventName}
                             </span>
                           ) : null}
                         </div>
-                        <div className="text-muted-foreground text-xs tabular-nums">
+                        <div className="text-text-3 nums text-meta">
                           {e.date ? formatDate(e.date, "monthYear") : "No date"}
                           {e.kind !== "milestone" && e.projectedDate ? " · projected" : ""}
                           {e.kind === "goal" && e.targetDate ? ` · target ${formatDate(e.targetDate, "monthYear")}` : ""}
@@ -227,7 +228,7 @@ function MilestoneForm({ milestone, goals, events, onClose }: { milestone?: Fina
       </div>
       <DialogFooter className="flex-row items-center justify-between sm:justify-between">
         {milestone ? (
-          <Button type="button" variant="ghost" size="sm" className="text-destructive" onClick={remove} disabled={pending}>
+          <Button type="button" variant="ghost" size="sm" className="text-danger hover:text-danger" onClick={remove} disabled={pending}>
             <Trash2 /> Delete
           </Button>
         ) : (
@@ -237,8 +238,8 @@ function MilestoneForm({ milestone, goals, events, onClose }: { milestone?: Fina
           <Button type="button" variant="outline" onClick={onClose} disabled={pending}>
             Cancel
           </Button>
-          <Button type="submit" disabled={pending}>
-            {pending ? <Loader2 className="animate-spin" /> : null} {milestone ? "Save" : "Add"}
+          <Button type="submit" loading={pending} disabled={pending}>
+            {milestone ? "Save" : "Add"}
           </Button>
         </div>
       </DialogFooter>

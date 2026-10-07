@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { NativeSelect } from "@/components/ui/native-select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
+import { RowList, SectionHeader } from "@/components/app/items";
 import { Field } from "@/components/app/form-fields";
 import { Disclaimer, MoneyInput, PctInput, ToneBadge } from "@/components/finance/bits";
 import type { Insight } from "@/lib/finance/insights";
@@ -17,30 +19,30 @@ import { fmtMoney } from "@/lib/finance/format";
 
 export function InsightsView({ insights, inputs, accounts, goals }: { insights: Insight[]; inputs: ModelInputs; accounts: FinancialAccount[]; goals: FinancialGoal[] }) {
   return (
-    <div className="grid gap-4 lg:grid-cols-5">
-      <div className="flex flex-col gap-3 lg:col-span-2">
-        <h2 className="text-sm font-semibold">What the numbers say</h2>
-        {insights.length === 0 ? <p className="text-muted-foreground text-sm">Add income, expenses and accounts to generate insights.</p> : null}
-        <ul className="flex flex-col gap-2">
+    <div className="grid gap-x-10 gap-y-7 lg:grid-cols-5">
+      <section className="flex flex-col gap-3 lg:col-span-2" aria-labelledby="insights-list">
+        <SectionHeader title={<span id="insights-list">What the numbers say</span>} count={insights.length} />
+        {insights.length === 0 ? <EmptyState title="No insights yet" description="Add income, expenses and accounts to generate them." /> : null}
+        <RowList>
           {insights.map((i) => (
-            <li key={i.id} className="flex flex-col gap-1 rounded-lg border px-3 py-2.5 text-sm">
-              <div className="flex items-start gap-2">
-                <ToneBadge tone={i.tone} className="mt-0.5">
-                  {i.tone === "good" ? "Good" : i.tone === "critical" ? "Act" : i.tone === "serious" ? "Watch" : i.tone === "warning" ? "Note" : "Info"}
-                </ToneBadge>
-                <span className="font-medium">{i.title}</span>
+            <div key={i.id} className="flex items-start gap-2.5 px-2 py-2.5 text-sm">
+              <ToneBadge tone={i.tone} className="mt-0.5 shrink-0">
+                {i.tone === "good" ? "Good" : i.tone === "critical" ? "Act" : i.tone === "serious" ? "Watch" : i.tone === "warning" ? "Note" : "Info"}
+              </ToneBadge>
+              <div className="min-w-0 flex-1">
+                <p className="text-text-1 font-medium">{i.title}</p>
+                <p className="text-text-3 text-meta mt-0.5">{i.body}</p>
+                {i.href ? (
+                  <Link href={i.href} className="text-brand-soft text-meta mt-1 inline-flex items-center gap-1 hover:underline">
+                    Open <ArrowRight className="size-3" aria-hidden />
+                  </Link>
+                ) : null}
               </div>
-              <p className="text-muted-foreground text-xs">{i.body}</p>
-              {i.href ? (
-                <Link href={i.href} className="text-primary inline-flex items-center gap-1 text-xs hover:underline">
-                  Open <ArrowRight className="size-3" />
-                </Link>
-              ) : null}
-            </li>
+            </div>
           ))}
-        </ul>
+        </RowList>
         <Disclaimer />
-      </div>
+      </section>
       <div className="lg:col-span-3">
         <Copilot inputs={inputs} accounts={accounts} goals={goals} />
       </div>
@@ -120,11 +122,11 @@ function Copilot({ inputs, accounts, goals }: { inputs: ModelInputs; accounts: F
           </Button>
         </div>
         {answer && answer.qid === qid ? (
-          <div className="flex flex-col gap-3 rounded-lg border p-3">
-            <p className="text-sm font-semibold">{answer.a.headline}</p>
+          <div className="border-line-1 bg-surface-0/50 flex flex-col gap-3 rounded-lg border p-4">
+            <p className="text-heading text-text-1">{answer.a.headline}</p>
             {answer.a.projection.length ? (
               <section>
-                <h3 className="text-muted-foreground mb-1 text-[11px] font-semibold uppercase tracking-wide">Projection</h3>
+                <h3 className="eyebrow mb-1.5">Projection</h3>
                 <ul className="list-disc space-y-0.5 pl-4 text-sm">
                   {answer.a.projection.map((l, i) => (
                     <li key={i}>{l}</li>
@@ -134,8 +136,8 @@ function Copilot({ inputs, accounts, goals }: { inputs: ModelInputs; accounts: F
             ) : null}
             {answer.a.assumptions.length ? (
               <section>
-                <h3 className="text-muted-foreground mb-1 text-[11px] font-semibold uppercase tracking-wide">Assumptions</h3>
-                <ul className="text-muted-foreground list-disc space-y-0.5 pl-4 text-xs">
+                <h3 className="eyebrow mb-1.5">Assumptions</h3>
+                <ul className="text-text-2 list-disc space-y-0.5 pl-4 text-xs">
                   {answer.a.assumptions.map((l, i) => (
                     <li key={i}>{l}</li>
                   ))}
@@ -144,15 +146,15 @@ function Copilot({ inputs, accounts, goals }: { inputs: ModelInputs; accounts: F
             ) : null}
             {answer.a.education.length ? (
               <section>
-                <h3 className="text-muted-foreground mb-1 text-[11px] font-semibold uppercase tracking-wide">General education</h3>
-                <ul className="text-muted-foreground list-disc space-y-0.5 pl-4 text-xs">
+                <h3 className="eyebrow mb-1.5">General education</h3>
+                <ul className="text-text-2 list-disc space-y-0.5 pl-4 text-xs">
                   {answer.a.education.map((l, i) => (
                     <li key={i}>{l}</li>
                   ))}
                 </ul>
               </section>
             ) : null}
-            <p className="text-muted-foreground text-xs">Not a guarantee or personalized investment advice. Change the assumptions on the Overview page to see how sensitive the answer is.</p>
+            <p className="text-text-3 text-meta">Not a guarantee or personalized investment advice. Change the assumptions on the Overview page to see how sensitive the answer is.</p>
           </div>
         ) : null}
       </CardContent>

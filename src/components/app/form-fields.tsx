@@ -15,7 +15,7 @@ export function Field({ label, htmlFor, error, hint, className, children }: { la
     <div className={cn("flex flex-col gap-1.5", className)}>
       <Label htmlFor={htmlFor}>{label}</Label>
       {children}
-      {error ? <p className="text-destructive text-xs">{error}</p> : hint ? <p className="text-muted-foreground text-xs">{hint}</p> : null}
+      {error ? <p className="text-danger text-xs">{error}</p> : hint ? <p className="text-text-3 text-xs">{hint}</p> : null}
     </div>
   );
 }
@@ -89,11 +89,11 @@ export function LinksEditor({ value, onChange, label = "Links" }: { value: Link[
     <div className="flex flex-col gap-2">
       <Label>{label}</Label>
       {value.length ? (
-        <ul className="flex flex-col gap-1">
+        <ul className="hairline-rows">
           {value.map((l, i) => (
-            <li key={i} className="flex items-center gap-2 rounded-md border px-2 py-1 text-sm">
-              <a href={l.url} target="_blank" rel="noreferrer noopener" className="text-primary inline-flex min-w-0 flex-1 items-center gap-1 truncate hover:underline">
-                <ExternalLink className="size-3.5 shrink-0" />
+            <li key={i} className="flex min-h-8 items-center gap-2 py-1 text-sm">
+              <a href={l.url} target="_blank" rel="noreferrer noopener" className="text-brand-soft focus-visible:ring-brand/40 inline-flex min-w-0 flex-1 items-center gap-1.5 truncate rounded-sm outline-none hover:underline focus-visible:ring-2">
+                <ExternalLink className="size-3.5 shrink-0" aria-hidden />
                 <span className="truncate">{l.label || l.url}</span>
               </a>
               <Button type="button" variant="ghost" size="icon-xs" aria-label="Remove link" onClick={() => onChange(value.filter((_, j) => j !== i))}>
@@ -104,11 +104,12 @@ export function LinksEditor({ value, onChange, label = "Links" }: { value: Link[
         </ul>
       ) : null}
       <div className="flex flex-col gap-1.5 sm:flex-row">
-        <Input placeholder="Label (optional)" value={draft.label} onChange={(e) => setDraft({ ...draft, label: e.target.value })} className="sm:w-40" />
+        <Input placeholder="Label (optional)" value={draft.label} onChange={(e) => setDraft({ ...draft, label: e.target.value })} className="sm:w-40" aria-label="Link label" />
         <Input
           placeholder="https://…"
           value={draft.url}
           onChange={(e) => setDraft({ ...draft, url: e.target.value })}
+          aria-label="Link URL"
           onKeyDown={(e) => {
             if (e.key === "Enter") {
               e.preventDefault();
@@ -120,7 +121,7 @@ export function LinksEditor({ value, onChange, label = "Links" }: { value: Link[
           <Plus /> Add
         </Button>
       </div>
-      {err ? <p className="text-destructive text-xs">{err}</p> : null}
+      {err ? <p className="text-danger text-xs">{err}</p> : null}
     </div>
   );
 }
@@ -134,9 +135,9 @@ function hostOf(url: string) {
 }
 
 export function DateInput({ value, onChange, id, className, ...props }: { value: string | null; onChange: (v: string | null) => void; id?: string; className?: string } & Omit<React.ComponentProps<"input">, "value" | "onChange" | "type">) {
-  return <Input id={id} type="date" value={value ?? ""} onChange={(e) => onChange(e.target.value || null)} className={cn("tabular-nums", className)} {...props} />;
+  return <Input id={id} type="date" value={value ?? ""} onChange={(e) => onChange(e.target.value || null)} className={cn("nums", className)} {...props} />;
 }
 
 export function TimeInput({ value, onChange, id, className, ...props }: { value: string | null; onChange: (v: string | null) => void; id?: string; className?: string } & Omit<React.ComponentProps<"input">, "value" | "onChange" | "type">) {
-  return <Input id={id} type="time" value={value ? value.slice(0, 5) : ""} onChange={(e) => onChange(e.target.value || null)} className={cn("tabular-nums", className)} {...props} />;
+  return <Input id={id} type="time" value={value ? value.slice(0, 5) : ""} onChange={(e) => onChange(e.target.value || null)} className={cn("nums", className)} {...props} />;
 }

@@ -5,13 +5,15 @@ import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { toast } from "sonner";
 import { ChevronLeft, ChevronRight, Plus, Archive, Check, Loader2, Landmark } from "lucide-react";
+import { SectionHeader } from "@/components/app/items";
+import { Metric, MetricStrip } from "@/components/app/metric";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { NativeSelect } from "@/components/ui/native-select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AssumptionsPanel } from "@/components/finance/assumptions-panel";
-import { MoneyInput, StatTile } from "@/components/finance/bits";
+import { MoneyInput } from "@/components/finance/bits";
 import { archiveBudgetCategory, saveBudgetActual, saveBudgetCategory, saveFinancialProfile } from "@/actions/finance";
 import type { BudgetLive } from "@/lib/data/finance";
 import { averageCashFlow } from "@/lib/plaid/mapping";
@@ -32,34 +34,34 @@ export function BudgetView({ profile, categories, actuals, month, today, live }:
   const go = (m: string) => router.push(`${pathname}?m=${m.slice(0, 7)}`);
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-7">
+      <MetricStrip cols={3}>
+        <Metric label="Take-home income" tag="Assumed" value={fmtMoney(profile.monthly_income)} muted={profile.monthly_income === 0} sub="per month, drives the projection" />
+        <Metric label="Expenses in projection" tag="Assumed" value={fmtMoney(profile.fixed_expenses + profile.variable_expenses)} muted={profile.fixed_expenses + profile.variable_expenses === 0} sub={expenseBudget && Math.abs(expenseBudget - (profile.fixed_expenses + profile.variable_expenses)) > 1 ? `category budget totals ${fmtMoney(expenseBudget)}` : "matches category budget"} />
+        <Metric label={`Spent in ${formatDate(month, "monthYear")}`} tag="Actual" value={fmtMoney(totalActual)} muted={totalActual === 0} sub={`of ${fmtMoney(totalBudget)} budgeted`} tone={totalBudget > 0 && totalActual > totalBudget ? "serious" : "neutral"} />
+      </MetricStrip>
+
       <AssumptionsPanel profile={profile} sections={["income"]} title="Income and expenses" description="These monthly totals drive the projection. The category budget below is a detail view; it does not change the projection unless you copy the totals up here. The Recurring page can fill income and fixed expenses from your paychecks and bills." />
 
       {live.hasTransactions ? <LiveCashFlow live={live} today={today} profile={profile} /> : null}
 
-      <div className="grid gap-3 sm:grid-cols-3">
-        <StatTile label="Take-home income" value={fmtMoney(profile.monthly_income)} sub="per month" />
-        <StatTile label="Expenses in projection" value={fmtMoney(profile.fixed_expenses + profile.variable_expenses)} sub={expenseBudget && Math.abs(expenseBudget - (profile.fixed_expenses + profile.variable_expenses)) > 1 ? `Category budget totals ${fmtMoney(expenseBudget)}` : "Matches category budget"} />
-        <StatTile label={`Spent in ${formatDate(month, "monthYear")}`} value={fmtMoney(totalActual)} sub={`of ${fmtMoney(totalBudget)} budgeted`} tone={totalBudget > 0 && totalActual > totalBudget ? "serious" : undefined} />
-      </div>
-
-      <Card>
-        <CardHeader className="items-center">
-          <div>
-            <CardTitle>Monthly budget</CardTitle>
-            <CardDescription className="mt-1">Budgeted vs actual per category. {live.hasTransactions ? "Actuals fill in from categorized transactions; type a value to override." : "Type an actual and press Enter or click ✓ to save."}</CardDescription>
-          </div>
-          <div className="flex items-center gap-1">
-            <Button variant="outline" size="icon-sm" aria-label="Previous month" onClick={() => go(addMonths(month, -1))}>
-              <ChevronLeft />
-            </Button>
-            <span className="w-32 text-center text-sm font-medium tabular-nums">{formatDate(month, "monthYear")}</span>
-            <Button variant="outline" size="icon-sm" aria-label="Next month" onClick={() => go(addMonths(month, 1))} disabled={month.slice(0, 7) >= today.slice(0, 7)}>
-              <ChevronRight />
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
+      <section aria-labelledby="budget-month">
+        <SectionHeader
+          title={<span id="budget-month">Monthly budget</span>}
+          hint={live.hasTransactions ? "actuals fill in from categorized transactions; type a value to override" : "type an actual and press Enter or click ✓ to save"}
+          action={
+            <div className="flex items-center gap-1">
+              <Button variant="outline" size="icon-sm" aria-label="Previous month" onClick={() => go(addMonths(month, -1))}>
+                <ChevronLeft />
+              </Button>
+              <span className="nums w-32 text-center text-sm font-medium">{formatDate(month, "monthYear")}</span>
+              <Button variant="outline" size="icon-sm" aria-label="Next month" onClick={() => go(addMonths(month, 1))} disabled={month.slice(0, 7) >= today.slice(0, 7)}>
+                <ChevronRight />
+              </Button>
+            </div>
+          }
+        />
+        <div className="border-line-1 bg-surface-1 mt-3 rounded-lg border">
           <Table>
             <TableHeader>
               <TableRow>
@@ -77,33 +79,39 @@ export function BudgetView({ profile, categories, actuals, month, today, live }:
               ))}
               {live.uncategorized > 0 ? (
                 <TableRow className="hover:bg-transparent">
-                  <TableCell className="text-muted-foreground text-xs" colSpan={3}>
+                  <TableCell className="text-text-3 text-meta" colSpan={3}>
                     Spending with no category yet ·{" "}
                     <Link href={`/finances/transactions?m=${month.slice(0, 7)}`} className="underline underline-offset-2">
                       categorize
                     </Link>
                   </TableCell>
-                  <TableCell className="text-muted-foreground text-right text-xs tabular-nums">{fmtMoney(live.uncategorized)}</TableCell>
+                  <TableCell className="text-text-2 nums text-meta text-right">{fmtMoney(live.uncategorized)}</TableCell>
                   <TableCell colSpan={2} />
                 </TableRow>
               ) : null}
               {live.uncategorizedPayments > 0 ? (
                 <TableRow className="hover:bg-transparent">
-                  <TableCell className="text-muted-foreground text-xs" colSpan={3}>Credit card payments (not budgeted; the purchases behind them are)</TableCell>
-                  <TableCell className="text-muted-foreground text-right text-xs tabular-nums">{fmtMoney(live.uncategorizedPayments)}</TableCell>
+                  <TableCell className="text-text-3 text-meta" colSpan={3}>Credit card payments (not budgeted; the purchases behind them are)</TableCell>
+                  <TableCell className="text-text-2 nums text-meta text-right">{fmtMoney(live.uncategorizedPayments)}</TableCell>
                   <TableCell colSpan={2} />
                 </TableRow>
               ) : null}
               <NewCategoryRow />
             </TableBody>
           </Table>
-          <div className="text-muted-foreground mt-3 flex justify-end gap-6 text-sm tabular-nums">
-            <span>Budgeted {fmtMoney(totalBudget)}</span>
-            <span>Actual {fmtMoney(totalActual)}</span>
-            <span className={cn(totalBudget - totalActual < 0 ? "text-destructive" : null)}>Left {fmtMoney(totalBudget - totalActual)}</span>
-          </div>
-        </CardContent>
-      </Card>
+        </div>
+        <div className="text-text-2 nums mt-3 flex flex-wrap justify-end gap-x-6 gap-y-1 text-sm">
+          <span>
+            <span className="text-text-3">Budgeted</span> {fmtMoney(totalBudget)}
+          </span>
+          <span>
+            <span className="text-text-3">Actual</span> {fmtMoney(totalActual)}
+          </span>
+          <span className={cn(totalBudget - totalActual < 0 ? "text-danger" : "text-text-1")}>
+            <span className="text-text-3">Left</span> {fmtMoney(totalBudget - totalActual)}
+          </span>
+        </div>
+      </section>
     </div>
   );
 }
@@ -158,8 +166,8 @@ function CategoryRow({ category, actual, liveActual, month }: { category: Budget
 
   return (
     <TableRow>
-      <TableCell className="font-medium">{category.name}</TableCell>
-      <TableCell className="text-muted-foreground text-xs">{KINDS.find((k) => k.value === category.kind)?.label}</TableCell>
+      <TableCell className="text-text-1 font-medium">{category.name}</TableCell>
+      <TableCell className="text-text-3 text-meta">{KINDS.find((k) => k.value === category.kind)?.label}</TableCell>
       <TableCell>
         <MoneyInput aria-label={`${category.name} budget`} value={budget} onChange={setBudget} onBlur={saveBudget} onKeyDown={(e) => e.key === "Enter" && saveBudget()} className="h-8 text-right" />
       </TableCell>
@@ -171,9 +179,9 @@ function CategoryRow({ category, actual, liveActual, month }: { category: Budget
           </Button>
         </div>
       </TableCell>
-      <TableCell className={cn("text-right tabular-nums", left < 0 ? "text-destructive" : "text-muted-foreground")}>
+      <TableCell className={cn("nums text-right", left < 0 ? "text-danger" : "text-text-2")}>
         {effective != null ? fmtMoney(left) : "—"}
-        {!actual && liveActual != null ? <span className="text-muted-foreground ml-1 text-[10px]">auto</span> : null}
+        {!actual && liveActual != null ? <span className="index ml-1">auto</span> : null}
       </TableCell>
       <TableCell>
         <Button variant="ghost" size="icon-xs" aria-label={`Archive ${category.name}`} onClick={archive} disabled={pending}>
@@ -244,15 +252,15 @@ function LiveCashFlow({ live, today, profile }: { live: BudgetLive; today: strin
   }
   return (
     <Card>
-      <CardHeader className="items-center">
-        <div>
-          <CardTitle className="flex items-center gap-2">
+      <CardHeader className="flex-col sm:flex-row sm:items-center">
+        <div className="min-w-0">
+          <CardTitle className="flex flex-wrap items-center gap-2">
             <Landmark className="size-4" /> Real cash flow from your bank <Badge variant="success">Live</Badge>
           </CardTitle>
           <CardDescription className="mt-1">From imported and synced transactions. Income = rows typed as income. Spending excludes transfers and debt payments; fixed = rent and utilities, variable = everything else. Months with only part of the picture (a card statement but no bank export, or the reverse) read low.</CardDescription>
         </div>
-        <Button size="sm" onClick={apply} disabled={pending || !basis.length || !differs}>
-          {pending ? <Loader2 className="animate-spin" /> : null} {differs ? `Use ${basis.length}-month average in assumptions` : "Assumptions already match"}
+        <Button size="sm" className="w-full shrink-0 sm:w-auto" onClick={apply} loading={pending} disabled={pending || !basis.length || !differs}>
+          {differs ? `Use ${basis.length}-month average in assumptions` : "Assumptions already match"}
         </Button>
       </CardHeader>
       <CardContent>
@@ -270,28 +278,28 @@ function LiveCashFlow({ live, today, profile }: { live: BudgetLive; today: strin
           </TableHeader>
           <TableBody>
             {live.months.map((m) => (
-              <TableRow key={m.month} className={cn(m.month.slice(0, 7) === currentMonth ? "text-muted-foreground" : null)}>
+              <TableRow key={m.month} className={cn(m.month.slice(0, 7) === currentMonth ? "text-text-2" : null)}>
                 <TableCell className="font-medium">
                   {formatDate(m.month, "monthYear")}
-                  {m.month.slice(0, 7) === currentMonth ? <span className="text-muted-foreground ml-1 text-xs">(so far)</span> : null}
+                  {m.month.slice(0, 7) === currentMonth ? <span className="index ml-1">so far</span> : null}
                 </TableCell>
-                <TableCell className="text-right tabular-nums">{fmtMoney(m.income)}</TableCell>
-                <TableCell className="text-right tabular-nums">{fmtMoney(m.spending)}</TableCell>
-                <TableCell className="text-right tabular-nums">{fmtMoney(m.fixed)}</TableCell>
-                <TableCell className="text-right tabular-nums">{fmtMoney(m.variable)}</TableCell>
-                <TableCell className="text-right tabular-nums">{fmtMoney(m.loanPayments)}</TableCell>
-                <TableCell className={cn("text-right tabular-nums", m.income - m.spending - m.loanPayments < 0 ? "text-destructive" : null)}>{fmtMoney(m.income - m.spending - m.loanPayments)}</TableCell>
+                <TableCell className="text-right nums">{fmtMoney(m.income)}</TableCell>
+                <TableCell className="text-right nums">{fmtMoney(m.spending)}</TableCell>
+                <TableCell className="text-right nums">{fmtMoney(m.fixed)}</TableCell>
+                <TableCell className="text-right nums">{fmtMoney(m.variable)}</TableCell>
+                <TableCell className="text-right nums">{fmtMoney(m.loanPayments)}</TableCell>
+                <TableCell className={cn("text-right nums", m.income - m.spending - m.loanPayments < 0 ? "text-danger" : null)}>{fmtMoney(m.income - m.spending - m.loanPayments)}</TableCell>
               </TableRow>
             ))}
             {basis.length ? (
-              <TableRow className="bg-muted/40 font-medium">
+              <TableRow className="bg-surface-2 text-text-1 font-medium">
                 <TableCell>Average ({basis.length} mo)</TableCell>
-                <TableCell className="text-right tabular-nums">{fmtMoney(avg.income)}</TableCell>
-                <TableCell className="text-right tabular-nums">{fmtMoney(avg.spending)}</TableCell>
-                <TableCell className="text-right tabular-nums">{fmtMoney(avg.fixed)}</TableCell>
-                <TableCell className="text-right tabular-nums">{fmtMoney(avg.variable)}</TableCell>
-                <TableCell className="text-right tabular-nums">{fmtMoney(basis.reduce((s, m) => s + m.loanPayments, 0) / basis.length)}</TableCell>
-                <TableCell className="text-right tabular-nums">{fmtMoney(avg.income - avg.spending - basis.reduce((s, m) => s + m.loanPayments, 0) / basis.length)}</TableCell>
+                <TableCell className="text-right nums">{fmtMoney(avg.income)}</TableCell>
+                <TableCell className="text-right nums">{fmtMoney(avg.spending)}</TableCell>
+                <TableCell className="text-right nums">{fmtMoney(avg.fixed)}</TableCell>
+                <TableCell className="text-right nums">{fmtMoney(avg.variable)}</TableCell>
+                <TableCell className="text-right nums">{fmtMoney(basis.reduce((s, m) => s + m.loanPayments, 0) / basis.length)}</TableCell>
+                <TableCell className="text-right nums">{fmtMoney(avg.income - avg.spending - basis.reduce((s, m) => s + m.loanPayments, 0) / basis.length)}</TableCell>
               </TableRow>
             ) : null}
           </TableBody>

@@ -3,7 +3,6 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -133,8 +132,8 @@ function TransactionForm({ accounts, categories, today, defaultAccountId, onClos
         <Button type="button" variant="outline" onClick={onClose} disabled={pending}>
           Cancel
         </Button>
-        <Button type="submit" disabled={pending || !form.account_id}>
-          {pending ? <Loader2 className="animate-spin" /> : null} Add
+        <Button loading={pending} type="submit" disabled={pending || !form.account_id}>
+          Add
         </Button>
       </DialogFooter>
     </form>

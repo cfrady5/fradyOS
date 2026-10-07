@@ -1,7 +1,6 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -24,16 +23,16 @@ export function LoginForm({ initialError, next, allowSignup }: { initialError?: 
   const lastEmail = signInState.email ?? signUpState.email ?? magicState.email ?? "";
 
   return (
-    <div className="bg-card border-border rounded-xl border p-5">
-      <Tabs value={mode} onValueChange={(v) => setMode(v as Mode)} className="mb-4">
-        <TabsList className="w-full">
+    <div className="flex flex-col">
+      <Tabs value={mode} onValueChange={(v) => setMode(v as Mode)} className="mb-5">
+        <TabsList className="w-full" aria-label="Sign-in method">
           <TabsTrigger value="signin">Sign in</TabsTrigger>
           {allowSignup ? <TabsTrigger value="signup">Create account</TabsTrigger> : null}
           <TabsTrigger value="magic">Magic link</TabsTrigger>
         </TabsList>
       </Tabs>
 
-      <form action={action} className="flex flex-col gap-3">
+      <form action={action} className="flex flex-col gap-4">
         <input type="hidden" name="next" value={next} />
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="email">{mode === "signin" ? "Email or username" : "Email"}</Label>
@@ -61,7 +60,7 @@ export function LoginForm({ initialError, next, allowSignup }: { initialError?: 
             />
           </div>
         ) : (
-          <p className="text-muted-foreground text-xs">
+          <p className="text-text-3 text-meta">
             We&apos;ll email you a one-time sign-in link. No password needed.
           </p>
         )}
@@ -77,8 +76,7 @@ export function LoginForm({ initialError, next, allowSignup }: { initialError?: 
           </Alert>
         ) : null}
 
-        <Button type="submit" disabled={pending} className="mt-1 w-full">
-          {pending ? <Loader2 className="animate-spin" /> : null}
+        <Button type="submit" size="lg" loading={pending} disabled={pending} className="mt-1 w-full">
           {mode === "signin" ? "Sign in" : mode === "signup" ? "Create account" : "Send magic link"}
         </Button>
       </form>

@@ -36,7 +36,7 @@ export function FilterBar({
       {view || search || hasFilters ? (
         <div className="flex flex-wrap items-center gap-2">
           {view}
-          <div className="ml-auto flex min-w-0 flex-1 items-center justify-end gap-2 sm:flex-none">
+          <div className="flex w-full min-w-0 items-center gap-2 sm:ml-auto sm:w-auto [&>*:first-child]:min-w-0 [&>*:first-child]:flex-1 sm:[&>*:first-child]:flex-none">
             {search}
             {hasFilters ? (
               <Button variant="outline" size="sm" className="md:hidden" onClick={() => setOpen(true)} aria-label={activeCount ? `Filters, ${activeCount} active` : "Filters"}>

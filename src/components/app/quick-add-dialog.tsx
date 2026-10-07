@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { ChevronDown, ChevronUp, Loader2 } from "lucide-react";
+import { ChevronDown, ChevronUp } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -156,13 +156,13 @@ function QuickAddForm({ preset, onClose }: { preset?: QuickAddPreset; onClose: (
         autoComplete="off"
       />
       <div className="flex flex-wrap items-center gap-1.5">
-        <span className="text-muted-foreground text-xs">Due:</span>
+        <span className="eyebrow mr-1">Due</span>
         {quickDates.map((q) => (
-          <Button key={q.label} type="button" size="sm" variant={draft.due_date === q.value ? "default" : "outline"} onClick={() => set("due_date", q.value)}>
+          <Button key={q.label} type="button" size="xs" variant={draft.due_date === q.value ? "secondary" : "ghost"} aria-pressed={draft.due_date === q.value} className={draft.due_date === q.value ? "text-text-1" : undefined} onClick={() => set("due_date", q.value)}>
             {q.label}
           </Button>
         ))}
-        <DateInput value={draft.due_date} onChange={(v) => set("due_date", v)} className="h-8 w-36 text-xs" aria-label="Due date" />
+        <DateInput value={draft.due_date} onChange={(v) => set("due_date", v)} className="ml-auto h-7 w-36 text-xs" aria-label="Due date" />
       </div>
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
         <Field label="Work area">
@@ -182,13 +182,13 @@ function QuickAddForm({ preset, onClose }: { preset?: QuickAddPreset; onClose: (
         </Field>
       </div>
 
-      <button type="button" onClick={() => setMore((m) => !m)} className="text-muted-foreground hover:text-foreground inline-flex w-fit items-center gap-1 text-xs font-medium">
+      <button type="button" onClick={() => setMore((m) => !m)} aria-expanded={more} className="text-text-2 hover:text-text-1 focus-visible:ring-brand/40 inline-flex w-fit items-center gap-1 rounded-sm text-xs font-medium transition-colors outline-none focus-visible:ring-2">
         {more ? <ChevronUp className="size-3.5" /> : <ChevronDown className="size-3.5" />}
         {more ? "Fewer options" : "More options"}
       </button>
 
       {more ? (
-        <div className="border-border/70 flex flex-col gap-3 rounded-lg border p-3">
+        <div className="border-line-1 bg-surface-0/50 flex flex-col gap-3 rounded-lg border p-3">
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
             <Field label="Status">
               <NativeSelect value={draft.status} onChange={(e) => set("status", e.target.value as TaskStatus)}>
@@ -215,7 +215,7 @@ function QuickAddForm({ preset, onClose }: { preset?: QuickAddPreset; onClose: (
             </Field>
           </div>
           {draft.status === "waiting" ? (
-            <div className="bg-warning/10 grid grid-cols-1 gap-2 rounded-lg p-2 sm:grid-cols-2">
+            <div className="border-warning/30 bg-warning/8 grid grid-cols-1 gap-2 rounded-lg border p-3 sm:grid-cols-2">
               <Field label="Waiting on (person)">
                 <Input value={draft.waiting_person} onChange={(e) => set("waiting_person", e.target.value)} placeholder="Name" />
               </Field>
@@ -248,8 +248,8 @@ function QuickAddForm({ preset, onClose }: { preset?: QuickAddPreset; onClose: (
           <Button type="button" variant="ghost" onClick={onClose}>
             Cancel
           </Button>
-          <Button type="submit" disabled={pending}>
-            {pending ? <Loader2 className="animate-spin" /> : null} Add task
+          <Button type="submit" loading={pending} disabled={pending}>
+            Add task
           </Button>
         </div>
       </DialogFooter>

@@ -213,11 +213,11 @@ export function PlaidConnections({ status, items, runs, accountCounts }: { statu
           </Alert>
         ) : null}
         {status.configured && status.keySource === "derived" ? (
-          <p className="text-muted-foreground flex items-start gap-1.5 text-xs">
+          <p className="text-text-2 flex items-start gap-1.5 text-xs">
             <KeyRound className="mt-0.5 size-3.5 shrink-0" /> Tokens are encrypted with a key derived from CRON_SECRET. For a dedicated key set <code>PLAID_TOKEN_ENCRYPTION_KEY</code> (64 hex characters) before connecting banks; changing keys later means reconnecting.
           </p>
         ) : null}
-        {status.configured && status.env === "sandbox" ? <p className="text-muted-foreground text-xs">Sandbox mode: choose any bank in Link and sign in with <code>user_good</code> / <code>pass_good</code>. Switch <code>PLAID_ENV</code> to <code>production</code> with a production secret for real accounts.</p> : null}
+        {status.configured && status.env === "sandbox" ? <p className="text-text-2 text-xs">Sandbox mode: choose any bank in Link and sign in with <code>user_good</code> / <code>pass_good</code>. Switch <code>PLAID_ENV</code> to <code>production</code> with a production secret for real accounts.</p> : null}
         {error ? (
           <Alert variant="destructive">
             <AlertDescription className="flex flex-col gap-2">
@@ -237,14 +237,14 @@ export function PlaidConnections({ status, items, runs, accountCounts }: { statu
             <AlertTitle>Key check</AlertTitle>
             <AlertDescription className="flex flex-col gap-1">
               <span>{diagnosis.verdict}</span>
-              <span className="text-muted-foreground text-xs">
+              <span className="text-text-2 text-xs">
                 client id from {diagnosis.clientId.source ?? "—"} ({diagnosis.clientId.length} chars) · secret from {diagnosis.secret.source ?? "—"} ({diagnosis.secret.length} chars) · PLAID_ENV {diagnosis.envSetting ?? "not set → sandbox"} · sandbox: {diagnosis.sandbox} · production: {diagnosis.production}
               </span>
             </AlertDescription>
           </Alert>
         ) : null}
         {items.length ? (
-          <ul className="divide-y">
+          <ul className="divide-line-1 divide-y">
             {items.map((it) => {
               const problem = it.status === "reauth_required" || it.status === "error";
               return (
@@ -265,14 +265,14 @@ export function PlaidConnections({ status, items, runs, accountCounts }: { statu
                           <AlertTriangle /> Error
                         </Badge>
                       )}
-                      <span className="text-muted-foreground text-xs">{accountCounts[it.item_id] ?? 0} account{(accountCounts[it.item_id] ?? 0) === 1 ? "" : "s"}</span>
+                      <span className="text-text-2 text-xs">{accountCounts[it.item_id] ?? 0} account{(accountCounts[it.item_id] ?? 0) === 1 ? "" : "s"}</span>
                     </div>
-                    <div className="text-muted-foreground mt-0.5 text-xs">
+                    <div className="text-text-2 mt-0.5 text-xs">
                       {it.last_synced_at ? `Synced ${timeAgo(it.last_synced_at)}` : "Not synced yet"}
                       {it.last_webhook_at ? ` · bank update ${timeAgo(it.last_webhook_at)}` : ""}
                       {it.products?.length ? ` · ${it.products.join(", ")}` : ""}
                     </div>
-                    {problem && it.error_message ? <div className="text-destructive mt-0.5 text-xs">{it.error_message}</div> : null}
+                    {problem && it.error_message ? <div className="text-danger mt-0.5 text-xs">{it.error_message}</div> : null}
                   </div>
                   <div className="flex items-center gap-1">
                     {problem ? (
@@ -292,19 +292,19 @@ export function PlaidConnections({ status, items, runs, accountCounts }: { statu
             })}
           </ul>
         ) : status.configured ? (
-          <p className="text-muted-foreground text-sm">No banks connected. Connect one and its accounts appear below with live balances; the projection uses them immediately.</p>
+          <p className="text-text-2 text-sm">No banks connected. Connect one and its accounts appear below with live balances; the projection uses them immediately.</p>
         ) : null}
         {runs.length ? (
           <details className="text-xs">
-            <summary className="text-muted-foreground cursor-pointer">Recent syncs</summary>
+            <summary className="text-text-2 cursor-pointer">Recent syncs</summary>
             <ul className="mt-1 flex flex-col gap-0.5">
               {runs.map((r) => (
                 <li key={r.id} className="flex flex-wrap items-center gap-2">
                   <Badge variant={r.status === "success" ? "success" : r.status === "error" ? "destructive" : "muted"}>{r.status}</Badge>
-                  <span className="text-muted-foreground">{r.trigger}</span>
-                  <span className="tabular-nums">{formatTimestamp(r.started_at, timezone)}</span>
-                  {r.result ? <span className="text-muted-foreground">{r.result.accounts_seen} accounts · {r.result.transactions_added + r.result.transactions_modified} transactions{r.result.realtime ? " · real-time balances" : ""}</span> : null}
-                  {r.error ? <span className="text-destructive">{r.error}</span> : null}
+                  <span className="text-text-2">{r.trigger}</span>
+                  <span className="nums">{formatTimestamp(r.started_at, timezone)}</span>
+                  {r.result ? <span className="text-text-2">{r.result.accounts_seen} accounts · {r.result.transactions_added + r.result.transactions_modified} transactions{r.result.realtime ? " · real-time balances" : ""}</span> : null}
+                  {r.error ? <span className="text-danger">{r.error}</span> : null}
                 </li>
               ))}
             </ul>

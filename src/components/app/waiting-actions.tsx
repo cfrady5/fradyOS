@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { CalendarClock, CheckCheck, MessageSquare, Loader2 } from "lucide-react";
+import { CalendarClock, CheckCheck, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
@@ -100,9 +100,11 @@ function FollowUpForm({ pending, onCancel, onSave }: { pending: boolean; onCance
         <DateInput value={nextDate} onChange={setNextDate} />
       </Field>
       <DialogFooter>
-        <Button variant="ghost" onClick={onCancel}>Cancel</Button>
-        <Button disabled={pending} onClick={() => onSave(nextDate, note)}>
-          {pending ? <Loader2 className="animate-spin" /> : null} Save
+        <Button type="button" variant="outline" onClick={onCancel}>
+          Cancel
+        </Button>
+        <Button loading={pending} disabled={pending} onClick={() => onSave(nextDate, note)}>
+          Save
         </Button>
       </DialogFooter>
     </>
@@ -116,7 +118,7 @@ function RescheduleForm({ initial, pending, onCancel, onSave }: { initial: strin
     <>
       <div className="flex flex-wrap gap-1.5">
         {[1, 2, 3, 7].map((n) => (
-          <Button key={n} type="button" size="sm" variant={nextDate === addDays(today, n) ? "default" : "outline"} onClick={() => setNextDate(addDays(today, n))}>
+          <Button key={n} type="button" size="sm" variant={nextDate === addDays(today, n) ? "default" : "outline"} aria-pressed={nextDate === addDays(today, n)} onClick={() => setNextDate(addDays(today, n))}>
             {n === 1 ? "Tomorrow" : n === 7 ? "Next week" : `In ${n} days`}
           </Button>
         ))}
@@ -125,9 +127,11 @@ function RescheduleForm({ initial, pending, onCancel, onSave }: { initial: strin
         <DateInput value={nextDate} onChange={setNextDate} />
       </Field>
       <DialogFooter>
-        <Button variant="ghost" onClick={onCancel}>Cancel</Button>
-        <Button disabled={pending} onClick={() => onSave(nextDate)}>
-          {pending ? <Loader2 className="animate-spin" /> : null} Save
+        <Button type="button" variant="outline" onClick={onCancel}>
+          Cancel
+        </Button>
+        <Button loading={pending} disabled={pending} onClick={() => onSave(nextDate)}>
+          Save
         </Button>
       </DialogFooter>
     </>

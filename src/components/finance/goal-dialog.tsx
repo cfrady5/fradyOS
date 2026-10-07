@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Loader2, Trash2, Plus, X } from "lucide-react";
+import { Trash2, Plus, X } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -141,7 +141,7 @@ function GoalForm({ goal, accounts, emergencyFundTarget, onClose }: { goal?: Fin
           </Field>
         ) : (
           <Field label="Progress" htmlFor="g-current-ro">
-            <Input id="g-current-ro" readOnly value={linked ? (linkedIsDebt ? `paid down from ${fmtMoney(linked.balance)} owed` : fmtMoney(linked.balance)) : "computed from your accounts"} className="text-muted-foreground" />
+            <Input id="g-current-ro" readOnly value={linked ? (linkedIsDebt ? `paid down from ${fmtMoney(linked.balance)} owed` : fmtMoney(linked.balance)) : "computed from your accounts"} className="text-text-2" />
           </Field>
         )}
         <Field label="Target date" htmlFor="g-date" hint="Without a date the goal shows a projected date instead of a status.">
@@ -166,7 +166,7 @@ function GoalForm({ goal, accounts, emergencyFundTarget, onClose }: { goal?: Fin
       </div>
       <DialogFooter className="flex-row items-center justify-between sm:justify-between">
         {goal ? (
-          <Button type="button" variant="ghost" size="sm" className="text-destructive" onClick={remove} disabled={pending}>
+          <Button type="button" variant="ghost" size="sm" className="text-danger" onClick={remove} disabled={pending}>
             <Trash2 /> Delete
           </Button>
         ) : (
@@ -176,8 +176,8 @@ function GoalForm({ goal, accounts, emergencyFundTarget, onClose }: { goal?: Fin
           <Button type="button" variant="outline" onClick={onClose} disabled={pending}>
             Cancel
           </Button>
-          <Button type="submit" disabled={pending}>
-            {pending ? <Loader2 className="animate-spin" /> : null} {goal ? "Save" : "Add goal"}
+          <Button loading={pending} type="submit" disabled={pending}>
+            {goal ? "Save" : "Add goal"}
           </Button>
         </div>
       </DialogFooter>
@@ -287,14 +287,14 @@ function LinkProjectForm({ goal, onClose }: { goal: FinancialGoal; onClose: () =
             <Plus /> Add
           </Button>
         </div>
-        <p className="text-muted-foreground text-xs">Tasks that already exist on the project with the same title are skipped.</p>
+        <p className="text-text-2 text-xs">Tasks that already exist on the project with the same title are skipped.</p>
       </div>
       <DialogFooter>
         <Button type="button" variant="outline" onClick={onClose} disabled={pending}>
           Cancel
         </Button>
-        <Button type="submit" disabled={pending || (mode === "existing" && !projectId)}>
-          {pending ? <Loader2 className="animate-spin" /> : null} Link goal
+        <Button loading={pending} type="submit" disabled={pending || (mode === "existing" && !projectId)}>
+          Link goal
         </Button>
       </DialogFooter>
     </form>

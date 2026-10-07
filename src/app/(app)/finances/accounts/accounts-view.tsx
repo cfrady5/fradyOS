@@ -1,17 +1,17 @@
 "use client";
 
 import * as React from "react";
-import { Plus, Pencil, Landmark, CheckSquare, X, Trash2, Eye, EyeOff, Loader2 } from "lucide-react";
+import { Plus, Pencil, Landmark, CheckSquare, X, Trash2, Eye, EyeOff } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { bulkDeleteAccounts, bulkSetAccountsInNetWorth } from "@/actions/finance";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { Metric, MetricStrip, MetricTag } from "@/components/app/metric";
+import { BulkBar, SelectCheckbox } from "@/components/finance/bulk";
 import { EmptyState } from "@/components/ui/empty-state";
-import { SectionHeader } from "@/components/app/items";
-import { StatTile } from "@/components/finance/bits";
+import { MetaRow, RowList, SectionHeader } from "@/components/app/items";
 import { AccountDialog } from "@/components/finance/account-dialog";
 import { PlaidConnections, type PlaidStatus } from "@/components/finance/plaid-connections";
 import { Badge } from "@/components/ui/badge";
@@ -90,45 +90,45 @@ export function AccountsView({ accounts, debts, today, plaid }: { accounts: Fina
   ];
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-7">
+      <MetricStrip cols={3}>
+        <Metric label="Assets" tag="Current" value={fmtMoney(assets)} muted={assets === 0} sub={`${active.filter((a) => !isLiability(a.account_type)).length} account${active.filter((a) => !isLiability(a.account_type)).length === 1 ? "" : "s"}`} />
+        <Metric label="Liabilities" tag="Current" value={fmtMoney(liabilities)} muted={liabilities === 0} sub={`${active.filter((a) => isLiability(a.account_type)).length} debt${active.filter((a) => isLiability(a.account_type)).length === 1 ? "" : "s"}`} />
+        <Metric label="Net worth" tag="Current" value={fmtMoney(assets - liabilities)} tone={assets - liabilities < 0 ? "critical" : "neutral"} sub="assets minus liabilities" />
+      </MetricStrip>
       <PlaidConnections status={plaid.status} items={plaid.items} runs={plaid.runs} accountCounts={accountCounts} />
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-muted-foreground text-sm">Connected accounts update on every sync; manual accounts are entered by hand and flagged when older than 45 days.</p>
+        <p className="text-text-2 max-w-2xl text-sm">Connected accounts update on every sync; manual balances are entered by hand and flagged when older than 45 days.</p>
         <div className="flex flex-wrap items-center gap-2">
           {active.length ? (
-            <Button variant={selecting ? "secondary" : "outline"} onClick={() => (selecting ? exitSelect() : setSelecting(true))} aria-pressed={selecting}>
+            <Button variant={selecting ? "secondary" : "outline"} size="sm" onClick={() => (selecting ? exitSelect() : setSelecting(true))} aria-pressed={selecting}>
               {selecting ? <X /> : <CheckSquare />} {selecting ? "Done" : "Select"}
             </Button>
           ) : null}
-          <Button onClick={() => setDialog({ open: true })}>
+          <Button size="sm" onClick={() => setDialog({ open: true })}>
             <Plus /> Add manual account
           </Button>
         </div>
       </div>
       {selecting ? (
-        <div className="flex flex-wrap items-center gap-2 text-sm">
+        <div className="-mt-3 flex flex-wrap items-center gap-2 text-sm">
           <Checkbox id="select-all-accounts" checked={selectedVisible.length === visibleIds.length ? true : selectedVisible.length ? "indeterminate" : false} onCheckedChange={(v) => setSelected(v ? new Set(visibleIds) : new Set())} />
-          <label htmlFor="select-all-accounts" className="cursor-pointer select-none">
+          <label htmlFor="select-all-accounts" className="text-text-1 cursor-pointer select-none">
             Select all {visibleIds.length}
           </label>
-          <span className="text-muted-foreground text-xs">Tick accounts, then use the bar at the bottom. Accounts still synced from a connected bank cannot be deleted until the bank is removed.</span>
+          <span className="text-text-3 text-meta">Tick accounts, then use the bar at the bottom. Accounts still synced from a connected bank cannot be deleted until the bank is removed.</span>
         </div>
       ) : null}
-      <div className="grid gap-3 sm:grid-cols-3">
-        <StatTile label="Assets" value={fmtMoney(assets)} />
-        <StatTile label="Liabilities" value={fmtMoney(liabilities)} />
-        <StatTile label="Net worth" value={fmtMoney(assets - liabilities)} />
-      </div>
       {active.length === 0 ? (
-        <EmptyState icon={<Landmark />} title="No accounts yet" description="Add checking, savings, investments and every debt. Net worth, the debt plan and projections all read from here." action={<Button onClick={() => setDialog({ open: true })}><Plus /> Add account</Button>} />
+        <EmptyState variant="page" icon={<Landmark />} title="No accounts yet" description="Add checking, savings, investments and every debt. Net worth, the debt plan and projections all read from here." action={<Button onClick={() => setDialog({ open: true })}><Plus /> Add account</Button>} />
       ) : (
         groups.map((g) => (
-          <section key={g.key}>
+          <section key={g.key} aria-label={g.label}>
             <SectionHeader
               title={
                 selecting && g.items.length ? (
                   <span className="inline-flex items-center gap-2">
-                    <Checkbox aria-label={`Select all ${g.label.toLowerCase()}`} checked={g.items.every((a) => selected.has(a.id)) ? true : g.items.some((a) => selected.has(a.id)) ? "indeterminate" : false} onCheckedChange={(v) => setMany(g.items.map((a) => a.id), Boolean(v))} />
+                    <SelectCheckbox aria-label={`Select all ${g.label.toLowerCase()}`} checked={g.items.every((a) => selected.has(a.id)) ? true : g.items.some((a) => selected.has(a.id)) ? "indeterminate" : false} onCheckedChange={(v) => setMany(g.items.map((a) => a.id), Boolean(v))} />
                     {g.label}
                   </span>
                 ) : (
@@ -144,51 +144,50 @@ export function AccountsView({ accounts, debts, today, plaid }: { accounts: Fina
               }
             />
             {g.items.length ? (
-              <Card className="gap-0 py-0">
-                <ul className="divide-y">
-                  {g.items.map((a) => {
-                    const d = debtByAccount.get(a.id);
-                    const live = a.external_provider === "plaid";
-                    const stale = !live && diffDays(a.last_updated, today) > 45;
-                    return (
-                      <li key={a.id} className={cn("flex items-center gap-3 px-4 py-2.5", selecting && selected.has(a.id) && "bg-primary/8")}>
-                        {selecting ? <Checkbox aria-label={`Select ${a.name}`} checked={selected.has(a.id)} onCheckedChange={(v) => toggleSelect(a.id, Boolean(v))} /> : null}
-                        <div className="min-w-0 flex-1">
-                          <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-                            <span className="text-sm font-medium">{a.name}</span>
-                            <span className="text-muted-foreground text-xs">{ACCOUNT_TYPES.find((t) => t.value === a.account_type)?.label}{a.institution ? ` · ${a.institution}` : ""}</span>
-                            {!a.include_in_net_worth ? <span className="text-muted-foreground text-xs">(excluded)</span> : null}
-                            {live ? <Badge variant={a.sync_error ? "warning" : "success"}>{a.sync_error ? "Sync issue" : "Live"}</Badge> : null}
-                          </div>
-                          <div className="text-muted-foreground mt-0.5 flex flex-wrap gap-x-3 text-xs tabular-nums">
-                            {a.interest_rate != null ? <span>{fmtPct(a.interest_rate, 2)} {isLiability(a.account_type) ? "APR" : "/yr"}</span> : null}
-                            {isLiability(a.account_type) ? <span>min {fmtMoney(a.minimum_payment ?? 0)} · paying {fmtMoney(d?.actual_payment || a.minimum_payment || 0)}</span> : a.monthly_contribution ? <span>+{fmtMoney(a.monthly_contribution)}/mo</span> : null}
-                            {live ? (
-                              <span className={cn(a.sync_error ? "text-chart-serious" : null)}>{a.sync_error ?? (a.last_synced_at ? `synced ${timeAgo(a.last_synced_at)}` : "not synced yet")}{a.available_balance != null && Math.abs(a.available_balance - a.balance) > 0.005 ? ` · ${fmtMoney(a.available_balance)} available` : ""}</span>
-                            ) : (
-                              <span className={cn(stale ? "text-chart-serious" : null)}>as of {formatDate(a.last_updated, "medium", today)}{stale ? " · stale" : ""}</span>
-                            )}
-                          </div>
+              <RowList>
+                {g.items.map((a) => {
+                  const d = debtByAccount.get(a.id);
+                  const live = a.external_provider === "plaid";
+                  const stale = !live && diffDays(a.last_updated, today) > 45;
+                  return (
+                    <div key={a.id} data-selected={(selecting && selected.has(a.id)) || undefined} className="hover:bg-surface-hover data-[selected]:bg-brand/8 flex items-center gap-3 rounded-md px-2 py-2 transition-colors">
+                      {selecting ? <SelectCheckbox aria-label={`Select ${a.name}`} checked={selected.has(a.id)} onCheckedChange={(v) => toggleSelect(a.id, Boolean(v))} /> : null}
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                          <span className="text-text-1 text-sm font-medium">{a.name}</span>
+                          <MetricTag>{live ? "Connected" : "Manual"}</MetricTag>
+                          {live && a.sync_error ? <Badge variant="warning">Sync issue</Badge> : null}
+                          {!a.include_in_net_worth ? <Badge variant="muted">Excluded</Badge> : null}
                         </div>
-                        <span className={cn("text-sm font-semibold tabular-nums", isLiability(a.account_type) ? "text-destructive" : null)}>{fmtMoney(a.balance)}</span>
-                        <Button variant="ghost" size="icon-sm" aria-label={`Edit ${a.name}`} onClick={() => setDialog({ open: true, account: a })}>
-                          <Pencil />
-                        </Button>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </Card>
+                        <MetaRow className="nums">
+                          <span>{ACCOUNT_TYPES.find((t) => t.value === a.account_type)?.label}{a.institution ? ` · ${a.institution}` : ""}</span>
+                          {a.interest_rate != null ? <span>{fmtPct(a.interest_rate, 2)} {isLiability(a.account_type) ? "APR" : "/yr"}</span> : null}
+                          {isLiability(a.account_type) ? <span>min {fmtMoney(a.minimum_payment ?? 0)} · paying {fmtMoney(d?.actual_payment || a.minimum_payment || 0)}</span> : a.monthly_contribution ? <span>+{fmtMoney(a.monthly_contribution)}/mo</span> : null}
+                          {live ? (
+                            <span className={cn(a.sync_error ? "text-chart-serious" : null)}>{a.sync_error ?? (a.last_synced_at ? `synced ${timeAgo(a.last_synced_at)}` : "not synced yet")}{a.available_balance != null && Math.abs(a.available_balance - a.balance) > 0.005 ? ` · ${fmtMoney(a.available_balance)} available` : ""}</span>
+                          ) : (
+                            <span className={cn(stale ? "text-chart-serious" : null)}>updated {formatDate(a.last_updated, "medium", today)}{stale ? " · stale" : ""}</span>
+                          )}
+                        </MetaRow>
+                      </div>
+                      <span className={cn("nums text-text-1 shrink-0 text-right text-sm font-medium", isLiability(a.account_type) ? "text-danger" : null)}>{isLiability(a.account_type) ? "−" : ""}{fmtMoney(a.balance)}</span>
+                      <Button variant="ghost" size="icon-sm" aria-label={`Edit ${a.name}`} onClick={() => setDialog({ open: true, account: a })}>
+                        <Pencil />
+                      </Button>
+                    </div>
+                  );
+                })}
+              </RowList>
             ) : (
-              <EmptyState compact title={`No ${g.label.toLowerCase()} yet`} />
+              <EmptyState className="mt-3" title={`No ${g.label.toLowerCase()} yet`} action={<Button variant="outline" size="sm" onClick={() => setDialog({ open: true, defaultType: g.defaultType })}><Plus /> Add</Button>} />
             )}
           </section>
         ))
       )}
       {selecting ? (
-        <div className="bg-card border-border fixed inset-x-3 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-40 mx-auto flex max-w-4xl flex-wrap items-center gap-2 rounded-xl border p-2.5 pr-16 shadow-2xl shadow-black/50 md:inset-x-auto md:right-8 md:bottom-6 md:left-[calc(15rem+2rem)] md:pr-2.5" role="toolbar" aria-label="Bulk account actions">
-          <span className="nums px-1 text-sm font-semibold">{selectedVisible.length} selected</span>
-          {selectedVisible.length ? <span className="text-muted-foreground nums text-xs">{fmtMoney(selectedTotal, { sign: true })} of net worth</span> : null}
+        <BulkBar label="Bulk account actions" className="pr-16 md:pr-2">
+          <span className="nums text-text-1 px-1 text-sm font-semibold">{selectedVisible.length} selected</span>
+          {selectedVisible.length ? <span className="text-text-3 nums text-meta">{fmtMoney(selectedTotal, { sign: true })} of net worth</span> : null}
           <Button variant="outline" size="sm" disabled={!selectedVisible.length || bulkPending} onClick={() => setNetWorth(true)}>
             <Eye /> Include in net worth
           </Button>
@@ -201,7 +200,7 @@ export function AccountsView({ accounts, debts, today, plaid }: { accounts: Fina
           <Button variant="ghost" size="sm" className="ml-auto" onClick={exitSelect}>
             Cancel
           </Button>
-        </div>
+        </BulkBar>
       ) : null}
 
       <Dialog open={confirmDelete} onOpenChange={setConfirmDelete}>
@@ -217,8 +216,8 @@ export function AccountsView({ accounts, debts, today, plaid }: { accounts: Fina
             <Button variant="outline" onClick={() => setConfirmDelete(false)} disabled={bulkPending}>
               Keep them
             </Button>
-            <Button variant="destructive" onClick={deleteSelected} disabled={bulkPending || selectedVisible.length === selectedLinked}>
-              {bulkPending ? <Loader2 className="animate-spin" /> : <Trash2 />} Delete {selectedVisible.length - selectedLinked}
+            <Button variant="destructive" onClick={deleteSelected} loading={bulkPending} disabled={bulkPending || selectedVisible.length === selectedLinked}>
+              {bulkPending ? null : <Trash2 />} Delete {selectedVisible.length - selectedLinked}
             </Button>
           </DialogFooter>
         </DialogContent>

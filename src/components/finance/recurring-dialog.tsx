@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Loader2, Trash2 } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -175,7 +175,7 @@ function RecurringForm({ item, defaultKind, accounts, categories, today, onClose
       </div>
       <DialogFooter className="flex-row items-center justify-between sm:justify-between">
         {item ? (
-          <Button type="button" variant="ghost" size="sm" className="text-destructive" onClick={remove} disabled={pending}>
+          <Button type="button" variant="ghost" size="sm" className="text-danger" onClick={remove} disabled={pending}>
             <Trash2 /> Delete
           </Button>
         ) : (
@@ -185,8 +185,8 @@ function RecurringForm({ item, defaultKind, accounts, categories, today, onClose
           <Button type="button" variant="outline" onClick={onClose} disabled={pending}>
             Cancel
           </Button>
-          <Button type="submit" disabled={pending}>
-            {pending ? <Loader2 className="animate-spin" /> : null} {item ? "Save" : "Add"}
+          <Button loading={pending} type="submit" disabled={pending}>
+            {item ? "Save" : "Add"}
           </Button>
         </div>
       </DialogFooter>

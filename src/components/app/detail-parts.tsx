@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { toast } from "sonner";
-import { Paperclip, Plus, Trash2, Download, Loader2, StickyNote } from "lucide-react";
+import { Paperclip, Plus, Trash2, Download, StickyNote } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -38,46 +38,51 @@ export function SubtasksList({ taskId, subtasks, onChanged }: { taskId: string; 
   }
 
   return (
-    <div className="flex flex-col gap-1.5">
-      {local.map((s) => (
-        <div key={s.id} className="group flex items-center gap-2 rounded-md px-1 py-0.5 hover:bg-accent/40">
-          <Checkbox
-            checked={s.is_done}
-            onCheckedChange={(v) => {
-              const done = v === true;
-              setLocal((xs) => xs.map((x) => (x.id === s.id ? { ...x, is_done: done } : x)));
-              startTransition(async () => {
-                const res = await toggleSubtask(s.id, done);
-                if (!res.ok) toast.error(res.error);
-                else onChanged();
-              });
-            }}
-            aria-label={s.title}
-          />
-          <span className={cn("flex-1 text-sm", s.is_done && "text-muted-foreground line-through")}>{s.title}</span>
-          <Button
-            variant="ghost"
-            size="icon-xs"
-            className="opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
-            aria-label="Delete subtask"
-            onClick={() =>
-              startTransition(async () => {
-                const res = await deleteSubtask(s.id);
-                if (!res.ok) toast.error(res.error);
-                else onChanged();
-              })
-            }
-          >
-            <Trash2 />
-          </Button>
+    <div className="flex flex-col gap-2">
+      {local.length ? (
+        <div className="hairline-rows">
+          {local.map((s) => (
+            <div key={s.id} className="group hover:bg-surface-hover -mx-1 flex min-h-8 items-center gap-2.5 rounded-md px-1 py-1 transition-colors duration-150">
+              <Checkbox
+                checked={s.is_done}
+                onCheckedChange={(v) => {
+                  const done = v === true;
+                  setLocal((xs) => xs.map((x) => (x.id === s.id ? { ...x, is_done: done } : x)));
+                  startTransition(async () => {
+                    const res = await toggleSubtask(s.id, done);
+                    if (!res.ok) toast.error(res.error);
+                    else onChanged();
+                  });
+                }}
+                aria-label={s.title}
+              />
+              <span className={cn("flex-1 text-sm", s.is_done ? "text-text-3 decoration-line-3 line-through" : "text-text-1")}>{s.title}</span>
+              <Button
+                variant="ghost"
+                size="icon-xs"
+                className="opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
+                aria-label="Delete subtask"
+                onClick={() =>
+                  startTransition(async () => {
+                    const res = await deleteSubtask(s.id);
+                    if (!res.ok) toast.error(res.error);
+                    else onChanged();
+                  })
+                }
+              >
+                <Trash2 />
+              </Button>
+            </div>
+          ))}
         </div>
-      ))}
+      ) : null}
       <div className="flex items-center gap-2">
         <Input
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           placeholder="Add a subtask and press Enter"
           className="h-8"
+          aria-label="New subtask"
           onKeyDown={(e) => {
             if (e.key === "Enter") {
               e.preventDefault();
@@ -109,9 +114,9 @@ export function NotesList({ parent, notes, onChanged }: { parent: NoteParent; no
   }
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-3">
       <div className="flex flex-col gap-1.5">
-        <Textarea value={body} onChange={(e) => setBody(e.target.value)} placeholder="Add a note… (⌘/Ctrl+Enter to save)" rows={2}
+        <Textarea value={body} onChange={(e) => setBody(e.target.value)} placeholder="Add a note… (⌘/Ctrl+Enter to save)" rows={2} aria-label="New note"
           onKeyDown={(e) => {
             if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
               e.preventDefault();
@@ -126,12 +131,12 @@ export function NotesList({ parent, notes, onChanged }: { parent: NoteParent; no
         </div>
       </div>
       {notes.length ? (
-        <ul className="flex flex-col gap-1.5">
+        <ul className="hairline-rows">
           {notes.map((n) => (
-            <li key={n.id} className="group rounded-md border px-2.5 py-2">
-              <p className="whitespace-pre-wrap text-sm">{n.body}</p>
-              <div className="mt-1 flex items-center justify-between">
-                <span className="text-muted-foreground text-[11px]">{formatTimestamp(n.created_at, timezone, { withYear: true })}</span>
+            <li key={n.id} className="group py-2.5">
+              <p className="text-text-1 text-sm whitespace-pre-wrap">{n.body}</p>
+              <div className="mt-1 flex items-center justify-between gap-2">
+                <span className="text-text-3 text-meta nums">{formatTimestamp(n.created_at, timezone, { withYear: true })}</span>
                 <Button
                   variant="ghost"
                   size="icon-xs"
@@ -194,13 +199,13 @@ export function AttachmentsList({ parent, attachments, onChanged }: { parent: No
   return (
     <div className="flex flex-col gap-2">
       {attachments.length ? (
-        <ul className="flex flex-col gap-1">
+        <ul className="hairline-rows">
           {attachments.map((a) => (
-            <li key={a.id} className="group flex items-center gap-2 rounded-md border px-2 py-1 text-sm">
-              <Paperclip className="text-muted-foreground size-3.5 shrink-0" />
+            <li key={a.id} className="group flex min-h-9 items-center gap-2 py-1 text-sm">
+              <Paperclip className="text-text-3 size-3.5 shrink-0" aria-hidden />
               <button
                 type="button"
-                className="min-w-0 flex-1 truncate text-left hover:underline"
+                className="text-text-1 focus-visible:ring-brand/40 min-w-0 flex-1 truncate rounded-sm text-left outline-none hover:underline focus-visible:ring-2"
                 onClick={() =>
                   startTransition(async () => {
                     const res = await getAttachmentUrl(a.id);
@@ -211,7 +216,7 @@ export function AttachmentsList({ parent, attachments, onChanged }: { parent: No
               >
                 {a.file_name}
               </button>
-              <span className="text-muted-foreground text-xs tabular-nums">{a.size_bytes ? formatBytes(a.size_bytes) : ""}</span>
+              <span className="text-text-3 text-meta nums">{a.size_bytes ? formatBytes(a.size_bytes) : ""}</span>
               <Button variant="ghost" size="icon-xs" aria-label="Download" onClick={() => startTransition(async () => { const r = await getAttachmentUrl(a.id); if (r.ok) window.open(r.data.url, "_blank", "noopener"); else toast.error(r.error); })}>
                 <Download />
               </Button>
@@ -234,12 +239,18 @@ export function AttachmentsList({ parent, attachments, onChanged }: { parent: No
           ))}
         </ul>
       ) : null}
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <input ref={inputRef} type="file" multiple className="sr-only" id={`file-${Object.values(parent)[0]}`} onChange={(e) => upload(e.target.files)} />
-        <Button type="button" variant="outline" size="sm" disabled={uploading || pending} onClick={() => inputRef.current?.click()}>
-          {uploading ? <Loader2 className="animate-spin" /> : <Paperclip />} {uploading ? "Uploading…" : "Attach files"}
+        <Button type="button" variant="outline" size="sm" loading={uploading} disabled={uploading || pending} onClick={() => inputRef.current?.click()}>
+          {uploading ? (
+            "Uploading…"
+          ) : (
+            <>
+              <Paperclip /> Attach files
+            </>
+          )}
         </Button>
-        <span className="text-muted-foreground text-xs">Stored privately in Supabase Storage (max 25 MB each).</span>
+        <span className="text-text-3 text-xs">Stored privately in Supabase Storage (max 25 MB each).</span>
       </div>
     </div>
   );

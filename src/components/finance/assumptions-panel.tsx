@@ -3,7 +3,6 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NativeSelect } from "@/components/ui/native-select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -89,7 +88,7 @@ export function AssumptionsPanel({ profile, sections = ["income", "growth", "deb
               <PctInput id="a-apy" value={form.savings_apy_pct} onChange={(v) => set("savings_apy_pct", v)} />
             </Field>
             <Field label="Emergency fund target (months)" htmlFor="a-ef">
-              <input id="a-ef" inputMode="decimal" value={form.emergency_fund_months} onChange={(e) => set("emergency_fund_months", e.target.value.replace(/[^0-9.]/g, ""))} className="border-input h-9 w-full rounded-md border bg-transparent px-3 py-1 text-sm tabular-nums shadow-xs outline-none focus-visible:border-ring focus-visible:ring-ring/40 focus-visible:ring-[3px]" />
+              <input id="a-ef" inputMode="decimal" value={form.emergency_fund_months} onChange={(e) => set("emergency_fund_months", e.target.value.replace(/[^0-9.]/g, ""))} className="border-line-2 h-9 w-full rounded-md border bg-transparent px-3 py-1 text-sm nums outline-none focus-visible:border-ring focus-visible:ring-brand/40/40 focus-visible:ring-[3px]" />
             </Field>
             <Field label="Leftover cash goes to" htmlFor="a-dest">
               <NativeSelect id="a-dest" value={form.surplus_destination} onChange={(e) => set("surplus_destination", e.target.value as Form["surplus_destination"])}>
@@ -122,8 +121,8 @@ export function AssumptionsPanel({ profile, sections = ["income", "growth", "deb
               Reset
             </Button>
           ) : null}
-          <Button type="button" size="sm" onClick={save} disabled={pending || !dirty}>
-            {pending ? <Loader2 className="animate-spin" /> : null} Save assumptions
+          <Button loading={pending} type="button" size="sm" onClick={save} disabled={pending || !dirty}>
+            Save assumptions
           </Button>
         </div>
       </CardContent>

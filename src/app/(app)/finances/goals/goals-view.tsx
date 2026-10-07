@@ -4,12 +4,12 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { GripVertical, Plus, Pencil, Target, FolderKanban, Link2, Loader2 } from "lucide-react";
+import { GripVertical, Plus, Pencil, Target, FolderKanban, Link2, ChevronUp, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Badge } from "@/components/ui/badge";
-import { SectionHeader } from "@/components/app/items";
+import { RowList, SectionHeader } from "@/components/app/items";
 import { ProgressMeter } from "@/components/finance/charts";
 import { Disclaimer, GoalStatusBadge } from "@/components/finance/bits";
 import { GoalDialog, LinkProjectDialog } from "@/components/finance/goal-dialog";
@@ -80,18 +80,18 @@ export function GoalsView({ goals, accounts, projection, allocation, suggestedPr
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-7">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-muted-foreground text-sm">Drag to set priority. Status compares each goal&rsquo;s projected completion with its target date.</p>
-        <Button onClick={() => setDialog({ open: true })}>
+        <p className="text-text-2 max-w-2xl text-sm">Drag to set priority. Status compares each goal&rsquo;s projected completion with its target date.</p>
+        <Button size="sm" onClick={() => setDialog({ open: true })}>
           <Plus /> New goal
         </Button>
       </div>
 
       {ordered.length === 0 ? (
-        <EmptyState icon={<Target />} title="No goals yet" description="An emergency fund, a debt to clear, a down payment, a trip. Give it a target and a date and the projection tells you whether you are on track." action={<Button onClick={() => setDialog({ open: true })}><Plus /> New goal</Button>} />
+        <EmptyState variant="page" icon={<Target />} title="No goals yet" description="An emergency fund, a debt to clear, a down payment, a trip. Give it a target and a date and the projection tells you whether you are on track." action={<Button onClick={() => setDialog({ open: true })}><Plus /> New goal</Button>} />
       ) : (
-        <div className="grid gap-4 lg:grid-cols-5">
+        <div className="grid gap-x-10 gap-y-7 lg:grid-cols-5">
           <div className="flex min-w-0 flex-col gap-2 lg:col-span-3">
             {ordered.map((g, idx) => {
               const r = resultById.get(g.id);
@@ -100,7 +100,7 @@ export function GoalsView({ goals, accounts, projection, allocation, suggestedPr
               return (
                 <Card
                   key={g.id}
-                  className={cn("gap-2 py-3", g.status === "paused" ? "opacity-70" : null)}
+                  className={cn("hover:border-line-2 gap-2 py-3 transition-colors", g.status === "paused" ? "opacity-70" : null)}
                   draggable
                   onDragStart={() => {
                     dragId.current = g.id;
@@ -110,22 +110,22 @@ export function GoalsView({ goals, accounts, projection, allocation, suggestedPr
                 >
                   <CardContent className="flex gap-3">
                     <div className="flex flex-col items-center gap-0.5 pt-0.5">
-                      <button type="button" className="text-muted-foreground cursor-grab" aria-label={`Drag to reorder ${g.name}`} title="Drag to reorder">
+                      <button type="button" className="text-text-3 focus-visible:ring-brand/40 cursor-grab rounded-sm outline-none focus-visible:ring-2" aria-label={`Drag to reorder ${g.name}`} title="Drag to reorder">
                         <GripVertical className="size-4" />
                       </button>
-                      <span className="text-muted-foreground text-[11px] tabular-nums">#{idx + 1}</span>
+                      <span className="index">{String(idx + 1).padStart(2, "0")}</span>
                       <div className="flex flex-col">
-                        <button type="button" className="text-muted-foreground hover:text-foreground text-[10px] leading-3 disabled:opacity-30" onClick={() => move(g.id, -1)} disabled={idx === 0} aria-label="Move up">
-                          ▲
+                        <button type="button" className="text-text-3 hover:text-text-1 focus-visible:ring-brand/40 flex size-5 items-center justify-center rounded-sm outline-none focus-visible:ring-2 disabled:opacity-30" onClick={() => move(g.id, -1)} disabled={idx === 0} aria-label={`Move ${g.name} up`}>
+                          <ChevronUp className="size-3.5" />
                         </button>
-                        <button type="button" className="text-muted-foreground hover:text-foreground text-[10px] leading-3 disabled:opacity-30" onClick={() => move(g.id, 1)} disabled={idx === ordered.length - 1} aria-label="Move down">
-                          ▼
+                        <button type="button" className="text-text-3 hover:text-text-1 focus-visible:ring-brand/40 flex size-5 items-center justify-center rounded-sm outline-none focus-visible:ring-2 disabled:opacity-30" onClick={() => move(g.id, 1)} disabled={idx === ordered.length - 1} aria-label={`Move ${g.name} down`}>
+                          <ChevronDown className="size-3.5" />
                         </button>
                       </div>
                     </div>
                     <div className="flex min-w-0 flex-1 flex-col gap-1.5">
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-sm font-semibold">{g.name}</span>
+                        <span className="text-text-1 text-sm font-medium">{g.name}</span>
                         <Badge variant="muted">{GOAL_CATEGORIES.find((c) => c.value === g.category)?.label}</Badge>
                         {g.status === "paused" ? <Badge variant="outline">Paused</Badge> : null}
                         {r ? <GoalStatusBadge status={r.status} /> : null}
@@ -137,7 +137,7 @@ export function GoalsView({ goals, accounts, projection, allocation, suggestedPr
                       {r ? (
                         <>
                           <ProgressMeter value={r.startAmount} target={r.targetAmount} tone={tone} />
-                          <div className="text-muted-foreground flex flex-wrap justify-between gap-x-3 text-xs tabular-nums">
+                          <div className="text-text-3 nums text-meta flex flex-wrap justify-between gap-x-3">
                             <span>
                               {fmtMoney(r.startAmount)} of {fmtMoney(r.targetAmount)} ({r.progressPct.toFixed(0)}%) · {fmtMoney(g.monthly_contribution)}/mo
                             </span>
@@ -148,17 +148,17 @@ export function GoalsView({ goals, accounts, projection, allocation, suggestedPr
                             </span>
                           </div>
                           {r.requiredMonthly != null && r.requiredMonthly > g.monthly_contribution + 0.5 && r.status !== "completed" ? (
-                            <p className="text-muted-foreground text-xs">Needs about {fmtMoney(r.requiredMonthly)}/mo to land on the target date.</p>
+                            <p className="text-warning text-meta">Needs about {fmtMoney(r.requiredMonthly)}/mo to land on the target date.</p>
                           ) : null}
                         </>
                       ) : null}
-                      <div className="flex flex-wrap items-center gap-2 text-xs">
+                      <div className="text-meta flex flex-wrap items-center gap-2">
                         {proj ? (
-                          <Link href={`/projects/${proj.id}`} className="text-primary inline-flex items-center gap-1 hover:underline">
+                          <Link href={`/projects/${proj.id}`} className="text-brand-soft inline-flex items-center gap-1 hover:underline">
                             <FolderKanban className="size-3.5" /> {proj.name} · {proj.task_done}/{proj.task_total} tasks
                           </Link>
                         ) : (
-                          <button type="button" className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1" onClick={() => setLinkFor(g)}>
+                          <button type="button" className="text-text-3 hover:text-text-1 focus-visible:ring-brand/40 inline-flex items-center gap-1 rounded-sm outline-none focus-visible:ring-2" onClick={() => setLinkFor(g)}>
                             <Link2 className="size-3.5" /> Turn into a project
                           </button>
                         )}
@@ -169,57 +169,55 @@ export function GoalsView({ goals, accounts, projection, allocation, suggestedPr
               );
             })}
             {doneGoals.length ? (
-              <div className="mt-2">
+              <div className="mt-5">
                 <SectionHeader title="Completed" count={doneGoals.length} />
-                <ul className="text-muted-foreground flex flex-col gap-1 text-sm">
+                <RowList>
                   {doneGoals.map((g) => (
-                    <li key={g.id} className="flex items-center justify-between rounded-md border px-3 py-1.5">
+                    <div key={g.id} className="text-text-3 flex items-center justify-between px-2 py-1.5 text-sm">
                       <span className="line-through">{g.name}</span>
                       <Button variant="ghost" size="icon-xs" aria-label={`Edit ${g.name}`} onClick={() => setDialog({ open: true, goal: g })}>
                         <Pencil />
                       </Button>
-                    </li>
+                    </div>
                   ))}
-                </ul>
+                </RowList>
               </div>
             ) : null}
           </div>
 
           <div className="flex min-w-0 flex-col gap-4 lg:col-span-2">
-            <Card>
-              <CardHeader>
-                <div>
-                  <CardTitle>Allocation by priority</CardTitle>
-                  <CardDescription className="mt-1">{fmtMoney(available)}/mo is available for goals (unallocated cash flow plus current goal contributions). Higher priority is funded first, up to what it needs for its date.</CardDescription>
-                </div>
-              </CardHeader>
-              <CardContent className="flex flex-col gap-3">
-                <ul className="flex flex-col divide-y text-sm">
-                  {allocation.map((l) => {
-                    const cur = goals.find((g) => g.id === l.goalId)?.monthly_contribution ?? 0;
-                    const s = suggestedById.get(l.goalId);
-                    return (
-                      <li key={l.goalId} className="flex flex-col gap-0.5 py-2">
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="truncate">{l.name}</span>
-                          <span className="tabular-nums">
-                            <span className="text-muted-foreground">{fmtMoney(cur)} →</span> <span className="font-medium">{fmtMoney(l.suggestedMonthly)}</span>
-                          </span>
-                        </div>
-                        <div className="text-muted-foreground flex items-center justify-between gap-2 text-xs">
-                          <span>{l.requiredMonthly != null ? `needs ${fmtMoney(l.requiredMonthly)}/mo for its date` : "no target date"}</span>
-                          {s ? <GoalStatusBadge status={s.status} /> : null}
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
-                <Button size="sm" onClick={applyAllocation} disabled={pending || !allocationDiffers}>
-                  {pending ? <Loader2 className="animate-spin" /> : null} {allocationDiffers ? "Apply this allocation" : "Contributions already match"}
+            <section aria-labelledby="goals-allocation">
+              <SectionHeader as="h3" title={<span id="goals-allocation">Allocation by priority</span>} />
+              <p className="text-text-2 text-meta mt-2">
+                <span className="nums text-text-1 font-medium">{fmtMoney(available)}/mo</span> is available for goals (unallocated cash flow plus current goal contributions). Higher priority is funded first, up to what it needs for its date.
+              </p>
+              <RowList className="mt-2">
+                {allocation.map((l) => {
+                  const cur = goals.find((g) => g.id === l.goalId)?.monthly_contribution ?? 0;
+                  const s = suggestedById.get(l.goalId);
+                  return (
+                    <div key={l.goalId} className="flex flex-col gap-0.5 px-2 py-2 text-sm">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-text-1 truncate">{l.name}</span>
+                        <span className="nums">
+                          <span className="text-text-3">{fmtMoney(cur)} →</span> <span className="text-text-1 font-medium">{fmtMoney(l.suggestedMonthly)}</span>
+                        </span>
+                      </div>
+                      <div className="text-text-3 text-meta flex items-center justify-between gap-2">
+                        <span>{l.requiredMonthly != null ? `needs ${fmtMoney(l.requiredMonthly)}/mo for its date` : "no target date"}</span>
+                        {s ? <GoalStatusBadge status={s.status} /> : null}
+                      </div>
+                    </div>
+                  );
+                })}
+              </RowList>
+              <div className="mt-3 flex flex-col gap-3">
+                <Button size="sm" className="w-fit" onClick={applyAllocation} loading={pending} disabled={pending || !allocationDiffers}>
+                  {allocationDiffers ? "Apply this allocation" : "Contributions already match"}
                 </Button>
                 <Disclaimer />
-              </CardContent>
-            </Card>
+              </div>
+            </section>
           </div>
         </div>
       )}

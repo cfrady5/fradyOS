@@ -1,16 +1,18 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
-import { Copy, Download, Trophy, ArrowRight } from "lucide-react";
+import { Copy, Download, Trophy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NativeSelect } from "@/components/ui/native-select";
 import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { PageHeader, SectionHeader, SocialPostRow, TaskRow } from "@/components/app/items";
+import { PageHeader, RowList, SectionHeader, SectionLink, SocialPostRow, SubHeading, TaskRow } from "@/components/app/items";
+import { FilterBar } from "@/components/app/filter-bar";
+import { Metric, MetricStrip } from "@/components/app/metric";
+import { fieldClassName } from "@/components/ui/input";
 import { DateInput } from "@/components/app/form-fields";
 import { useWorkspace } from "@/components/app/workspace-provider";
 import { ProjectCard } from "../projects/projects-view";
@@ -63,27 +65,34 @@ export function CompletedView({ data, range, from, to, area, project }: { data: 
   return (
     <div className="mx-auto max-w-6xl">
       <PageHeader title="Completed" description="Everything you finished, kept as a record. Counts are activity, not impact.">
-        <div className="flex flex-wrap items-center gap-2">
-          <Tabs value={range} onValueChange={(v) => setParams({ range: v, from: null, to: null })}>
-            <TabsList>
-              <TabsTrigger value="week">This week</TabsTrigger>
-              <TabsTrigger value="lastweek">Last week</TabsTrigger>
-              <TabsTrigger value="month">This month</TabsTrigger>
-              <TabsTrigger value="30">Last 30 days</TabsTrigger>
-              <TabsTrigger value="custom">Custom</TabsTrigger>
-            </TabsList>
-          </Tabs>
-          {range === "custom" ? (
-            <div className="flex items-center gap-1.5">
-              <DateInput value={from} onChange={(v) => v && setParams({ from: v })} className="w-36" aria-label="From" />
-              <span className="text-muted-foreground text-xs">to</span>
-              <DateInput value={to} onChange={(v) => v && setParams({ to: v })} className="w-36" aria-label="To" />
-            </div>
-          ) : (
-            <span className="text-muted-foreground text-xs tabular-nums">
-              {formatDate(from, "medium", today)} – {formatDate(to, "medium", today)}
-            </span>
-          )}
+        <FilterBar
+          activeCount={(area ? 1 : 0) + (project ? 1 : 0)}
+          onReset={() => setParams({ area: null, project: null })}
+          view={
+            <Tabs value={range} onValueChange={(v) => setParams({ range: v, from: null, to: null })}>
+              <TabsList aria-label="Range">
+                <TabsTrigger value="week">This week</TabsTrigger>
+                <TabsTrigger value="lastweek">Last week</TabsTrigger>
+                <TabsTrigger value="month">This month</TabsTrigger>
+                <TabsTrigger value="30">Last 30 days</TabsTrigger>
+                <TabsTrigger value="custom">Custom</TabsTrigger>
+              </TabsList>
+            </Tabs>
+          }
+          search={
+            range === "custom" ? (
+              <div className="flex items-center gap-1.5">
+                <DateInput value={from} onChange={(v) => v && setParams({ from: v })} className="w-36" aria-label="From" />
+                <span className="text-text-3 text-meta">to</span>
+                <DateInput value={to} onChange={(v) => v && setParams({ to: v })} className="w-36" aria-label="To" />
+              </div>
+            ) : (
+              <span className="text-text-3 nums text-meta">
+                {formatDate(from, "medium", today)} – {formatDate(to, "medium", today)}
+              </span>
+            )
+          }
+        >
           <NativeSelect className="w-40" value={area ?? ""} onChange={(e) => setParams({ area: e.target.value || null, project: null })} aria-label="Work area">
             <option value="">All work areas</option>
             {workAreas.map((a) => (
@@ -96,74 +105,74 @@ export function CompletedView({ data, range, from, to, area, project }: { data: 
               <option key={p.id} value={p.id}>{p.name}</option>
             ))}
           </NativeSelect>
-        </div>
+        </FilterBar>
       </PageHeader>
 
-      <div className="mb-5 grid grid-cols-2 gap-2 sm:grid-cols-4">
-        <Stat label="Tasks this week" value={data.counts.tasksThisWeek} />
-        <Stat label="Tasks this month" value={data.counts.tasksThisMonth} />
-        <Stat label="Posts published this week" value={data.counts.postsThisWeek} />
-        <Stat label="Posts published this month" value={data.counts.postsThisMonth} />
-      </div>
+      <MetricStrip cols={4} className="mb-7">
+        <Metric size="sm" label="Tasks · week" value={data.counts.tasksThisWeek} muted={!data.counts.tasksThisWeek} />
+        <Metric size="sm" label="Tasks · month" value={data.counts.tasksThisMonth} muted={!data.counts.tasksThisMonth} />
+        <Metric size="sm" label="Posts · week" value={data.counts.postsThisWeek} muted={!data.counts.postsThisWeek} sub="published" />
+        <Metric size="sm" label="Posts · month" value={data.counts.postsThisMonth} muted={!data.counts.postsThisMonth} sub="published" />
+      </MetricStrip>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <div className="flex flex-col gap-5 lg:col-span-2">
+      <div className="grid grid-cols-1 gap-x-10 gap-y-7 lg:grid-cols-3">
+        <div className="flex flex-col gap-7 lg:col-span-2">
           <section>
             <SectionHeader title="Tasks completed" count={data.tasks.length} />
             {data.tasks.length ? (
-              <div className="flex flex-col gap-3">
+              <div className="mt-2">
                 {byDay.map((d) => (
-                  <div key={d.date}>
-                    <p className="text-muted-foreground mb-1 text-xs font-medium">{formatDate(d.date, "weekday", today)}</p>
-                    <div className="flex flex-col gap-1.5">
+                  <React.Fragment key={d.date}>
+                    <SubHeading count={d.tasks.length}>{formatDate(d.date, "weekday", today)}</SubHeading>
+                    <RowList>
                       {d.tasks.map((t) => (
                         <TaskRow key={t.id} task={t} onToggleComplete={toggle} dense />
                       ))}
-                    </div>
-                  </div>
+                    </RowList>
+                  </React.Fragment>
                 ))}
               </div>
             ) : (
-              <EmptyState compact icon={<Trophy />} title="No tasks completed in this range" description="Completed tasks are kept here with their completion time. Reopen any of them from its detail panel." />
+              <EmptyState icon={<Trophy />} title="No tasks completed in this range" description="Completed tasks are kept here with their completion time. Reopen any of them from its detail panel." />
             )}
           </section>
 
           <section>
             <SectionHeader title="Projects completed" count={data.projects.length} />
             {data.projects.length ? (
-              <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+              <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
                 {data.projects.map((p) => (
                   <ProjectCard key={p.id} project={p} today={today} />
                 ))}
               </div>
             ) : (
-              <p className="text-muted-foreground text-xs">No projects marked completed in this range.</p>
+              <p className="text-text-3 text-meta py-1.5">No projects marked completed in this range.</p>
             )}
           </section>
 
           <section>
             <SectionHeader title="Social posts published" count={data.posts.length} />
             {data.posts.length ? (
-              <div className="flex flex-col gap-1.5">
+              <RowList>
                 {data.posts.map((p) => (
                   <SocialPostRow key={p.id} post={p} dense />
                 ))}
-              </div>
+              </RowList>
             ) : (
-              <p className="text-muted-foreground text-xs">No posts marked published in this range.</p>
+              <p className="text-text-3 text-meta py-1.5">No posts marked published in this range.</p>
             )}
           </section>
 
           <section>
-            <SectionHeader title="Carrying into next week" count={data.carryOver.length} hint="open tasks due by the end of this week" action={<Link href="/tasks?due=week" className="text-muted-foreground inline-flex items-center gap-1 text-xs hover:underline">Plan them <ArrowRight className="size-3" /></Link>} />
+            <SectionHeader title="Carrying into next week" count={data.carryOver.length} hint="open tasks due by the end of this week" action={<SectionLink href="/tasks?due=week">Plan them</SectionLink>} />
             {data.carryOver.length ? (
-              <div className="flex flex-col gap-1.5">
+              <RowList>
                 {data.carryOver.map((t) => (
                   <TaskRow key={t.id} task={t} onToggleComplete={toggle} dense />
                 ))}
-              </div>
+              </RowList>
             ) : (
-              <p className="text-muted-foreground text-xs">Nothing overdue or due this week is still open.</p>
+              <p className="text-text-3 text-meta py-1.5">Nothing overdue or due this week is still open.</p>
             )}
           </section>
         </div>
@@ -172,13 +181,13 @@ export function CompletedView({ data, range, from, to, area, project }: { data: 
           <Card>
             <CardContent className="flex flex-col gap-3">
               <div className="flex items-center justify-between gap-2">
-                <p className="text-sm font-semibold">Weekly summary</p>
+                <p className="text-heading">Weekly summary</p>
                 <NativeSelect className="w-36" value={by} onChange={(e) => setBy(e.target.value as "project" | "area")} aria-label="Group summary by">
                   <option value="project">By project</option>
                   <option value="area">By work area</option>
                 </NativeSelect>
               </div>
-              <textarea readOnly value={markdown} rows={16} className="bg-muted/40 w-full rounded-md border p-2 font-mono text-xs" aria-label="Summary text" />
+              <textarea readOnly value={markdown} rows={16} className={`${fieldClassName} text-text-2 w-full p-2.5 font-mono text-xs leading-relaxed`} aria-label="Summary text" />
               <div className="flex flex-wrap gap-2">
                 <Button size="sm" onClick={copy}>
                   <Copy /> Copy
@@ -199,20 +208,11 @@ export function CompletedView({ data, range, from, to, area, project }: { data: 
                   </a>
                 </Button>
               </div>
-              <p className="text-muted-foreground text-xs">Generated from your records only. Add the outcomes and context yourself before sending.</p>
+              <p className="text-text-3 text-meta">Generated from your records only. Add the outcomes and context yourself before sending.</p>
             </CardContent>
           </Card>
         </div>
       </div>
-    </div>
-  );
-}
-
-function Stat({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="bg-card border-border/80 rounded-xl border px-4 py-3.5">
-      <p className="text-subtle-foreground text-[11px] font-semibold tracking-wide uppercase">{label}</p>
-      <p className="nums mt-0.5 text-2xl font-semibold tracking-tight">{value}</p>
     </div>
   );
 }

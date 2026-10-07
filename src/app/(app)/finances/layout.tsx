@@ -1,17 +1,26 @@
 import type { Metadata } from "next";
+import { PageHeader } from "@/components/app/items";
+import { NAV_GROUPS } from "@/components/app/nav";
 import { FinanceNav } from "@/components/finance/bits";
 
 export const metadata: Metadata = { title: { default: "Finances", template: "%s · Finances" } };
 
+const MONEY = NAV_GROUPS.find((g) => g.key === "money");
+
 export default function FinancesLayout({ children }: LayoutProps<"/finances">) {
   return (
     <div className="mx-auto max-w-6xl">
-      <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h1 className="text-xl font-semibold tracking-tight md:text-2xl">Financial Future</h1>
-          <p className="text-muted-foreground mt-1 text-sm">Current finances → goals → scenarios → projected future. Manual entry only; no bank credentials are stored.</p>
-        </div>
-      </div>
+      <PageHeader
+        title="Finances"
+        description="Current finances → goals → scenarios → projected future. Bank logins are never stored."
+        eyebrow={
+          <>
+            {MONEY?.index ? <span className="index">{MONEY.index}</span> : null}
+            <span>{MONEY?.label ?? "Money"}</span>
+          </>
+        }
+        className="mb-4 md:mb-4"
+      />
       <FinanceNav />
       {children}
     </div>

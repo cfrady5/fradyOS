@@ -4,7 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
-import { CalendarDays, Plus, RefreshCw, Loader2, AlertTriangle, Settings, CheckSquare, X, Archive, Trash2, EyeOff, ArchiveRestore } from "lucide-react";
+import { CalendarDays, Plus, RefreshCw, AlertTriangle, Settings, CheckSquare, X, Archive, Trash2, EyeOff, ArchiveRestore } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NativeSelect } from "@/components/ui/native-select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -13,7 +13,8 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ProjectSelect } from "@/components/app/form-fields";
-import { EventRow, PageHeader, SectionHeader } from "@/components/app/items";
+import { EventRow, PageHeader, RowList, SubHeading } from "@/components/app/items";
+import { FilterBar } from "@/components/app/filter-bar";
 import { EventDialog } from "@/components/app/event-dialog";
 import { useWorkspace } from "@/components/app/workspace-provider";
 import { syncMondayNow } from "@/actions/monday";
@@ -102,58 +103,63 @@ export function EventsView({ events, scope, area, reviewCount, connection, token
             <span>
               Monday.com board “{connection.board_name ?? connection.board_id}” ·{" "}
               {connection.last_success_at ? `last synced ${timeAgo(connection.last_success_at)} (${formatTimestamp(connection.last_success_at, timezone)})` : "never synced"}
-              {connection.last_error ? <span className="text-destructive"> · last sync failed</span> : null}
+              {connection.last_error ? <span className="text-danger"> · last sync failed</span> : null}
             </span>
           ) : tokenConfigured ? (
             <span>
-              Monday.com token is set. <Link href="/settings?tab=monday" className="text-primary-soft hover:underline">Choose a board</Link> to start importing events.
+              Monday.com token is set. <Link href="/settings?tab=monday" className="text-brand-soft hover:underline">Choose a board</Link> to start importing events.
             </span>
           ) : (
             <span>
-              Monday.com is disconnected. Add events manually, or <Link href="/settings?tab=monday" className="text-primary-soft hover:underline">set up the integration</Link>.
+              Monday.com is disconnected. Add events manually, or <Link href="/settings?tab=monday" className="text-brand-soft hover:underline">set up the integration</Link>.
             </span>
           )
         }
         actions={
           <>
             {connection && tokenConfigured ? (
-              <Button variant="outline" onClick={sync} disabled={pending}>
-                {pending ? <Loader2 className="animate-spin" /> : <RefreshCw />} Sync now
+              <Button variant="outline" size="sm" onClick={sync} loading={pending} disabled={pending}>
+                {pending ? null : <RefreshCw />} Sync now
               </Button>
             ) : (
-              <Button asChild variant="outline">
+              <Button asChild variant="outline" size="sm">
                 <Link href="/settings?tab=monday"><Settings /> Monday.com</Link>
               </Button>
             )}
             {events.length ? (
-              <Button variant={selecting ? "secondary" : "outline"} onClick={() => (selecting ? exitSelect() : setSelecting(true))} aria-pressed={selecting}>
+              <Button variant={selecting ? "secondary" : "outline"} size="sm" onClick={() => (selecting ? exitSelect() : setSelecting(true))} aria-pressed={selecting}>
                 {selecting ? <X /> : <CheckSquare />} {selecting ? "Done" : "Select"}
               </Button>
             ) : null}
-            <Button onClick={() => setDialogOpen(true)}>
+            <Button size="sm" onClick={() => setDialogOpen(true)}>
               <Plus /> New event
             </Button>
           </>
         }
       >
-        <div className="flex flex-wrap items-center gap-2">
-          <Tabs value={scope} onValueChange={(v) => setParams({ scope: v === "upcoming" ? null : v })}>
-            <TabsList>
-              <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
-              <TabsTrigger value="past">Past</TabsTrigger>
-              <TabsTrigger value="review">
-                Needs review{reviewCount ? <span className="bg-destructive text-destructive-foreground ml-1 rounded-full px-1.5 text-[10px] tabular-nums">{reviewCount}</span> : null}
-              </TabsTrigger>
-              <TabsTrigger value="all">All</TabsTrigger>
-            </TabsList>
-          </Tabs>
+        <FilterBar
+          view={
+            <Tabs value={scope} onValueChange={(v) => setParams({ scope: v === "upcoming" ? null : v })}>
+              <TabsList aria-label="Which events">
+                <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
+                <TabsTrigger value="past">Past</TabsTrigger>
+                <TabsTrigger value="review">
+                  Needs review{reviewCount ? <span className="index text-danger" aria-label={`${reviewCount} to review`}>{reviewCount}</span> : null}
+                </TabsTrigger>
+                <TabsTrigger value="all">All</TabsTrigger>
+              </TabsList>
+            </Tabs>
+          }
+          activeCount={area ? 1 : 0}
+          onReset={() => setParams({ area: null })}
+        >
           <NativeSelect className="w-44" value={area ?? ""} onChange={(e) => setParams({ area: e.target.value || null })} aria-label="Work area">
             <option value="">All work areas</option>
             {workAreas.map((a) => (
               <option key={a.id} value={a.id}>{a.name}</option>
             ))}
           </NativeSelect>
-        </div>
+        </FilterBar>
       </PageHeader>
 
       {connection?.last_error ? (
@@ -166,61 +172,61 @@ export function EventsView({ events, scope, area, reviewCount, connection, token
 
       {events.length === 0 ? (
         <EmptyState
+          variant="page"
           icon={<CalendarDays />}
           title={scope === "review" ? "Nothing needs review" : scope === "past" ? "No past events" : "No events yet"}
           description={scope === "review" ? "Canceled or removed Monday.com items will appear here." : "Import from Monday.com or add an event manually. Each event gets a preparation checklist and social plan."}
           action={scope !== "review" ? <Button onClick={() => setDialogOpen(true)}><Plus /> New event</Button> : undefined}
         />
       ) : (
-        <div className="flex flex-col gap-5">
+        <div className="flex flex-col gap-3">
           {selecting ? (
             <div className="flex flex-wrap items-center gap-2 text-sm">
               <Checkbox id="select-all" checked={selectedVisible.length === visibleIds.length ? true : selectedVisible.length ? "indeterminate" : false} onCheckedChange={(v) => setSelected(v ? new Set(visibleIds) : new Set())} />
-              <label htmlFor="select-all" className="cursor-pointer select-none">
+              <label htmlFor="select-all" className="text-text-1 cursor-pointer select-none">
                 Select all {visibleIds.length} shown
               </label>
-              <span className="text-muted-foreground text-xs">Tick events, then use the bar at the bottom. Monday.com fields stay read-only; work area, project, archive and delete are yours.</span>
+              <span className="text-text-3 text-meta">Tick events, then use the bar at the bottom. Monday.com fields stay read-only; work area, project, archive and delete are yours.</span>
             </div>
           ) : null}
-          {byMonth.map((g) => {
-            const groupIds = g.events.map((e) => e.id);
-            const groupSelected = groupIds.filter((id) => selected.has(id)).length;
-            return (
-              <section key={g.key}>
-                <SectionHeader
-                  title={
-                    selecting ? (
+          <div className="flex flex-col gap-5">
+            {byMonth.map((g) => {
+              const groupIds = g.events.map((e) => e.id);
+              const groupSelected = groupIds.filter((id) => selected.has(id)).length;
+              return (
+                <section key={g.key} aria-label={g.label}>
+                  <SubHeading count={g.events.length}>
+                    {selecting ? (
                       <span className="inline-flex items-center gap-2">
                         <Checkbox aria-label={`Select all in ${g.label}`} checked={groupSelected === groupIds.length ? true : groupSelected ? "indeterminate" : false} onCheckedChange={(v) => setSelected((prev) => { const next = new Set(prev); for (const id of groupIds) { if (v) next.add(id); else next.delete(id); } return next; })} />
                         {g.label}
                       </span>
                     ) : (
                       g.label
-                    )
-                  }
-                  count={g.events.length}
-                />
-                <div className="flex flex-col gap-1.5">
-                  {g.events.map((e) => (
-                    <div key={e.id} className={cn("flex items-stretch gap-2", selecting && selected.has(e.id) && "[&>a]:border-primary/50 [&>a]:bg-primary/8")}>
-                      {selecting ? (
-                        <label className="flex shrink-0 cursor-pointer items-center px-1" aria-label={`Select ${e.name}`}>
-                          <Checkbox checked={selected.has(e.id)} onCheckedChange={(v) => toggleSelect(e.id, Boolean(v))} />
-                        </label>
-                      ) : null}
-                      <EventRow event={e} prepOpen={e.prep_open} prepTotal={e.prep_total} socialOpen={e.social_open} className="min-w-0 flex-1" />
-                    </div>
-                  ))}
-                </div>
-              </section>
-            );
-          })}
+                    )}
+                  </SubHeading>
+                  <RowList>
+                    {g.events.map((e) => (
+                      <div key={e.id} className={cn("flex items-stretch", selecting && selected.has(e.id) && "bg-brand/8 rounded-md")}>
+                        {selecting ? (
+                          <label className="flex shrink-0 cursor-pointer items-center pl-2" aria-label={`Select ${e.name}`}>
+                            <Checkbox checked={selected.has(e.id)} onCheckedChange={(v) => toggleSelect(e.id, Boolean(v))} />
+                          </label>
+                        ) : null}
+                        <EventRow event={e} prepOpen={e.prep_open} prepTotal={e.prep_total} socialOpen={e.social_open} className="min-w-0 flex-1" />
+                      </div>
+                    ))}
+                  </RowList>
+                </section>
+              );
+            })}
+          </div>
         </div>
       )}
 
       {selecting ? (
-        <div className="bg-card border-border fixed inset-x-3 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-40 mx-auto flex max-w-4xl flex-wrap items-center gap-2 rounded-xl border p-2.5 pr-16 shadow-2xl shadow-black/50 md:inset-x-auto md:right-8 md:bottom-6 md:left-[calc(15rem+2rem)] md:pr-2.5" role="toolbar" aria-label="Bulk actions">
-          <span className="nums px-1 text-sm font-semibold">{selectedVisible.length} selected</span>
+        <div className="bg-surface-3 border-line-2 shadow-popover fixed inset-x-3 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-40 mx-auto flex max-w-4xl flex-wrap items-center gap-2 rounded-lg border p-2.5 pr-16 md:inset-x-auto md:right-8 md:bottom-6 md:left-[calc(232px+2rem)] md:pr-2.5" role="toolbar" aria-label="Bulk actions">
+          <span className="nums text-text-1 px-1 text-sm font-semibold">{selectedVisible.length} selected</span>
           <NativeSelect className="w-40" value="" disabled={!selectedVisible.length || bulkPending} onChange={(e) => { const v = e.target.value; if (v === "") return; applyBulk({ work_area_id: v === "__none" ? null : v }, (n) => `Work area set on ${n} event${n === 1 ? "" : "s"}`); }} aria-label="Set work area">
             <option value="">Set work area…</option>
             {workAreas.map((a) => (
@@ -265,8 +271,8 @@ export function EventsView({ events, scope, area, reviewCount, connection, token
             <Button variant="outline" onClick={() => setConfirmDelete(false)} disabled={bulkPending}>
               Keep them
             </Button>
-            <Button variant="destructive" onClick={deleteSelected} disabled={bulkPending}>
-              {bulkPending ? <Loader2 className="animate-spin" /> : <Trash2 />} Delete {selectedVisible.length}
+            <Button variant="destructive" onClick={deleteSelected} loading={bulkPending} disabled={bulkPending}>
+              {bulkPending ? null : <Trash2 />} Delete {selectedVisible.length}
             </Button>
           </DialogFooter>
         </DialogContent>

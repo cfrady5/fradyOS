@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Plus, Trash2, Star, Loader2, Check } from "lucide-react";
+import { Plus, Trash2, Star, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { NativeSelect } from "@/components/ui/native-select";
@@ -65,12 +65,12 @@ function TemplateCard({ template, items }: { template: EventTemplate; items: Eve
             </Button>
           )}
         </div>
-        <Button size="icon-sm" variant="ghost" className="text-destructive" aria-label="Delete template" disabled={pending} onClick={() => { if (!window.confirm(`Delete template “${template.name}”? Items already created from it are kept.`)) return; startTransition(async () => { const r = await deleteTemplate(template.id); if (!r.ok) toast.error(r.error); else router.refresh(); }); }}>
+        <Button size="icon-sm" variant="ghost" className="text-danger" aria-label="Delete template" disabled={pending} onClick={() => { if (!window.confirm(`Delete template “${template.name}”? Items already created from it are kept.`)) return; startTransition(async () => { const r = await deleteTemplate(template.id); if (!r.ok) toast.error(r.error); else router.refresh(); }); }}>
           <Trash2 />
         </Button>
       </CardHeader>
       <CardContent className="flex flex-col gap-2">
-        {items.length === 0 ? <p className="text-muted-foreground text-xs">No milestones yet.</p> : null}
+        {items.length === 0 ? <p className="text-text-2 text-xs">No milestones yet.</p> : null}
         {items.map((it) => (
           <TemplateItemRow key={it.id} item={it} />
         ))}
@@ -155,12 +155,12 @@ function TemplateItemRow({ item, templateId, onDone }: { item?: EventTemplateIte
       <div className="col-span-2 flex items-center justify-end gap-1 sm:col-span-12">
         {onDone ? <Button size="sm" variant="ghost" onClick={onDone}>Cancel</Button> : null}
         {dirty ? (
-          <Button size="sm" disabled={pending || !form.title.trim()} onClick={save}>
-            {pending ? <Loader2 className="animate-spin" /> : <Check />} {item ? "Save" : "Add"}
+          <Button loading={pending} size="sm" disabled={pending || !form.title.trim()} onClick={save}>
+            {pending ? null : <Check />} {item ? "Save" : "Add"}
           </Button>
         ) : null}
         {item ? (
-          <Button size="icon-sm" variant="ghost" className="text-destructive" aria-label="Delete milestone" disabled={pending} onClick={() => startTransition(async () => { const r = await deleteTemplateItem(item.id); if (!r.ok) toast.error(r.error); else router.refresh(); })}>
+          <Button size="icon-sm" variant="ghost" className="text-danger" aria-label="Delete milestone" disabled={pending} onClick={() => startTransition(async () => { const r = await deleteTemplateItem(item.id); if (!r.ok) toast.error(r.error); else router.refresh(); })}>
             <Trash2 />
           </Button>
         ) : null}

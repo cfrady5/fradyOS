@@ -326,7 +326,7 @@
   /* Eyebrow: the small uppercase label that sits above titles and section headings. */
   .eyebrow {
     font-size: var(--text-eyebrow);
-    line-height: 1;
+    line-height: 1.3;
     letter-spacing: 0.12em;
     font-weight: 600;
     text-transform: uppercase;

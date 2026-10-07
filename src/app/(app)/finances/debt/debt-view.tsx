@@ -6,18 +6,19 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { CreditCard, Plus, ArrowUp, ArrowDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { SectionHeader, SectionLink } from "@/components/app/items";
+import { Metric, MetricStrip } from "@/components/app/metric";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { LineChart } from "@/components/finance/charts";
-import { Disclaimer, StatTile } from "@/components/finance/bits";
+import { Disclaimer } from "@/components/finance/bits";
 import { AssumptionsPanel } from "@/components/finance/assumptions-panel";
 import { setDebtOrder } from "@/actions/finance";
 import type { Projection, StrategyComparison } from "@/lib/finance/engine";
 import { DEBT_STRATEGIES, isLiability, type DebtStrategy, type FinancialAccount, type FinancialDebt, type FinancialProfile } from "@/lib/finance/types";
 import { fmtMoney, fmtMonths, fmtPct } from "@/lib/finance/format";
 import { formatDate } from "@/lib/dates";
-import { cn } from "@/lib/utils";
+
 
 export function DebtView({ profile, accounts, debts, projection, comparison, curves }: { profile: FinancialProfile; accounts: FinancialAccount[]; debts: FinancialDebt[]; projection: Projection; comparison: StrategyComparison[]; curves: Record<DebtStrategy, number[]> }) {
   const router = useRouter();
@@ -51,28 +52,24 @@ export function DebtView({ profile, accounts, debts, projection, comparison, cur
   }
 
   if (!accounts.some((a) => isLiability(a.account_type) && !a.is_archived)) {
-    return <EmptyState icon={<CreditCard />} title="No debts recorded" description="Add credit cards and loans as accounts. The debt plan, payoff date and interest math all come from there." action={<Button asChild><Link href="/finances/accounts"><Plus /> Add a debt</Link></Button>} />;
+    return <EmptyState variant="page" icon={<CreditCard />} title="No debts recorded" description="Add credit cards and loans as accounts. The debt plan, payoff date and interest math all come from there." action={<Button asChild><Link href="/finances/accounts"><Plus /> Add a debt</Link></Button>} />;
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <StatTile label="Total debt" value={fmtMoney(totalDebt)} sub={`${open.length} balance${open.length === 1 ? "" : "s"} · ${fmtPct(weightedApr)} weighted APR`} />
-        <StatTile label="Monthly payments" value={fmtMoney(totalMin + projection.cashFlow.extraDebt)} sub={`${fmtMoney(totalMin)} required + ${fmtMoney(projection.cashFlow.extraDebt)} extra`} />
-        <StatTile label="Debt-free" value={projection.debtFreeDate ? formatDate(projection.debtFreeDate, "monthYear") : "Not in 30 yrs"} tone={projection.debtFreeDate ? undefined : "critical"} sub={projection.debtFreeMonth != null ? `${fmtMonths(projection.debtFreeMonth)} with ${DEBT_STRATEGIES.find((s) => s.value === profile.debt_strategy)?.label.toLowerCase()}` : "Increase payments to clear it"} />
-        <StatTile label="Interest on the way" value={fmtMoney(projection.totalInterest)} sub={current.interestSavedVsMinimum > 0 ? `${fmtMoney(current.interestSavedVsMinimum)} less than minimums only` : "At minimum payments"} />
-      </div>
+    <div className="flex flex-col gap-7">
+      <MetricStrip cols={4}>
+        <Metric label="Total debt" tag="Current" value={fmtMoney(totalDebt)} sub={`${open.length} balance${open.length === 1 ? "" : "s"} · ${fmtPct(weightedApr)} weighted APR`} />
+        <Metric label="Monthly payments" tag="Current" value={fmtMoney(totalMin + projection.cashFlow.extraDebt)} sub={`${fmtMoney(totalMin)} required + ${fmtMoney(projection.cashFlow.extraDebt)} extra`} />
+        <Metric label="Debt-free" tag="Projected" value={projection.debtFreeDate ? formatDate(projection.debtFreeDate, "monthYear") : "Not in 30 yrs"} tone={projection.debtFreeDate ? "neutral" : "critical"} sub={projection.debtFreeMonth != null ? `${fmtMonths(projection.debtFreeMonth)} with ${DEBT_STRATEGIES.find((s) => s.value === profile.debt_strategy)?.label.toLowerCase()}` : "increase payments to clear it"} />
+        <Metric label="Interest on the way" tag="Projected" value={fmtMoney(projection.totalInterest)} sub={current.interestSavedVsMinimum > 0 ? `${fmtMoney(current.interestSavedVsMinimum)} less than minimums only` : "at minimum payments"} />
+      </MetricStrip>
 
       <AssumptionsPanel profile={profile} sections={["debt"]} title="Payoff plan" description="Pick the strategy and how much extra goes toward debt each month. Freed-up payments roll into the next debt automatically." compact />
 
-      <Card>
-        <CardHeader>
-          <div>
-            <CardTitle>Strategy comparison</CardTitle>
-            <CardDescription className="mt-1">Same balances, same extra payment ({fmtMoney(profile.extra_debt_payment)}/mo); only the order changes.</CardDescription>
-          </div>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-4">
+      <section aria-labelledby="debt-compare">
+        <SectionHeader title={<span id="debt-compare">Strategy comparison</span>} hint={`same balances, same extra payment (${fmtMoney(profile.extra_debt_payment)}/mo); only the order changes`} />
+        <div className="mt-3 flex flex-col gap-4">
+          <div className="border-line-1 bg-surface-1 rounded-lg border">
           <Table>
             <TableHeader>
               <TableRow>
@@ -84,34 +81,27 @@ export function DebtView({ profile, accounts, debts, projection, comparison, cur
             </TableHeader>
             <TableBody>
               {comparison.map((c) => (
-                <TableRow key={c.strategy} className={cn(c.strategy === profile.debt_strategy ? "bg-muted/40" : null)}>
-                  <TableCell className="font-medium">
+                <TableRow key={c.strategy} data-state={c.strategy === profile.debt_strategy ? "selected" : undefined}>
+                  <TableCell className="text-text-1 font-medium">
                     {DEBT_STRATEGIES.find((s) => s.value === c.strategy)?.label}
-                    {c.strategy === profile.debt_strategy ? <span className="text-muted-foreground ml-2 text-xs">current</span> : null}
+                    {c.strategy === profile.debt_strategy ? <span className="index ml-2">current</span> : null}
                   </TableCell>
-                  <TableCell className="text-right tabular-nums">{c.debtFreeDate ? `${formatDate(c.debtFreeDate, "monthYear")} (${fmtMonths(c.debtFreeMonth)})` : "—"}</TableCell>
-                  <TableCell className="text-right tabular-nums">{fmtMoney(c.totalInterest)}</TableCell>
-                  <TableCell className="text-right tabular-nums">{c.strategy === "minimum" ? "—" : `${c.interestSavedVsMinimum >= 0 ? "saves" : "costs"} ${fmtMoney(Math.abs(c.interestSavedVsMinimum))}${c.monthsSavedVsMinimum != null ? ` · ${fmtMonths(Math.abs(c.monthsSavedVsMinimum))} ${c.monthsSavedVsMinimum >= 0 ? "sooner" : "later"}` : ""}`}</TableCell>
+                  <TableCell className="text-right nums">{c.debtFreeDate ? `${formatDate(c.debtFreeDate, "monthYear")} (${fmtMonths(c.debtFreeMonth)})` : "—"}</TableCell>
+                  <TableCell className="text-right nums">{fmtMoney(c.totalInterest)}</TableCell>
+                  <TableCell className="text-right nums">{c.strategy === "minimum" ? "—" : `${c.interestSavedVsMinimum >= 0 ? "saves" : "costs"} ${fmtMoney(Math.abs(c.interestSavedVsMinimum))}${c.monthsSavedVsMinimum != null ? ` · ${fmtMonths(Math.abs(c.monthsSavedVsMinimum))} ${c.monthsSavedVsMinimum >= 0 ? "sooner" : "later"}` : ""}`}</TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
+          </div>
           <LineChart xLabels={xLabels} series={series} height={200} ariaLabel="Total debt over time by strategy" />
           <Disclaimer />
-        </CardContent>
-      </Card>
+        </div>
+      </section>
 
-      <Card>
-        <CardHeader>
-          <div>
-            <CardTitle>Each debt</CardTitle>
-            <CardDescription className="mt-1">Payoff dates under the current plan. Edit balances, APR and payments on Accounts.</CardDescription>
-          </div>
-          <Button asChild variant="ghost" size="sm">
-            <Link href="/finances/accounts">Accounts</Link>
-          </Button>
-        </CardHeader>
-        <CardContent>
+      <section aria-labelledby="debt-each">
+        <SectionHeader title={<span id="debt-each">Each debt</span>} count={open.length} hint="payoff dates under the current plan; edit balances, APR and payments on Accounts" action={<SectionLink href="/finances/accounts">Accounts</SectionLink>} />
+        <div className="border-line-1 bg-surface-1 mt-3 rounded-lg border">
           <Table>
             <TableHeader>
               <TableRow>
@@ -130,28 +120,28 @@ export function DebtView({ profile, accounts, debts, projection, comparison, cur
                   {profile.debt_strategy === "custom" ? (
                     <TableCell>
                       <div className="flex items-center gap-0.5">
-                        <span className="w-4 text-xs tabular-nums">{i + 1}</span>
-                        <Button variant="ghost" size="icon-xs" aria-label="Move up" onClick={() => moveCustom(d.accountId, -1)} disabled={pending || i === 0}>
+                        <span className="index w-5">{String(i + 1).padStart(2, "0")}</span>
+                        <Button variant="ghost" size="icon-xs" aria-label={`Move ${d.name} up`} onClick={() => moveCustom(d.accountId, -1)} disabled={pending || i === 0}>
                           <ArrowUp />
                         </Button>
-                        <Button variant="ghost" size="icon-xs" aria-label="Move down" onClick={() => moveCustom(d.accountId, 1)} disabled={pending || i === customOrder.length - 1}>
+                        <Button variant="ghost" size="icon-xs" aria-label={`Move ${d.name} down`} onClick={() => moveCustom(d.accountId, 1)} disabled={pending || i === customOrder.length - 1}>
                           <ArrowDown />
                         </Button>
                       </div>
                     </TableCell>
                   ) : null}
-                  <TableCell className="font-medium">{d.name}</TableCell>
-                  <TableCell className="text-right tabular-nums">{fmtMoney(d.startBalance)}</TableCell>
-                  <TableCell className="text-right tabular-nums">{fmtPct(d.rate, 2)}</TableCell>
-                  <TableCell className="text-right tabular-nums">{d.monthlyPayment > 0 ? fmtMoney(d.monthlyPayment) : <span className="text-chart-serious">none set</span>}</TableCell>
-                  <TableCell className="text-right tabular-nums">{d.payoffDate ? formatDate(d.payoffDate, "monthYear") : "—"}</TableCell>
-                  <TableCell className="text-right tabular-nums">{fmtMoney(d.totalInterest)}</TableCell>
+                  <TableCell className="text-text-1 font-medium">{d.name}</TableCell>
+                  <TableCell className="text-right nums">{fmtMoney(d.startBalance)}</TableCell>
+                  <TableCell className="text-right nums">{fmtPct(d.rate, 2)}</TableCell>
+                  <TableCell className="text-right nums">{d.monthlyPayment > 0 ? fmtMoney(d.monthlyPayment) : <span className="text-chart-serious">none set</span>}</TableCell>
+                  <TableCell className="text-right nums">{d.payoffDate ? formatDate(d.payoffDate, "monthYear") : "—"}</TableCell>
+                  <TableCell className="text-right nums">{fmtMoney(d.totalInterest)}</TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
-        </CardContent>
-      </Card>
+        </div>
+      </section>
     </div>
   );
 }

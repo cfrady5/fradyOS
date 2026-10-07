@@ -9,7 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { EmptyState } from "@/components/ui/empty-state";
 import { NativeSelect } from "@/components/ui/native-select";
-import { AreaDot, PageHeader, PriorityBadge } from "@/components/app/items";
+import { AreaTag, PageHeader, PriorityBadge, SectionHeader } from "@/components/app/items";
+import { FilterBar } from "@/components/app/filter-bar";
 import { ProjectDialog } from "@/components/app/project-dialog";
 import { useWorkspace } from "@/components/app/workspace-provider";
 import { labelFor, PROJECT_STATUSES, type ProjectWithStats, type WorkArea } from "@/lib/types";
@@ -43,7 +44,7 @@ export function ProjectsView({ projects, area, status, workAreas }: { projects: 
           </Button>
         }
       >
-        <div className="flex flex-wrap items-center gap-2">
+        <FilterBar activeCount={(area ? 1 : 0) + (status ? 1 : 0)} onReset={() => router.push(pathname)}>
           <NativeSelect className="w-44" value={area ?? ""} onChange={(e) => setParam("area", e.target.value || null)} aria-label="Filter by work area">
             <option value="">All work areas</option>
             {workAreas.map((a) => (
@@ -61,7 +62,7 @@ export function ProjectsView({ projects, area, status, workAreas }: { projects: 
             ))}
             <option value="all">Everything</option>
           </NativeSelect>
-        </div>
+        </FilterBar>
       </PageHeader>
 
       {projects.length === 0 ? (
@@ -76,13 +77,11 @@ export function ProjectsView({ projects, area, status, workAreas }: { projects: 
           }
         />
       ) : (
-        <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-7">
           {groups.map((g) => (
-            <section key={g.key}>
-              <h2 className="mb-2.5 flex items-center gap-2 text-sm font-semibold">
-                <AreaDot color={g.color} /> {g.name} <span className="bg-secondary text-muted-foreground nums rounded-md px-1.5 py-0.5 text-[11px] leading-4 font-medium">{g.items.length}</span>
-              </h2>
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+            <section key={g.key} aria-label={g.name}>
+              <SectionHeader title={<AreaTag name={g.name} color={g.color} className="text-heading" />} count={g.items.length} />
+              <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
                 {g.items.map((p) => (
                   <ProjectCard key={p.id} project={p} today={today} />
                 ))}
@@ -101,29 +100,29 @@ export function ProjectCard({ project: p, today }: { project: ProjectWithStats; 
   const pct = p.task_total ? Math.round((p.task_done / p.task_total) * 100) : 0;
   const targetBucket = dueBucket(p.target_date, today);
   return (
-    <Link href={`/projects/${p.id}`} className="bg-card border-border/80 hover:border-border hover:bg-accent/30 flex flex-col gap-2.5 rounded-xl border p-4 outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring">
+    <Link href={`/projects/${p.id}`} className="bg-surface-1 border-line-1 hover:border-line-2 hover:bg-surface-hover focus-visible:ring-brand/40 flex flex-col gap-3 rounded-lg border p-4 transition-colors duration-150 outline-none focus-visible:ring-2">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className="truncate text-sm font-semibold">{p.name}</p>
-          {p.next_action ? <p className="text-muted-foreground mt-0.5 line-clamp-2 text-xs">Next: {p.next_action}</p> : p.description ? <p className="text-muted-foreground mt-0.5 line-clamp-2 text-xs">{p.description}</p> : null}
+          <p className="text-text-1 truncate text-sm font-medium">{p.name}</p>
+          {p.next_action ? <p className="text-text-2 text-meta mt-0.5 line-clamp-2">Next: {p.next_action}</p> : p.description ? <p className="text-text-2 text-meta mt-0.5 line-clamp-2">{p.description}</p> : null}
         </div>
         <Badge variant={p.status === "active" ? "default" : p.status === "completed" ? "success" : p.status === "on_hold" ? "warning" : "muted"}>{labelFor(PROJECT_STATUSES, p.status)}</Badge>
       </div>
       <div className="flex items-center gap-2">
         <Progress value={pct} className="flex-1" aria-label={`${pct}% of tasks complete`} />
-        <span className="text-muted-foreground text-xs tabular-nums">
+        <span className="text-text-3 nums text-meta">
           {p.task_done}/{p.task_total}
         </span>
       </div>
-      <div className="text-muted-foreground flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
+      <div className="text-text-3 text-meta flex flex-wrap items-center gap-x-2.5 gap-y-1">
         <PriorityBadge priority={p.priority} />
         {p.target_date ? (
-          <span className={cn("tabular-nums", targetBucket === "overdue" && p.status !== "completed" ? "text-destructive" : "")}>
+          <span className={cn("nums", targetBucket === "overdue" && p.status !== "completed" ? "text-danger" : "")}>
             Target {formatDate(p.target_date, "medium", today)}
           </span>
         ) : null}
         {p.overdue_count ? (
-          <span className="text-destructive inline-flex items-center gap-1">
+          <span className="text-danger inline-flex items-center gap-1">
             <AlertCircle className="size-3" /> {p.overdue_count} overdue
           </span>
         ) : null}
