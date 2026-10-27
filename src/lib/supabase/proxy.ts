@@ -2,11 +2,11 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { getSupabasePublishableKey, getSupabaseUrl, isSupabaseConfigured } from "./env";
 
-// Paths that never require a session: auth pages and machine-to-machine endpoints that carry their own secret.
-const PUBLIC_PREFIXES = ["/login", "/setup", "/auth/", "/api/cron/", "/api/webhooks/", "/api/health"];
+// Paths that never require a session: the public site, auth pages and machine-to-machine endpoints that carry their own secret.
+const PUBLIC_PREFIXES = ["/", "/work", "/ventures", "/writing", "/about", "/login", "/setup", "/auth/", "/api/cron/", "/api/webhooks/", "/api/health"];
 
 export function isPublicPath(pathname: string) {
-  return PUBLIC_PREFIXES.some((p) => (p.endsWith("/") ? pathname.startsWith(p) : pathname === p || pathname.startsWith(p + "/")));
+  return PUBLIC_PREFIXES.some((p) => (p === "/" ? pathname === "/" : p.endsWith("/") ? pathname.startsWith(p) : pathname === p || pathname.startsWith(p + "/")));
 }
 
 export async function updateSession(request: NextRequest) {
@@ -16,7 +16,7 @@ export async function updateSession(request: NextRequest) {
   if (process.env.FRADYOS_PREVIEW === "1" && !process.env.VERCEL) {
     if (request.nextUrl.pathname === "/login") {
       const url = request.nextUrl.clone();
-      url.pathname = "/";
+      url.pathname = "/today";
       url.search = "";
       return NextResponse.redirect(url);
     }
@@ -64,7 +64,7 @@ export async function updateSession(request: NextRequest) {
 
   if (isAuthed && pathname === "/login") {
     const url = request.nextUrl.clone();
-    url.pathname = "/";
+    url.pathname = "/today";
     url.search = "";
     return NextResponse.redirect(url);
   }

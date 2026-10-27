@@ -17,7 +17,7 @@ const passwordSchema = z.string().min(8, "Password must be at least 8 characters
 
 function safeNext(v: FormDataEntryValue | null) {
   const s = typeof v === "string" ? v : "";
-  return s.startsWith("/") && !s.startsWith("//") ? s : "/";
+  return s.startsWith("/") && !s.startsWith("//") ? s : "/today";
 }
 
 async function siteOrigin() {
@@ -73,7 +73,7 @@ export async function signUpAction(_prev: AuthState, formData: FormData): Promis
     options: { emailRedirectTo: `${origin}/auth/confirm` },
   });
   if (error) return { error: error.message, email, mode: "signup" };
-  if (data.session) redirect("/");
+  if (data.session) redirect("/today");
   return {
     message: "Check your email for a confirmation link, then sign in.",
     email,

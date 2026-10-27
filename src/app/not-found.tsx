@@ -10,7 +10,7 @@ export default function NotFound() {
       <h1 className="text-title text-text-1">Not found</h1>
       <p className="text-text-2 max-w-sm text-sm">That page or record doesn&apos;t exist, or it belongs to another workspace.</p>
       <Button asChild variant="outline" size="sm">
-        <Link href="/">Back to Today</Link>
+        <Link href="/today">Back to Today</Link>
       </Button>
     </main>
   );

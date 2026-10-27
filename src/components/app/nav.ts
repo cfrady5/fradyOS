@@ -15,7 +15,7 @@ export type NavGroup = "work" | "money" | "system";
 export type NavItem = { href: string; label: string; icon: LucideIcon; key: string; group: NavGroup; mobile?: boolean };
 
 export const NAV_ITEMS: NavItem[] = [
-  { href: "/", label: "Today", icon: Sun, key: "t", group: "work", mobile: true },
+  { href: "/today", label: "Today", icon: Sun, key: "t", group: "work", mobile: true },
   { href: "/projects", label: "Projects", icon: FolderKanban, key: "p", group: "work" },
   { href: "/tasks", label: "Tasks", icon: CheckSquare, key: "k", group: "work", mobile: true },
   { href: "/waiting", label: "Waiting On", icon: Hourglass, key: "w", group: "work" },
@@ -37,7 +37,6 @@ export const NAV_GROUPS: { key: NavGroup; label: string | null; index: string | 
 export const MOBILE_NAV_ITEMS = NAV_ITEMS.filter((i) => i.mobile);
 
 export function isActive(pathname: string, href: string) {
-  if (href === "/") return pathname === "/";
   return pathname === href || pathname.startsWith(href + "/");
 }
 

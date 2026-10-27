@@ -179,6 +179,19 @@
   --color-chart-serious: var(--chart-serious);
   --color-chart-critical: var(--chart-critical);
 
+  /* Public site palette (src/lib/site/tokens.ts). Variables are injected by the (site) layout. */
+  --color-ground: var(--site-ground);
+  --color-ink: var(--site-ink);
+  --color-ink-muted: var(--site-muted);
+  --color-body: var(--site-body);
+  --color-label: var(--site-label);
+  --color-hairline: var(--site-hairline);
+  --color-border-strong: var(--site-border-strong);
+  --color-pixel-dim: var(--site-pixel-dim);
+  --color-lichen: var(--site-lichen);
+  --color-oak: var(--site-oak);
+  --color-crosshair: var(--site-crosshair);
+
   --radius-xs: var(--radius-xs);
   --radius-sm: var(--radius-sm);
   --radius-md: var(--radius-md);
@@ -359,4 +372,77 @@
   .area-dot {
     background-color: var(--area-color, var(--area-fallback));
   }
+}
+
+/* ------------------------------------------------------------------------------------------------
+   Public site (/) utilities. Scoped to the `.site` wrapper where they touch base styles.
+   ------------------------------------------------------------------------------------------------ */
+.site :focus-visible {
+  outline: 1px solid var(--site-lichen);
+  outline-offset: 2px;
+}
+.site ::selection {
+  background: var(--site-lichen);
+  color: var(--site-ground);
+}
+html:has(.site) {
+  scroll-behavior: smooth;
+}
+@media (prefers-reduced-motion: reduce) {
+  html:has(.site) {
+    scroll-behavior: auto;
+  }
+}
+
+@utility h1 {
+  font-weight: 500;
+  font-size: clamp(42px, 7.4vw, 76px);
+  letter-spacing: -0.05em;
+  line-height: 1.02;
+}
+
+@utility h2 {
+  font-weight: 500;
+  font-size: clamp(34px, 4.9vw, 52px);
+  letter-spacing: -0.045em;
+  line-height: 1.05;
+}
+
+@utility label {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--site-label);
+  @media (width >= 48rem) {
+    font-size: 11px;
+  }
+}
+
+@utility no-scrollbar {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* Dotted field used behind live previews while they load. */
+@utility dot-field {
+  background-image: radial-gradient(var(--site-pixel-dim) 1px, transparent 1px);
+  background-size: 6px 6px;
+  background-position: 3px 3px;
+}
+
+@keyframes status-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--site-lichen) 55%, transparent);
+  }
+  70% {
+    box-shadow: 0 0 0 6px color-mix(in srgb, var(--site-lichen) 0%, transparent);
+  }
+}
+.status-dot {
+  animation: status-pulse 2.4s ease-out infinite;
 }

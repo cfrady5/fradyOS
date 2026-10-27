@@ -12,8 +12,6 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
-    // The personal site in site/ is its own app with its own lint config.
-    "site/**",
   ]),
 ]);
 

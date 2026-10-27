@@ -72,7 +72,7 @@ export function AppShell({ children, unreadNotifications }: { children: React.Re
           {/* Desktop sidebar */}
           <aside className="bg-surface-0 border-line-1 sticky top-0 hidden h-svh w-[232px] shrink-0 flex-col border-r md:flex">
             <div className="flex h-14 items-center px-5">
-              <Link href="/" className="focus-visible:ring-brand/40 rounded-sm outline-none focus-visible:ring-2">
+              <Link href="/today" className="focus-visible:ring-brand/40 rounded-sm outline-none focus-visible:ring-2">
                 <Wordmark size="md" className="text-[17px]" />
               </Link>
             </div>
@@ -88,7 +88,7 @@ export function AppShell({ children, unreadNotifications }: { children: React.Re
               <Button variant="ghost" size="icon" className="md:hidden" aria-label="Open navigation" onClick={() => setMobileNavOpen(true)}>
                 <Menu />
               </Button>
-              <Link href="/" className="focus-visible:ring-brand/40 rounded-sm outline-none focus-visible:ring-2 md:hidden">
+              <Link href="/today" className="focus-visible:ring-brand/40 rounded-sm outline-none focus-visible:ring-2 md:hidden">
                 <Wordmark size="md" />
               </Link>
               <button

@@ -2,7 +2,7 @@ import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { redirect } from "next/navigation";
 
 export default function SetupPage() {
-  if (isSupabaseConfigured()) redirect("/");
+  if (isSupabaseConfigured()) redirect("/today");
   return (
     <main className="bg-surface-0 mx-auto flex min-h-svh max-w-lg flex-col justify-center gap-4 px-4 py-10">
       <p className="eyebrow">Setup</p>

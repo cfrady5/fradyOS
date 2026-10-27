@@ -8,7 +8,7 @@ export const metadata: Metadata = { title: "Sign in · FRADY OS" };
 export default async function LoginPage({ searchParams }: PageProps<"/login">) {
   const sp = await searchParams;
   const error = typeof sp.error === "string" ? sp.error : undefined;
-  const next = typeof sp.next === "string" ? sp.next : "/";
+  const next = typeof sp.next === "string" ? sp.next : "/today";
   const allowSignup = await isSignupAllowed();
   return (
     <main className="bg-surface-0 flex min-h-svh flex-col px-4 py-8 sm:items-center sm:justify-center">
