@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git push -u origin claude/frady-os-build-80xzb0)",
+      "Bash(git push origin claude/frady-os-build-80xzb0)"
+    ]
+  }
+}
