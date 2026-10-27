@@ -122,7 +122,7 @@ All deadlines, planned dates and event dates are stored as Postgres `date` value
 
 ## Public homepage
 
-`/` is Caleb Frady's public homepage (hand-written Canvas 2D pixel effects, no WebGL or animation libraries), with `/work`, `/ventures`, `/writing` and `/about` as placeholder pages. The OS itself lives at `/today` and the other authenticated routes; the "Portal" link in the homepage footer leads there. See `SITE.md` for the site tokens, components and effect tuning.
+`/` is Caleb Frady's public homepage (hand-written Canvas 2D pixel effects, no WebGL or animation libraries) and the only public page. The OS itself lives at `/today` and the other authenticated routes; the "Portal" link in the homepage footer leads there. See `SITE.md` for the site tokens, components and effect tuning.
 
 ## Project structure
 

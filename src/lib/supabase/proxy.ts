@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getSupabasePublishableKey, getSupabaseUrl, isSupabaseConfigured } from "./env";
 
 // Paths that never require a session: the public site, auth pages and machine-to-machine endpoints that carry their own secret.
-const PUBLIC_PREFIXES = ["/", "/work", "/ventures", "/writing", "/about", "/login", "/setup", "/auth/", "/api/cron/", "/api/webhooks/", "/api/health"];
+const PUBLIC_PREFIXES = ["/", "/login", "/setup", "/auth/", "/api/cron/", "/api/webhooks/", "/api/health"];
 
 export function isPublicPath(pathname: string) {
   return PUBLIC_PREFIXES.some((p) => (p === "/" ? pathname === "/" : p.endsWith("/") ? pathname.startsWith(p) : pathname === p || pathname.startsWith(p + "/")));

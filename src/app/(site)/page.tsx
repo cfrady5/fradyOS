@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { Nav } from "@/components/site/Nav";
 import { Hero } from "@/components/site/sections/Hero";
 import { Strip } from "@/components/site/Strip";
 import { HowIWork } from "@/components/site/sections/HowIWork";
@@ -14,16 +13,13 @@ export const metadata: Metadata = {
 
 export default function HomePage() {
   return (
-    <>
-      <Nav />
-      <main className="mx-4 min-h-screen border-x border-hairline md:mx-12">
+    <main className="mx-4 min-h-screen border-x border-hairline md:mx-12">
         <Hero />
         <Strip />
         <HowIWork />
         <SelectedWork />
         <StartSomething />
         <Footer />
-      </main>
-    </>
+    </main>
   );
 }

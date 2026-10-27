@@ -12,8 +12,8 @@ The public homepage for Caleb Frady lives inside the FRADY OS app at `/` (route 
 | `src/lib/pixel/pixelEngine.ts` | Shared engine: tuning constants, Bayer dithering, batched Path2D drawing, the page-level pointer bus, text rasterisation. |
 | `src/lib/pixel/effects/*.ts` | The four effects: `heroField`, `monogram`, `wordmark`, `easing`. |
 | `src/components/site/PixelCanvas.tsx` | Hosts an effect: DPR-aware sizing, one rAF loop per canvas paused offscreen, reduced-motion handling. |
-| `src/components/site/*` | Nav, Button, StatusChip, FigureFrame (crosshair corners), CodeCard, Strip, Gallery, LivePreview, Footer (with the Portal link). |
-| `src/app/(site)/page.tsx` | The homepage. `/work`, `/ventures`, `/writing`, `/about` are placeholder pages. |
+| `src/components/site/*` | Button, StatusChip, FigureFrame (crosshair corners), CodeCard, Strip, Gallery, LivePreview, Footer (with the Portal link). |
+| `src/app/(site)/page.tsx` | The homepage, the only public page. It has no top navigation; the hero buttons and the footer carry the links. |
 
 ## Tuning the effects
 
@@ -21,7 +21,7 @@ All constants live in `TUNING` at the top of `src/lib/pixel/pixelEngine.ts`.
 
 **Shared**: `maxDpr` (device pixel ratio cap, 2), `pixelFill` (pixel square as a fraction of the cell pitch, 0.7 leaves visible gaps), `narrowWidth` (canvases narrower than this use the `pitchNarrow` of each effect, so phones render fewer pixels), `enterThreshold` (fraction of a canvas on screen before its effect's entrance runs, 0.35).
 
-**Hero field** (`hero`): `pitch` 6 px (9 on narrow). `base` ± `amplitude` is the slow sine-noise brightness (0.13 ± 0.11) and `waveSpeed` its tempo. `leftFadeStart` / `leftFadeEnd` / `leftFadeFloor` fade the field toward the left so the headline stays calm. `lightSigma` (115 px) and `lightGain` (+0.8) shape the cursor light. Clicks spawn ripples: `rippleSpeed` 460 px/s, `rippleSigma` 13 px, `rippleLife` 2.5 s. Lit pixels draw in `moss` (#183224); pixels brighter than `peakThreshold` (the core of the cursor light, and ripples) draw in `mossLit` (#21452F); unlit pixels are pixel-dim. Both greens sit close to the unlit grid's luminance, so the headline and copy keep their contrast wherever the light is. Brighten them in `src/lib/site/tokens.ts` only after checking the text over them.
+**Hero field** (`hero`): `pitch` 6 px (9 on narrow). Brightness is counted in shade levels, 0 for the unlit grid and 1 to 5 for `moss1` to `moss5` (an OKLCH ramp from deep teal-green to leaf green, all near the unlit grid's luminance), ordered-dithered between neighbouring shades. The main source is a steady flowing wave: a band travelling at `flowSpeed` (55 px/s) toward `flowAngle` (-12 deg) with `flowWavelength` 620 px, plus a weaker cross band (`flow2*`, weight `flow2Weight`). Each crest is `(0.5 + 0.5 sin)^3`, so bright bands stay narrow and troughs show the grey grid. `flowMeander` bends the fronts row by row so they ripple like water. `flowGain` (6.2 levels) sets the crest height, scaled toward `flowFloor` on the left. A faint sine-noise sparkle (`base` ± `amplitude`, `waveSpeed`) sits on top, faded on the left by `leftFadeStart` / `leftFadeEnd` / `leftFadeFloor`. The cursor adds a gaussian light (`lightSigma` 115 px, `lightGain` 3.4 levels) and clicks spawn ripples (`rippleSpeed` 460 px/s, `rippleSigma` 13 px, `rippleLife` 2.5 s, `rippleGain` 3.2 levels). To keep copy readable, pixels never exceed `textCap` (moss3) left of `textCapStart` of the width, rising to the full ramp by `textCapEnd`; phones keep the cap everywhere. Reduced motion freezes the wave in place.
 
 **Monogram** (`monogram`): the "f" is rasterised with Geist 800 into a `cols x rows` grid (52 x 68). `shimmerSpeed` / `shimmerAmount` control the vertical shimmer; pixels within `lichenRadius` (50 px) of the cursor light up in lichen.
 

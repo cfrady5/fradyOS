@@ -23,7 +23,8 @@ export const TUNING = {
   hero: {
     pitch: 6,
     pitchNarrow: 9,
-    /** Base brightness: base ± amplitude from the slow sine-noise wave. */
+    /** Field brightness is measured in shade levels (0 = unlit grid, 5 = moss5) and ordered-dithered
+     *  between neighbouring shades. Texture: base ± amplitude levels of slow sine-noise sparkle. */
     base: 0.13,
     amplitude: 0.11,
     waveSpeed: 0.35,
@@ -31,16 +32,35 @@ export const TUNING = {
     leftFadeStart: 0.16,
     leftFadeEnd: 0.6,
     leftFadeFloor: 0.14,
-    /** Cursor light: gaussian sigma in px and added brightness at the centre. */
+    /** Cursor light: gaussian sigma in px and added shade levels at the centre. */
     lightSigma: 115,
-    lightGain: 0.8,
-    /** Click ripples: ring speed (px/s), gaussian width (px), lifetime (s), added brightness. */
+    lightGain: 3.4,
+    /** Click ripples: ring speed (px/s), gaussian width (px), lifetime (s), added shade levels. */
     rippleSpeed: 460,
     rippleSigma: 13,
     rippleLife: 2.5,
-    rippleGain: 1.1,
-    /** Lit pixels draw in moss; above this brightness (the cursor light's core, ripples) in mossLit. */
-    peakThreshold: 0.72,
+    rippleGain: 3.2,
+    /** The flowing wave: a main band travelling at `flowSpeed` px/s toward `flowAngle` degrees (0 is
+     *  rightward, negative drifts up), with wavelength `flowWavelength` px, plus a weaker cross band.
+     *  `flowMeander` (radians) bends the fronts row by row so they ripple like water. `flowGain` is
+     *  the crest height in shade levels; on the left it is scaled down to `flowFloor`. */
+    flowWavelength: 620,
+    flowSpeed: 55,
+    flowAngle: -12,
+    flowGain: 6.2,
+    flow2Wavelength: 380,
+    flow2Speed: 34,
+    flow2Angle: 32,
+    flow2Weight: 0.3,
+    flowMeander: 1.3,
+    flowMeanderScale: 0.0105,
+    flowMeanderSpeed: 0.22,
+    flowFloor: 0.6,
+    /** Text-safe cap: pixels never go above `textCap` shades left of `textCapStart` (fraction of the
+     *  width), rising to the full ramp by `textCapEnd`. Narrow screens keep the cap everywhere. */
+    textCap: 3,
+    textCapStart: 0.55,
+    textCapEnd: 0.85,
   },
 
   monogram: {
@@ -120,8 +140,8 @@ export const COLORS = {
   dim: tokens.pixelDim,
   ink: tokens.ink,
   lichen: tokens.lichen,
-  moss: tokens.moss,
-  mossLit: tokens.mossLit,
+  /** Hero field shades, darkest first. */
+  moss: [tokens.moss1, tokens.moss2, tokens.moss3, tokens.moss4, tokens.moss5],
   label: tokens.label,
   hairline: tokens.hairline,
   borderStrong: tokens.borderStrong,

@@ -11,7 +11,7 @@ export function Hero() {
       <div className="absolute inset-0" aria-hidden="false">
         <PixelCanvas effect="hero" label="Field of dithered pixels. A light follows the cursor and clicks send a ripple across the field." fontFamily={geist.style.fontFamily} />
       </div>
-      <div className="relative px-6 pt-36 pb-16 md:px-14 md:pt-44 md:pb-24">
+      <div className="relative px-6 pt-28 pb-16 md:px-14 md:pt-36 md:pb-24">
         <div className="flex max-w-[780px] flex-col items-start">
           <StatusChip>{site.hero.chip}</StatusChip>
           <TwoTone as="h1" size="h1" line1={site.hero.line1} line2={site.hero.line2} className="mt-8" />
