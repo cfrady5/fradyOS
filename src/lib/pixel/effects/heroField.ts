@@ -1,10 +1,11 @@
-import { TUNING, COLORS, PixelBatch, bayer, dprOf, makeLayer, pitchFor, smoothstep, type EffectEnv, type LocalPointer, type PixelEffect } from "../pixelEngine";
+import { TUNING, COLORS, bayer, dprOf, makeLayer, pitchFor, smoothstep, type EffectEnv, type LocalPointer, type PixelEffect } from "../pixelEngine";
 
 type Ripple = { x: number; y: number; t0: number };
 
 /**
  * Hero background: a slow sine-noise field, calm on the left, lit by a gaussian around the cursor,
- * with click ripples drawn in lichen.
+ * with click ripples. Lit pixels are dark greens (moss, mossLit) close to the unlit grid's
+ * luminance, so the headline and copy on top stay readable wherever the light sits.
  */
 export function heroField(env: EffectEnv): PixelEffect {
   const T = TUNING.hero;
@@ -66,7 +67,8 @@ export function heroField(env: EffectEnv): PixelEffect {
 
       const size = pitch * TUNING.pixelFill;
       const off = (pitch - size) / 2;
-      const batch = new PixelBatch(size);
+      const moss = new Path2D();
+      const mossLit = new Path2D();
       const sig2 = 2 * T.lightSigma * T.lightSigma;
       const lightReach2 = (3.2 * T.lightSigma) ** 2;
       const rs2 = 2 * T.rippleSigma * T.rippleSigma;
@@ -88,7 +90,7 @@ export function heroField(env: EffectEnv): PixelEffect {
             const d2 = dx * dx + dy * dy;
             if (d2 < lightReach2) v += T.lightGain * Math.exp(-d2 / sig2);
           }
-          let lichen = 0;
+          let ripple = 0;
           for (let k = 0; k < rip.length; k++) {
             const rp = rip[k];
             const dx = cx - rp.x;
@@ -96,19 +98,19 @@ export function heroField(env: EffectEnv): PixelEffect {
             const dd = Math.sqrt(dx * dx + dy * dy) - rp.r;
             if (dd > -rippleReach && dd < rippleReach) {
               const g = Math.exp(-(dd * dd) / rs2) * rp.a;
-              lichen += g;
+              ripple += g;
               v += g * T.rippleGain;
             }
           }
           if (v > bayer(x, y)) {
-            const px = x * pitch + off;
-            if (lichen > 0.22) batch.lichen.rect(px, py, size, size);
-            else if (v > T.inkThreshold) batch.ink.rect(px, py, size, size);
-            else batch.inkMid.rect(px, py, size, size);
+            (ripple > 0.22 || v > T.peakThreshold ? mossLit : moss).rect(x * pitch + off, py, size, size);
           }
         }
       }
-      batch.flush(ctx, T.midAlpha);
+      ctx.fillStyle = COLORS.moss;
+      ctx.fill(moss);
+      ctx.fillStyle = COLORS.mossLit;
+      ctx.fill(mossLit);
     },
 
     pointer(p) {

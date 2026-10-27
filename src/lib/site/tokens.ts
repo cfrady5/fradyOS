@@ -13,6 +13,9 @@ export const tokens = {
   borderStrong: "#26262B",
   pixelDim: "#34343B",
   lichen: "#9DD6B0",
+  /** Lit pixels in the hero field. Dark greens close to the unlit grid's luminance, so text over the field stays readable. */
+  moss: "#183224",
+  mossLit: "#21452F",
   oak: "#C9A578",
   crosshair: "#52525B",
 } as const;

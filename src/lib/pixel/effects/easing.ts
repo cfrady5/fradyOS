@@ -1,7 +1,7 @@
 import { TUNING, COLORS, type EffectEnv, type PixelEffect } from "../pixelEngine";
 
 /**
- * FIG. 03: cubic-bezier(.65, 0, .35, 1) with its control handles and a lichen marker that travels
+ * FIG. 02: cubic-bezier(.65, 0, .35, 1) with its control handles and a lichen marker that travels
  * the curve on a 1.4 s loop.
  */
 export function easing(env: EffectEnv): PixelEffect {

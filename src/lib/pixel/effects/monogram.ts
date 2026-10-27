@@ -1,7 +1,7 @@
 import { TUNING, PixelBatch, bayer, ensureFont, rasterizeText, type EffectEnv, type LocalPointer, type PixelEffect } from "../pixelEngine";
 
 /**
- * FIG. 02: the "f" monogram rasterised to a 52x68 grid, dithered with a slow vertical shimmer.
+ * FIG. 01: the "f" monogram rasterised to a 52x68 grid, dithered with a slow vertical shimmer.
  * Pixels near the cursor light up in lichen.
  */
 export function monogram(env: EffectEnv): PixelEffect {

@@ -17,6 +17,8 @@ export const TUNING = {
   pixelFill: 0.7,
   /** Canvases narrower than this use the "narrow" pitch (fewer pixels on phones). */
   narrowWidth: 720,
+  /** Fraction of a canvas that must be on screen before its effect's `enter()` runs (the wordmark flood). */
+  enterThreshold: 0.35,
 
   hero: {
     pitch: 6,
@@ -37,24 +39,8 @@ export const TUNING = {
     rippleSigma: 13,
     rippleLife: 2.5,
     rippleGain: 1.1,
-    /** Brightness above which a lit pixel draws in full ink rather than ink at `midAlpha`. */
-    inkThreshold: 0.72,
-    midAlpha: 0.55,
-  },
-
-  orb: {
-    pitch: 3,
-    pitchNarrow: 4,
-    /** Easing of the light vector toward its target, per 60 Hz frame. */
-    lerp: 0.1,
-    ambient: 0.03,
-    exponent: 1.2,
-    /** Lit value above which a pixel is specular and draws in lichen. */
-    specular: 0.985,
-    orbitSpeed: 0.45,
-    pulseSpeed: 420,
-    pulseSigma: 9,
-    pulseLife: 1.1,
+    /** Lit pixels draw in moss; above this brightness (the cursor light's core, ripples) in mossLit. */
+    peakThreshold: 0.72,
   },
 
   monogram: {
@@ -84,6 +70,13 @@ export const TUNING = {
     lichenDistance: 4,
     sweepSpeed: 110,
     sweepWavelength: 420,
+    /** Flood-in on first view: launch delays spread over `floodStagger` s from the nearest corner
+     *  outward, plus up to `floodJitter` s of noise; each flight lasts `floodFlight` s along a curve
+     *  whose control point is bent sideways by up to `floodBend` of the flight length. */
+    floodStagger: 1.3,
+    floodJitter: 0.35,
+    floodFlight: 0.9,
+    floodBend: 0.25,
   },
 
   easing: {
@@ -127,6 +120,8 @@ export const COLORS = {
   dim: tokens.pixelDim,
   ink: tokens.ink,
   lichen: tokens.lichen,
+  moss: tokens.moss,
+  mossLit: tokens.mossLit,
   label: tokens.label,
   hairline: tokens.hairline,
   borderStrong: tokens.borderStrong,
@@ -136,17 +131,13 @@ export const COLORS = {
 export class PixelBatch {
   dim = new Path2D();
   ink = new Path2D();
-  inkMid = new Path2D();
   lichen = new Path2D();
   constructor(public readonly size: number) {}
 
-  flush(ctx: CanvasRenderingContext2D, midAlpha = TUNING.hero.midAlpha) {
+  flush(ctx: CanvasRenderingContext2D) {
     ctx.fillStyle = COLORS.dim;
     ctx.fill(this.dim);
-    ctx.globalAlpha = midAlpha;
     ctx.fillStyle = COLORS.ink;
-    ctx.fill(this.inkMid);
-    ctx.globalAlpha = 1;
     ctx.fill(this.ink);
     ctx.fillStyle = COLORS.lichen;
     ctx.fill(this.lichen);
@@ -183,6 +174,8 @@ export interface PixelEffect {
   pointerLeave(): void;
   /** True when nothing is changing, so the host can skip frames (used under reduced motion). */
   idle(): boolean;
+  /** Optional entrance: called once, the first time `TUNING.enterThreshold` of the canvas is on screen. */
+  enter?(): void;
 }
 
 /** Pitch for a canvas of the given width: fewer, larger pixels on narrow screens. */
@@ -361,8 +354,4 @@ export const clamp01 = (v: number) => (v < 0 ? 0 : v > 1 ? 1 : v);
 export function smoothstep(a: number, b: number, x: number): number {
   const t = clamp01((x - a) / (b - a));
   return t * t * (3 - 2 * t);
-}
-/** Frame-rate independent lerp factor: `perFrame` at 60 Hz. */
-export function lerpFactor(perFrame: number, dt: number): number {
-  return 1 - Math.pow(1 - perFrame, dt * 60);
 }

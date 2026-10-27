@@ -77,6 +77,19 @@ export function PixelCanvas({ effect, label, fontFamily = "sans-serif", classNam
       { rootMargin: "64px" },
     );
     io.observe(canvas);
+    // Effects with an entrance (the wordmark flood) get it once, when enough of the canvas is on screen.
+    const enterIo = fx.enter
+      ? new IntersectionObserver(
+          (entries, observer) => {
+            if (!entries.some((e) => e.isIntersecting)) return;
+            observer.disconnect();
+            fx.enter?.();
+            start();
+          },
+          { threshold: TUNING.enterThreshold },
+        )
+      : null;
+    enterIo?.observe(canvas);
     const unregister = registerPointerTarget(canvas, fx);
     const onMotion = () => start();
     media.addEventListener("change", onMotion);
@@ -86,6 +99,7 @@ export function PixelCanvas({ effect, label, fontFamily = "sans-serif", classNam
       if (raf) cancelAnimationFrame(raf);
       ro.disconnect();
       io.disconnect();
+      enterIo?.disconnect();
       unregister();
       media.removeEventListener("change", onMotion);
     };
