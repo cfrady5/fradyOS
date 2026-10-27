@@ -120,6 +120,10 @@ The interface uses a single graphite theme ("performance-driven modernism"): bac
 
 All deadlines, planned dates and event dates are stored as Postgres `date` values and handled as `YYYY-MM-DD` strings end to end, so they never shift through UTC conversion. "Today" is computed in the user's time zone (default `America/Indiana/Indianapolis`, editable in Settings). Timestamps (created/completed/synced) are `timestamptz` and displayed in the user's zone.
 
+## Personal site (`site/`)
+
+The public homepage for Caleb Frady lives in `site/` as its own Next.js app (hand-written Canvas 2D pixel effects, no WebGL or animation libraries). It is deployed separately with the Vercel Root Directory set to `site`; see `site/README.md` for the design tokens and effect tuning.
+
 ## Project structure
 
 ```
