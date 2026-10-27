@@ -54,7 +54,9 @@ export function Gallery() {
           </button>
         </div>
       </div>
-      <div ref={rail} role="region" aria-label="Gallery of live sites, scroll horizontally" tabIndex={0} className="no-scrollbar flex snap-x snap-mandatory overflow-x-auto outline-none focus-visible:outline-lichen">
+      {/* `relative` keeps absolutely positioned descendants (the sr-only link text) inside the rail's
+          clip; without it their static positions widen the document and phones can pan sideways. */}
+      <div ref={rail} role="region" aria-label="Gallery of live sites, scroll horizontally" tabIndex={0} className="no-scrollbar relative flex snap-x snap-mandatory overflow-x-auto outline-none focus-visible:outline-lichen">
         {sites.map((s, i) => (
           <article key={s.slug} className={cn("w-[86vw] shrink-0 snap-start sm:w-[min(72vw,600px)]", i < total - 1 && "border-r border-hairline")}>
             <div className="label flex h-10 items-center justify-between border-b border-hairline px-4">
