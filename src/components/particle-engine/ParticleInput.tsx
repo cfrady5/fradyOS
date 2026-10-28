@@ -34,7 +34,7 @@ export function ParticleInput({ busy, onSubmit }: Props) {
         value={value}
         onChange={(e) => setValue(e.target.value)}
         maxLength={PROMPT_MAX_LENGTH}
-        placeholder="Describe something: a spiral galaxy, the word FRADY, a wolf howling at the moon"
+        placeholder="Describe something, or drop an image: a spiral galaxy, the word FRADY, a wolf howling at the moon"
         autoComplete="off"
         spellCheck={false}
         enterKeyHint="go"

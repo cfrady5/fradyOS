@@ -31,7 +31,7 @@ A GPU particle engine: the visitor types a prompt and about 30,000 particles (8,
 | `src/lib/particles/shaders/*` | Simplex and curl noise, the velocity pass (spring to target, curl turbulence, dispersion burst, cursor repulsion, click impulses, soft containment, damping, speed clamp), the position pass, and the point sprite shaders (size by depth and seed, palette or image colour, lichen on fast movers, twinkle). |
 | `src/lib/particles/textSampler.ts` | Offscreen-canvas text rendering sampled into targets; edges get full emphasis so letters stay legible. |
 | `src/lib/particles/geometrySampler.ts` | Procedural forms (sphere, basketball, galaxy, ring, torus, helix, wave, heart, star, moon, black hole, cube, rose, saturn, tornado, cloud, and a seeded `concept` blob used as the image fallback). Pure functions, unit-tested. |
-| `src/lib/particles/imageSampler.ts` | Turns a generated silhouette into targets: adaptive threshold, speck removal, contour plus interior sampling, slight 2.5D depth, optional image colour. |
+| `src/lib/particles/imageSampler.ts` | Turns an image into targets. Silhouette mode (generated images): adaptive threshold, speck removal, contour plus interior sampling. Photo mode (visitor uploads): background estimated from the border, subject by Otsu threshold on the distance from it, particles placed by brightness and edge strength, colours carried along. Slight 2.5D depth in both. |
 | `src/lib/particles/targetGenerator.ts` | Builds a `TargetData` for an interpretation at the current particle count, falling back to the procedural form when no image is available. |
 | `src/lib/particles/transitions.ts` | The state machine (IDLE, DISPERSING, GENERATING, ASSEMBLING, FORMED, INTERACTIVE, ERROR) and the controller the UI subscribes to. One submission at a time; the scene is re-targeted, never rebuilt. Text and geometry prompts the rules recognise never leave the browser. |
 | `src/lib/particles/performance.ts` | Device tiering, WebGL2 probing (float or half-float render targets), reduced-motion check, and the frame-rate monitor. |
@@ -52,6 +52,8 @@ A GPU particle engine: the visitor types a prompt and about 30,000 particles (8,
 | `LAB_IMAGE_DAILY_CAP` | Global images per UTC day per server instance (default 200). |
 | `LAB_IMAGE_CONCURRENCY`, `LAB_INTERPRET_CONCURRENCY` | In-flight caps (defaults 2 and 4). |
 | `LAB_IMAGE_TIMEOUT_MS` | Image generation timeout (default 45000). |
+
+**Uploads**: "Upload an image" (or dropping a file on the page) forms the visitor's own picture. Sampling runs in the browser in photo mode; the file never leaves the device and no API is called. Images over 12 MB and non-image files are refused with a message.
 
 Per-visitor limits: 20 interpretations and 6 images per minute. Results are cached for an hour (interpretations) and a day (images, 40 entries).
 

@@ -30,6 +30,9 @@ class OpenAIImageProvider implements ImageProvider {
   ) {}
 
   async generate(subject: string, signal: AbortSignal): Promise<string> {
+    // A masked value pasted from a dashboard ("sk-proj-abc•••") would fail inside fetch with an
+    // opaque ByteString error; say what is wrong instead.
+    if (/[^\x21-\x7e]/.test(this.apiKey)) throw new Error("the OpenAI key contains characters that are not part of a real key, re-enter it from the original source");
     const res = await fetch("https://api.openai.com/v1/images/generations", {
       method: "POST",
       headers: { "content-type": "application/json", authorization: `Bearer ${this.apiKey}` },

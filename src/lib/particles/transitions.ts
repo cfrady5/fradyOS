@@ -1,7 +1,8 @@
 import type { Interpretation } from "@/lib/ai/schema";
 import { ImageResponseSchema, InterpretResponseSchema } from "@/lib/ai/schema";
 import { interpretDeterministic } from "@/lib/ai/rules";
-import { buildTarget } from "./targetGenerator";
+import { buildTarget, fitFor } from "./targetGenerator";
+import { sampleImage } from "./imageSampler";
 import type { LabPhase, TargetData } from "./types";
 
 /** What the scene component gives the controller. Methods map onto `ParticleSimulation`. */
@@ -163,7 +164,46 @@ export function createLabController(opts: ControllerOptions) {
     }
   }
 
+  /** Form an image the visitor supplied. Sampled in the browser; the file is never uploaded. */
+  async function submitImage(file: File) {
+    if (state.busy) return;
+    if (!file.type.startsWith("image/")) {
+      set({ phase: "ERROR", busy: false, error: "That file is not an image." });
+      return;
+    }
+    if (file.size > 12 * 1024 * 1024) {
+      set({ phase: "ERROR", busy: false, error: "That image is over 12 MB. Try a smaller one." });
+      return;
+    }
+    const myRun = ++run;
+    const name = file.name.replace(/\.[a-z0-9]+$/i, "") || "your image";
+    set({ busy: true, prompt: name, error: null, note: null });
+    const url = URL.createObjectURL(file);
+    try {
+      if (engine) {
+        engine.disperse();
+        set({ phase: "DISPERSING" });
+        await sleep(opts.reducedMotion ? 150 : 450);
+        if (myRun !== run) return;
+      }
+      set({ phase: "GENERATING" });
+      const s = await sampleImage(url, count, { fit: fitFor(1.2, opts.viewAspect()) * 0.92, useColor: true, mode: "photo" });
+      if (myRun !== run) return;
+      const interp: Interpretation = { category: "object", subject: name, method: "image", text: null, geometry: null, aspect: Math.min(2.4, Math.max(0.5, s.aspect)), depth: "relief", motion: { turbulence: 0.15, spin: 0, pulse: 0.1 }, palette: "ink" };
+      lastInterpretation = null;
+      set({ interpretation: interp, note: `Built from ${file.name}. The image stayed in your browser.` });
+      await assembleInto({ count, positions: s.positions, emphasis: s.emphasis, colors: s.colors, depth: "relief", motion: interp.motion, palette: "ink" }, myRun);
+    } catch (error) {
+      if (myRun !== run) return;
+      engine?.loosen();
+      set({ phase: "ERROR", busy: false, error: error instanceof Error ? error.message : "That image could not be read." });
+    } finally {
+      URL.revokeObjectURL(url);
+    }
+  }
+
   return {
+    submitImage,
     subscribe(listener: () => void) {
       listeners.add(listener);
       return () => listeners.delete(listener);

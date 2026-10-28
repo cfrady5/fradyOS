@@ -46,7 +46,15 @@ export function ParticleLab() {
   }, [controller]);
 
   return (
-    <div className="site relative h-svh w-full overflow-hidden bg-ground text-ink">
+    <div
+      className="site relative h-svh w-full overflow-hidden bg-ground text-ink"
+      onDragOver={(e) => e.preventDefault()}
+      onDrop={(e) => {
+        e.preventDefault();
+        const f = e.dataTransfer.files?.[0];
+        if (f) void controller.submitImage(f);
+      }}
+    >
       {webgl.ok ? (
         <ParticleCanvas count={count} dpr={tier.dpr} halfFloat={webgl.halfFloat} reducedMotion={reducedMotion} mobile={tier.mobile} controller={controller} onLowFps={onLowFps} />
       ) : (
@@ -64,7 +72,7 @@ export function ParticleLab() {
         <div className="pointer-events-auto flex w-full max-w-[720px] flex-col gap-3">
           <ParticleStatus state={state} onRetry={controller.retry} />
           <ParticleInput busy={state.busy} onSubmit={controller.submit} />
-          <ParticleControls busy={state.busy} onPrompt={controller.submit} onReset={controller.reset} />
+          <ParticleControls busy={state.busy} onPrompt={controller.submit} onImage={controller.submitImage} onReset={controller.reset} />
         </div>
       </div>
     </div>

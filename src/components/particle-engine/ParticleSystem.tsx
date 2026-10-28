@@ -162,7 +162,8 @@ export function ParticleSystem({ count, halfFloat, reducedMotion, mobile, contro
   });
 
   return (
-    <group ref={group}>
+    // Raised a little so formations clear the prompt bar along the bottom of the view.
+    <group ref={group} position={[0, 0.12, 0]}>
       <primitive object={sim.points} />
     </group>
   );
