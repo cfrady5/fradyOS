@@ -34,6 +34,17 @@ export async function sampleImage(src: string, count: number, options: { fit: nu
     lum[i] = l;
     sum += l;
   }
+  // A generated "silhouette" sometimes arrives dark on a light ground; judge by the border and invert.
+  let borderSum = 0;
+  let borderN = 0;
+  for (let i = 0; i < S; i++) {
+    borderSum += lum[i] + lum[(S - 1) * S + i] + lum[i * S] + lum[i * S + S - 1];
+    borderN += 4;
+  }
+  if (borderSum / borderN > 0.5) {
+    for (let i = 0; i < S * S; i++) lum[i] = 1 - lum[i];
+    sum = S * S - sum;
+  }
   const mean = sum / (S * S);
   const threshold = Math.min(0.6, Math.max(0.18, mean * 1.6));
   const mask = new Uint8Array(S * S);

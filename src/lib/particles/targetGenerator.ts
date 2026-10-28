@@ -28,7 +28,7 @@ export function fitFor(aspect: number, viewAspect: number): number {
  * prompts call `fetchImage` and fall back to a seeded procedural form when no image comes back, so
  * the scene always has something to assemble into.
  */
-export async function buildTarget(interp: Interpretation, opts: TargetOptions): Promise<{ target: TargetData; fallback: "none" | "procedural" }> {
+export async function buildTarget(interp: Interpretation, opts: TargetOptions): Promise<{ target: TargetData; fallback: "none" | "procedural"; reason?: string }> {
   const base = { count: opts.count, depth: interp.depth, motion: interp.motion, palette: interp.palette } as const;
   if (interp.method === "text") {
     const text = interp.text ?? interp.subject;
@@ -43,16 +43,20 @@ export async function buildTarget(interp: Interpretation, opts: TargetOptions): 
   }
   // Image route.
   const src = opts.fetchImage ? await opts.fetchImage(interp.subject) : null;
+  let reason: string | undefined;
   if (src) {
-    try {
-      const fit = fitFor(interp.aspect, opts.viewAspect);
-      const s = await sampleImage(src, opts.count, { fit, useColor: true });
-      return { target: { ...base, positions: s.positions, emphasis: s.emphasis, colors: s.colors }, fallback: "none" };
-    } catch {
-      // Unusable image: fall through to the procedural stand-in.
+    const fit = fitFor(interp.aspect, opts.viewAspect);
+    // Silhouette mode first (crisp contour), then the photo analysis, which copes with any background.
+    for (const mode of ["silhouette", "photo"] as const) {
+      try {
+        const s = await sampleImage(src, opts.count, { fit, useColor: true, mode });
+        return { target: { ...base, positions: s.positions, emphasis: s.emphasis, colors: s.colors }, fallback: "none" };
+      } catch (error) {
+        reason = error instanceof Error ? error.message : "image could not be sampled";
+      }
     }
   }
   const fit = fitFor(1.2, opts.viewAspect);
   const s = sampleGeometry("concept", opts.count, interp.subject, fit);
-  return { target: { ...base, depth: "volume", positions: s.positions, emphasis: s.emphasis, colors: null }, fallback: "procedural" };
+  return { target: { ...base, depth: "volume", positions: s.positions, emphasis: s.emphasis, colors: null }, fallback: "procedural", reason };
 }

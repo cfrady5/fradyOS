@@ -89,7 +89,7 @@ export function createLabController(opts: ControllerOptions) {
   async function build(interp: Interpretation, signal: AbortSignal): Promise<{ target: TargetData; note: string | null }> {
     let imageTried = false;
     lastImageError = null;
-    const { target, fallback } = await buildTarget(interp, {
+    const { target, fallback, reason } = await buildTarget(interp, {
       count,
       viewAspect: opts.viewAspect(),
       fontFamily: opts.fontFamily,
@@ -105,7 +105,9 @@ export function createLabController(opts: ControllerOptions) {
           ? `Image generation is not configured on this site, so this is a procedural form for "${interp.subject}".`
           : lastImageError
             ? `Image generation failed (${lastImageError}), so this is a procedural form for "${interp.subject}".`
-            : `No usable image came back, so this is a procedural form for "${interp.subject}".`;
+            : reason
+              ? `The generated image could not be used (${reason}), so this is a procedural form for "${interp.subject}".`
+              : `No usable image came back, so this is a procedural form for "${interp.subject}".`;
     }
     return { target, note };
   }
