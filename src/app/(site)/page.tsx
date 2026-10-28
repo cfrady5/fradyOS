@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Hero } from "@/components/site/sections/Hero";
-import { Strip } from "@/components/site/Strip";
+import { Services } from "@/components/site/sections/Services";
 import { HowIWork } from "@/components/site/sections/HowIWork";
 import { SelectedWork } from "@/components/site/sections/SelectedWork";
 import { StartSomething } from "@/components/site/sections/StartSomething";
@@ -15,7 +15,7 @@ export default function HomePage() {
   return (
     <main className="mx-4 min-h-screen border-x border-hairline md:mx-12">
         <Hero />
-        <Strip />
+        <Services />
         <HowIWork />
         <SelectedWork />
         <StartSomething />

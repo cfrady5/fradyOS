@@ -28,14 +28,11 @@ const LINES: Tok[][] = [
 
 const COLOR: Record<Tok["t"], string> = { kw: "text-oak", id: "text-ink", str: "text-body", pun: "text-label", cm: "text-label" };
 
-/** Code card: header bar, line-numbered token code, build footer. */
+/** Code card: file tab and line-numbered token code. */
 export function CodeCard({ className }: { className?: string }) {
   return (
     <div className={className}>
-      <div className="label flex h-10 items-center justify-between border-b border-hairline px-4">
-        <span>frady.tokens.ts</span>
-        <span>ts</span>
-      </div>
+      <div className="flex h-10 items-center border-b border-hairline px-4 font-mono text-[12.5px] text-label">frady.tokens.ts</div>
       <pre className="overflow-x-auto px-4 py-4 font-mono text-[12.5px] leading-[1.7]">
         {LINES.map((line, i) => (
           <div key={i} className="flex">
@@ -52,10 +49,6 @@ export function CodeCard({ className }: { className?: string }) {
           </div>
         ))}
       </pre>
-      <div className="label flex h-10 items-center justify-between border-t border-hairline px-4">
-        <span className="text-lichen">✓ Build passed</span>
-        <span>Deployed</span>
-      </div>
     </div>
   );
 }

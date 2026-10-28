@@ -12,8 +12,13 @@ The public homepage for Caleb Frady lives inside the FRADY OS app at `/` (route 
 | `src/lib/pixel/pixelEngine.ts` | Shared engine: tuning constants, Bayer dithering, batched Path2D drawing, the page-level pointer bus, text rasterisation. |
 | `src/lib/pixel/effects/*.ts` | The four effects: `heroField`, `monogram`, `wordmark`, `easing`. |
 | `src/components/site/PixelCanvas.tsx` | Hosts an effect: DPR-aware sizing, one rAF loop per canvas paused offscreen, reduced-motion handling. |
-| `src/components/site/*` | Button, StatusChip, FigureFrame (crosshair corners), CodeCard, Strip, Gallery, LivePreview, Footer (with the Portal link). |
+| `src/components/site/*` | Button, TwoTone, SectionHeader (heading, then supporting copy; exports the shared section padding), FigureFrame (crosshair corners), CodeCard, Gallery, LivePreview, Footer (with the Portal link). |
+| `src/components/site/sections/*` | Hero, Services, HowIWork, SelectedWork, StartSomething. |
 | `src/app/(site)/page.tsx` | The homepage, the only public page. It has no top navigation; the hero buttons and the footer carry the links. |
+
+## Section structure
+
+Every section follows the same order: heading, supporting description, then content. There are no eyebrow labels, section numbers, figure numbers, status chips or captions; hierarchy comes from the type scale (`h1`, `h2`, `h3`, `lede` and `label` utilities in `src/app/globals.css`) and from spacing (`SECTION_PAD` in `SectionHeader.tsx`, with content starting at `mt-12 md:mt-16` below the header). The mono `label` style is kept only for metadata inside components: the gallery counter, hosts and open links, the live-preview loading line, and the footer.
 
 ## Tuning the effects
 

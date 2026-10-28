@@ -59,13 +59,9 @@ export function Gallery() {
       <div ref={rail} role="region" aria-label="Gallery of live sites, scroll horizontally" tabIndex={0} className="no-scrollbar relative flex snap-x snap-mandatory overflow-x-auto outline-none focus-visible:outline-lichen">
         {sites.map((s, i) => (
           <article key={s.slug} className={cn("w-[86vw] shrink-0 snap-start sm:w-[min(72vw,600px)]", i < total - 1 && "border-r border-hairline")}>
-            <div className="label flex h-10 items-center justify-between border-b border-hairline px-4">
-              <span>
-                <span className="text-ink">{String(i + 1).padStart(2, "0")}</span>
-                <span className="mx-2 text-crosshair" aria-hidden="true">/</span>
-                {s.name}
-              </span>
-              <span>{GROUP_LABEL[s.group]}</span>
+            <div className="flex h-12 items-center justify-between gap-4 border-b border-hairline px-4">
+              <h3 className="truncate text-[15px] font-medium tracking-[-0.01em] text-ink">{s.name}</h3>
+              <span className="shrink-0 text-[13px] text-label">{GROUP_LABEL[s.group]}</span>
             </div>
             <LivePreview url={s.url} name={s.name} mode={s.preview} />
             <div className="flex h-11 items-center justify-between border-t border-hairline px-4">

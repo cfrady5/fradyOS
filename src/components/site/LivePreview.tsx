@@ -44,7 +44,7 @@ export function LivePreview({ url, name, mode }: { url: string; name: string; mo
     <div ref={ref} className="relative overflow-hidden bg-ground" style={{ aspectRatio: `${BASE_W} / ${BASE_H}` }}>
       {/* Placeholder: dotted field with the site name, shown until the live frame paints. */}
       <div aria-hidden="true" className="dot-field absolute inset-0 flex flex-col justify-between p-5">
-        <span className="label">{mode === "live" ? (near ? "Loading live preview" : "Live preview") : "Preview opens off-site"}</span>
+        <span className="label">{mode === "live" ? (near ? "Loading live preview" : "") : "Preview opens off-site"}</span>
         <span className="text-[28px] leading-none font-medium tracking-[-0.03em] text-ink-muted">{name}</span>
       </div>
       {mode === "live" && near ? (

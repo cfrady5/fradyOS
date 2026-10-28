@@ -1,14 +1,12 @@
 import { Crosshairs } from "./Crosshairs";
 import { cn } from "@/lib/utils";
 
-/** Bordered figure with crosshair corners, "FIG. 0X" top-left and a mono caption bottom-right. */
-export function FigureFrame({ index, caption, children, className, bodyClassName, bordered = true }: { index: string; caption: React.ReactNode; children: React.ReactNode; className?: string; bodyClassName?: string; bordered?: boolean }) {
+/** Frame for an interactive pixel figure, with crosshair corners. */
+export function FigureFrame({ children, className, bodyClassName, bordered = true }: { children: React.ReactNode; className?: string; bodyClassName?: string; bordered?: boolean }) {
   return (
     <figure className={cn("relative", bordered && "border border-hairline", className)}>
       <Crosshairs />
-      <span className="label pointer-events-none absolute top-3 left-3 z-10">FIG. {index}</span>
       <div className={cn("relative", bodyClassName)}>{children}</div>
-      <figcaption className="label pointer-events-none absolute right-3 bottom-3 z-10 text-right">{caption}</figcaption>
     </figure>
   );
 }

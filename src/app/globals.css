@@ -408,6 +408,21 @@ html:has(.site) {
   line-height: 1.05;
 }
 
+/* Card and list titles inside a section. */
+@utility h3 {
+  font-weight: 500;
+  font-size: 19px;
+  letter-spacing: -0.02em;
+  line-height: 1.3;
+}
+
+/* Supporting copy directly under a heading. */
+@utility lede {
+  font-size: 17px;
+  line-height: 1.6;
+  color: var(--site-body);
+}
+
 @utility label {
   font-family: var(--font-mono);
   font-size: 12px;
@@ -434,15 +449,3 @@ html:has(.site) {
   background-position: 3px 3px;
 }
 
-@keyframes status-pulse {
-  0%,
-  100% {
-    box-shadow: 0 0 0 0 color-mix(in srgb, var(--site-lichen) 55%, transparent);
-  }
-  70% {
-    box-shadow: 0 0 0 6px color-mix(in srgb, var(--site-lichen) 0%, transparent);
-  }
-}
-.status-dot {
-  animation: status-pulse 2.4s ease-out infinite;
-}
