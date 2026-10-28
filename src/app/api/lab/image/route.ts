@@ -39,6 +39,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     controller.abort();
     const message = error instanceof Error ? error.message : "image generation failed";
+    console.error(`[lab] image generation failed for "${subject}": ${message}`);
     return NextResponse.json({ error: "generation_failed", message }, { status: 502 });
   } finally {
     release();

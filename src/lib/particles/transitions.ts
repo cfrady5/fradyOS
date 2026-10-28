@@ -49,6 +49,7 @@ export function createLabController(opts: ControllerOptions) {
   let pendingTarget: TargetData | null = null;
   let lastInterpretation: Interpretation | null = null;
   let imageProviderAvailable: boolean | null = null;
+  let lastImageError: string | null = null;
   let run = 0;
   let count = opts.count;
   let state: LabState = { phase: "IDLE", prompt: "", error: null, note: null, interpretation: null, depth: "relief", busy: false };
@@ -74,7 +75,11 @@ export function createLabController(opts: ControllerOptions) {
     const res = await fetchImpl("/api/lab/image", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ subject }), signal });
     if (res.status === 503) return null;
     if (res.status === 429) throw new Error("Image generation is busy. Give it a moment, then try again.");
-    if (!res.ok) return null;
+    if (!res.ok) {
+      const body = (await res.json().catch(() => null)) as { message?: string } | null;
+      lastImageError = body?.message ?? `HTTP ${res.status}`;
+      return null;
+    }
     const parsed = ImageResponseSchema.safeParse(await res.json());
     return parsed.success ? parsed.data.image : null;
   }
@@ -82,6 +87,7 @@ export function createLabController(opts: ControllerOptions) {
   /** Build a target for an interpretation at the current particle count. */
   async function build(interp: Interpretation, signal: AbortSignal): Promise<{ target: TargetData; note: string | null }> {
     let imageTried = false;
+    lastImageError = null;
     const { target, fallback } = await buildTarget(interp, {
       count,
       viewAspect: opts.viewAspect(),
@@ -93,7 +99,12 @@ export function createLabController(opts: ControllerOptions) {
     });
     let note: string | null = null;
     if (fallback === "procedural") {
-      note = imageTried && imageProviderAvailable === false ? `Image generation is not configured on this site, so this is a procedural form for "${interp.subject}".` : `No usable image came back, so this is a procedural form for "${interp.subject}".`;
+      note =
+        imageTried && imageProviderAvailable === false
+          ? `Image generation is not configured on this site, so this is a procedural form for "${interp.subject}".`
+          : lastImageError
+            ? `Image generation failed (${lastImageError}), so this is a procedural form for "${interp.subject}".`
+            : `No usable image came back, so this is a procedural form for "${interp.subject}".`;
     }
     return { target, note };
   }

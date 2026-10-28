@@ -36,7 +36,17 @@ class OpenAIImageProvider implements ImageProvider {
       body: JSON.stringify({ model: this.model, prompt: silhouettePrompt(subject), n: 1, size: this.size, output_format: "png", quality: "low" }),
       signal,
     });
-    if (!res.ok) throw new Error(`image provider ${res.status}`);
+    if (!res.ok) {
+      // Surface the provider's own message (model access, bad parameter, quota) rather than a bare status.
+      let detail = "";
+      try {
+        const err = (await res.json()) as { error?: { message?: string; code?: string } };
+        detail = err.error?.message ?? err.error?.code ?? "";
+      } catch {
+        // No JSON body.
+      }
+      throw new Error(`OpenAI ${res.status}${detail ? ": " + detail.slice(0, 200) : ""}`);
+    }
     const json = (await res.json()) as { data?: { b64_json?: string; url?: string }[] };
     const first = json.data?.[0];
     if (first?.b64_json) return `data:image/png;base64,${first.b64_json}`;
