@@ -8,8 +8,8 @@ import { openaiApiKey } from "./env";
  *
  * Configure with:
  *   LAB_IMAGE_PROVIDER = "openai" | "none" (default: "openai" when OPENAI_API_KEY is set, else "none")
- *   OPENAI_API_KEY (or `openai`), LAB_IMAGE_MODEL (tried first; then gpt-image-1, gpt-image-1-mini, gpt-image-2,
- *   dall-e-3, dall-e-2 until one the account can use answers), LAB_IMAGE_SIZE (default "1024x1024")
+ *   OPENAI_API_KEY (or `openai`), LAB_IMAGE_MODEL (tried first; then gpt-image-1-mini, gpt-image-1.5, gpt-image-2,
+ *   the gpt-image-2.5 variants, chatgpt-image-latest, gpt-image-1 and dall-e-3 until one answers), LAB_IMAGE_SIZE
  */
 
 export interface ImageProvider {
@@ -22,14 +22,20 @@ export function silhouettePrompt(subject: string): string {
   return `A clean, high-contrast white silhouette of ${subject}, centered, filling most of the frame, on a solid pure black background. Flat white shape with a crisp, readable outline, slight interior detail in mid grey only where it helps recognition. No text, no watermark, no border, no gradient background.`;
 }
 
-/** Models tried in order until one the account can use answers. `LAB_IMAGE_MODEL` goes first. */
-const OPENAI_IMAGE_MODELS = ["gpt-image-1", "gpt-image-1-mini", "gpt-image-2", "dall-e-3", "dall-e-2"];
+/** Models tried in order until one the account can use answers, cheapest first. `LAB_IMAGE_MODEL` goes first. */
+const OPENAI_IMAGE_MODELS = ["gpt-image-1-mini", "gpt-image-1.5", "gpt-image-2", "gpt-image-2.5-sunburst", "gpt-image-2.5-flare", "chatgpt-image-latest", "gpt-image-1", "dall-e-3"];
 
-function openAIBody(model: string, subject: string, size: string): Record<string, unknown> {
+function openAIBody(model: string, subject: string, size: string, minimal: boolean): Record<string, unknown> {
   const base = { model, prompt: silhouettePrompt(subject), n: 1, size };
+  if (minimal) return base;
   // DALL·E takes response_format; the gpt-image family returns base64 by default and takes quality.
   if (model.startsWith("dall-e")) return { ...base, response_format: "b64_json" };
   return { ...base, quality: "low" };
+}
+
+/** True when the 400 is about an optional parameter, so the same model is worth one bare retry. */
+function isParameterComplaint(status: number, detail: string): boolean {
+  return status === 400 && /quality|size|response_format|output_format|parameter|unknown field|unrecognized/i.test(detail);
 }
 
 /** True when the error means the model is unknown or unavailable to this account, so the next model is worth trying. */
@@ -53,11 +59,14 @@ class OpenAIImageProvider implements ImageProvider {
     // opaque ByteString error; say what is wrong instead.
     if (/[^\x21-\x7e]/.test(this.apiKey)) throw new Error("the OpenAI key contains characters that are not part of a real key, re-enter it from the original source");
     let lastError = "no image model available";
-    for (const model of this.models) {
+    const attempts: [string, boolean][] = [];
+    for (const model of this.models) attempts.push([model, false], [model, true]);
+    for (const [model, minimal] of attempts) {
+      if (!this.models.includes(model)) continue;
       const res = await fetch("https://api.openai.com/v1/images/generations", {
         method: "POST",
         headers: { "content-type": "application/json", authorization: `Bearer ${this.apiKey}` },
-        body: JSON.stringify(openAIBody(model, subject, this.size)),
+        body: JSON.stringify(openAIBody(model, subject, this.size, minimal)),
         signal,
       });
       if (!res.ok) {
@@ -68,7 +77,9 @@ class OpenAIImageProvider implements ImageProvider {
         } catch {
           // No JSON body.
         }
-        lastError = `OpenAI ${res.status}${detail ? ": " + detail.slice(0, 200) : ""}`;
+        lastError = `OpenAI ${res.status} (${model})${detail ? ": " + detail.slice(0, 200) : ""}`;
+        // An optional parameter it dislikes: the bare retry of the same model comes next in `attempts`.
+        if (!minimal && isParameterComplaint(res.status, detail)) continue;
         if (isModelUnavailable(res.status, detail)) {
           // Remember so later requests skip straight to a model that works.
           this.models = this.models.filter((m) => m !== model);
