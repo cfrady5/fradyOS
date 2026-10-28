@@ -20,7 +20,7 @@ export function isClaudeConfigured(): boolean {
   return Boolean(anthropicApiKey());
 }
 
-const SYSTEM = `You classify short visitor prompts for a generative particle engine that forms shapes out of 30,000 points.
+const SYSTEM = `You classify short visitor prompts for a generative particle engine that forms shapes out of 50,000 points.
 Return one JSON object matching the schema. Rules:
 - category "text" for words, names, initials, numbers or symbols the visitor wants spelled out; method "text"; put the exact characters in "text" (max 40).
 - category "geometry" for mathematical forms; method "geometry"; pick the closest "geometry" kind from: ${GEOMETRY_KINDS.join(", ")}.

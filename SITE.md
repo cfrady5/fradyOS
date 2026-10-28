@@ -23,7 +23,7 @@ Every section follows the same order: heading, supporting description, then cont
 
 ## Particle lab (`/lab`)
 
-A GPU particle engine: the visitor types a prompt and about 30,000 particles (8,100 on phones, 4,096 on low-power phones) assemble into it. The hero links to it; nothing else on the homepage changes.
+A GPU particle engine: the visitor types a prompt and about 50,000 particles (8,100 on phones, 4,096 on low-power phones) assemble into it. The hero links to it; nothing else on the homepage changes.
 
 | Path | What it is |
 | --- | --- |

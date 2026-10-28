@@ -1,6 +1,6 @@
 /**
  * Device tiering, capability probing and a frame-rate monitor for the particle engine.
- * Desktop starts at ~30k particles, phones at ~8k, low-power phones at ~4k; the FPS monitor can
+ * Desktop starts at ~50k particles, phones at ~8k, low-power phones at ~4k; the FPS monitor can
  * step the engine down further at runtime.
  */
 
@@ -25,7 +25,7 @@ export function detectTier(): DeviceTier {
   return {
     mobile,
     lowPower: lowPower || saveData,
-    particles: lowPower || saveData ? 4_096 : mobile ? 8_100 : 30_276,
+    particles: lowPower || saveData ? 4_096 : mobile ? 8_100 : 50_176,
     dpr: mobile ? 1.5 : 2,
   };
 }
