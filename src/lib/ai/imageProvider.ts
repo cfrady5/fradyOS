@@ -1,4 +1,5 @@
 import "server-only";
+import { openaiApiKey } from "./env";
 
 /**
  * Silhouette generation behind one small interface, so the lab can switch providers through env
@@ -7,7 +8,7 @@ import "server-only";
  *
  * Configure with:
  *   LAB_IMAGE_PROVIDER = "openai" | "none" (default: "openai" when OPENAI_API_KEY is set, else "none")
- *   OPENAI_API_KEY, LAB_IMAGE_MODEL (default "gpt-image-1"), LAB_IMAGE_SIZE (default "1024x1024")
+ *   OPENAI_API_KEY (or `openai`), LAB_IMAGE_MODEL (default "gpt-image-1"), LAB_IMAGE_SIZE (default "1024x1024")
  */
 
 export interface ImageProvider {
@@ -55,9 +56,10 @@ let cached: ImageProvider | null | undefined;
 /** The configured provider, or null when image generation is off. */
 export function getImageProvider(): ImageProvider | null {
   if (cached !== undefined) return cached;
-  const choice = (process.env.LAB_IMAGE_PROVIDER ?? (process.env.OPENAI_API_KEY ? "openai" : "none")).toLowerCase();
-  if (choice === "openai" && process.env.OPENAI_API_KEY) {
-    cached = new OpenAIImageProvider(process.env.OPENAI_API_KEY, process.env.LAB_IMAGE_MODEL ?? "gpt-image-1", process.env.LAB_IMAGE_SIZE ?? "1024x1024");
+  const key = openaiApiKey();
+  const choice = (process.env.LAB_IMAGE_PROVIDER ?? (key ? "openai" : "none")).toLowerCase();
+  if (choice === "openai" && key) {
+    cached = new OpenAIImageProvider(key, process.env.LAB_IMAGE_MODEL ?? "gpt-image-1", process.env.LAB_IMAGE_SIZE ?? "1024x1024");
   } else {
     cached = null;
   }

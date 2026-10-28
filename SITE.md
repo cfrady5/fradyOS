@@ -47,8 +47,8 @@ A GPU particle engine: the visitor types a prompt and about 30,000 particles (8,
 
 | Variable | Purpose |
 | --- | --- |
-| `ANTHROPIC_API_KEY` | Enables Claude prompt interpretation (`claude-opus-5-5` by default, `LAB_INTERPRET_MODEL` overrides). Low effort, structured output, 8 s timeout, server-side refusal fallback on. |
-| `OPENAI_API_KEY` | Enables silhouette generation through the OpenAI Images API (`LAB_IMAGE_PROVIDER=openai`, the default when the key is set; `LAB_IMAGE_MODEL` default `gpt-image-1`; `LAB_IMAGE_SIZE` default `1024x1024`). Set `LAB_IMAGE_PROVIDER=none` to keep the key but turn generation off. |
+| `ANTHROPIC_API_KEY` (or `anthropic`) | Enables Claude prompt interpretation (`claude-opus-5-5` by default, `LAB_INTERPRET_MODEL` overrides). Low effort, structured output, 8 s timeout, server-side refusal fallback on. |
+| `OPENAI_API_KEY` (or `openai`) | Enables silhouette generation through the OpenAI Images API (`LAB_IMAGE_PROVIDER=openai`, the default when the key is set; `LAB_IMAGE_MODEL` default `gpt-image-1`; `LAB_IMAGE_SIZE` default `1024x1024`). Set `LAB_IMAGE_PROVIDER=none` to keep the key but turn generation off. |
 | `LAB_IMAGE_DAILY_CAP` | Global images per UTC day per server instance (default 200). |
 | `LAB_IMAGE_CONCURRENCY`, `LAB_INTERPRET_CONCURRENCY` | In-flight caps (defaults 2 and 4). |
 | `LAB_IMAGE_TIMEOUT_MS` | Image generation timeout (default 45000). |

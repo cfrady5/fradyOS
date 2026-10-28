@@ -3,6 +3,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { GEOMETRY_KINDS, InterpretationSchema, type Interpretation } from "./schema";
 import { interpretDeterministic, reconcile } from "./rules";
+import { anthropicApiKey } from "./env";
 
 export { interpretDeterministic } from "./rules";
 
@@ -16,7 +17,7 @@ const MODEL = process.env.LAB_INTERPRET_MODEL ?? "claude-opus-5-5";
 const TIMEOUT_MS = 8_000;
 
 export function isClaudeConfigured(): boolean {
-  return Boolean(process.env.ANTHROPIC_API_KEY);
+  return Boolean(anthropicApiKey());
 }
 
 const SYSTEM = `You classify short visitor prompts for a generative particle engine that forms shapes out of 30,000 points.
@@ -33,7 +34,7 @@ Return one JSON object matching the schema. Rules:
 export async function interpretWithClaude(prompt: string): Promise<{ interpretation: Interpretation; source: "claude" | "deterministic" }> {
   if (!isClaudeConfigured()) return { interpretation: interpretDeterministic(prompt), source: "deterministic" };
   try {
-    const client = new Anthropic({ timeout: TIMEOUT_MS, maxRetries: 1 });
+    const client = new Anthropic({ apiKey: anthropicApiKey(), timeout: TIMEOUT_MS, maxRetries: 1 });
     const response = await client.beta.messages.create({
       model: MODEL,
       max_tokens: 1024,
