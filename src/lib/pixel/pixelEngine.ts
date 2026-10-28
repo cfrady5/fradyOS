@@ -8,7 +8,7 @@
  *
  * Tuning constants live in `TUNING` at the top so every effect can be adjusted from one place.
  */
-import { tokens } from "@/lib/site/tokens";
+import { tokens, fieldGreens } from "@/lib/site/tokens";
 
 export const TUNING = {
   /** Device pixel ratio cap. */
@@ -23,8 +23,9 @@ export const TUNING = {
   hero: {
     pitch: 6,
     pitchNarrow: 9,
-    /** Field brightness is measured in shade levels (0 = unlit grid, 5 = moss5) and ordered-dithered
-     *  between neighbouring shades. Texture: base ± amplitude levels of slow sine-noise sparkle. */
+    /** Field brightness is measured in shade levels (0 = unlit grid, 1..5 = the five steps of a green
+     *  family) and ordered-dithered between neighbouring steps. Texture: base ± amplitude levels of slow
+     *  sine-noise sparkle. */
     base: 0.13,
     amplitude: 0.11,
     waveSpeed: 0.35,
@@ -47,7 +48,7 @@ export const TUNING = {
     flowWavelength: 620,
     flowSpeed: 55,
     flowAngle: -12,
-    flowGain: 6.2,
+    flowGain: 6.6,
     flow2Wavelength: 380,
     flow2Speed: 34,
     flow2Angle: 32,
@@ -56,6 +57,27 @@ export const TUNING = {
     flowMeanderScale: 0.0105,
     flowMeanderSpeed: 0.22,
     flowFloor: 0.6,
+    /** Variance. The travel speed of each band swings by ±`flowSpeedVar` at `flowSpeedVarRate` rad/s
+     *  (the bands speed up and slow down out of step). `flowMeander2` bends the fronts column by column
+     *  too. A drifting swell scales the crests down by up to `swellDepth` in some regions, so the wave
+     *  runs strong in places and calm in others. */
+    flowSpeedVar: 0.4,
+    flowSpeedVarRate: 0.13,
+    flowMeander2: 0.9,
+    flowMeander2Scale: 0.0055,
+    flowMeander2Speed: 0.16,
+    swellDepth: 0.4,
+    swellScaleX: 0.0032,
+    swellScaleY: 0.0055,
+    swellSpeed: 0.07,
+    /** Hue. A slow hue map (wavelength 2π / `hueScale` px, tilted `hueAngle` degrees, drifting at
+     *  `hueDrift` rad/s) picks the green family per pixel, dithered between neighbours; `hueSpread` is
+     *  its range. Crests lean warm (fern) and flanks cool (tide) by `hueCrestBias`. */
+    hueScale: 0.0042,
+    hueAngle: 58,
+    hueDrift: 0.06,
+    hueSpread: 0.62,
+    hueCrestBias: 0.18,
     /** Text-safe cap: pixels never go above `textCap` shades left of `textCapStart` (fraction of the
      *  width), rising to the full ramp by `textCapEnd`. Narrow screens keep the cap everywhere. */
     textCap: 3,
@@ -140,8 +162,8 @@ export const COLORS = {
   dim: tokens.pixelDim,
   ink: tokens.ink,
   lichen: tokens.lichen,
-  /** Hero field shades, darkest first. */
-  moss: [tokens.moss1, tokens.moss2, tokens.moss3, tokens.moss4, tokens.moss5],
+  /** Hero field greens: hue families cool to warm, each five steps darkest first. */
+  field: [fieldGreens.tide, fieldGreens.emerald, fieldGreens.moss, fieldGreens.fern],
   label: tokens.label,
   hairline: tokens.hairline,
   borderStrong: tokens.borderStrong,

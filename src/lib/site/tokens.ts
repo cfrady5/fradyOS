@@ -13,18 +13,24 @@ export const tokens = {
   borderStrong: "#26262B",
   pixelDim: "#34343B",
   lichen: "#9DD6B0",
-  /** Hero field greens, darkest to brightest (OKLCH ramp, deep teal to leaf). All stay near the unlit grid's
-   *  luminance; the field caps pixels under the text at moss3 so copy keeps its contrast. */
-  moss1: "#113327",
-  moss2: "#153C29",
-  moss3: "#194429",
-  moss4: "#1F4C2B",
-  moss5: "#26542C",
   oak: "#C9A578",
   crosshair: "#52525B",
 } as const;
 
 export type TokenName = keyof typeof tokens;
+
+/**
+ * Hero field greens: four hue families from cool to warm (tide teal, emerald, moss, fern olive), each a
+ * five-step OKLCH ramp. Step n has the same luminance in every family (0.026 to 0.068, close to the
+ * unlit grid's 0.035), so hue can drift freely without changing text contrast. The field caps pixels
+ * under the copy at step 3. Canvas-only, so these are not emitted as CSS variables.
+ */
+export const fieldGreens = {
+  tide: ["#05342B", "#023D33", "#00453A", "#024D41", "#035447"],
+  emerald: ["#123321", "#123C26", "#11452B", "#104D30", "#0E5535"],
+  moss: ["#1B331C", "#1E3B1F", "#204422", "#234C25", "#265429"],
+  fern: ["#253114", "#2B3A16", "#304216", "#364917", "#3A5118"],
+} as const;
 
 /** Type scale, kept here so the headline rules live next to the colours. */
 export const type = {
