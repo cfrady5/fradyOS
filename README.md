@@ -122,7 +122,7 @@ All deadlines, planned dates and event dates are stored as Postgres `date` value
 
 ## Public homepage
 
-`/` is Caleb Frady's public homepage (hand-written Canvas 2D pixel effects, no WebGL or animation libraries) and the only public page. The OS itself lives at `/today` and the other authenticated routes; the "Portal" link in the homepage footer leads there. See `SITE.md` for the site tokens, components and effect tuning.
+`/` is Caleb Frady's public homepage (hand-written Canvas 2D pixel effects, no WebGL or animation libraries). `/lab` is the particle lab, a GPU particle engine built on three.js and React Three Fiber that forms visitor prompts out of particles; see the "Particle lab" section of `SITE.md` for its optional `ANTHROPIC_API_KEY` and `OPENAI_API_KEY` integrations and limits. The OS itself lives at `/today` and the other authenticated routes; the "Portal" link in the homepage footer leads there. See `SITE.md` for the site tokens, components and effect tuning.
 
 ## Project structure
 

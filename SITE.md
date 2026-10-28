@@ -14,11 +14,50 @@ The public homepage for Caleb Frady lives inside the FRADY OS app at `/` (route 
 | `src/components/site/PixelCanvas.tsx` | Hosts an effect: DPR-aware sizing, one rAF loop per canvas paused offscreen, reduced-motion handling. |
 | `src/components/site/*` | Button, TwoTone, SectionHeader (heading, then supporting copy; exports the shared section padding), FigureFrame (crosshair corners), CodeCard, Gallery, LivePreview, Footer (with the Portal link). |
 | `src/components/site/sections/*` | Hero, Services, HowIWork, SelectedWork, StartSomething. |
-| `src/app/(site)/page.tsx` | The homepage, the only public page. It has no top navigation; the hero buttons and the footer carry the links. |
+| `src/app/(site)/page.tsx` | The homepage. It has no top navigation; the hero buttons and the footer carry the links. |
+| `src/app/(site)/lab/page.tsx` | The particle lab (see below). |
 
 ## Section structure
 
 Every section follows the same order: heading, supporting description, then content. There are no eyebrow labels, section numbers, figure numbers, status chips or captions; hierarchy comes from the type scale (`h1`, `h2`, `h3`, `lede` and `label` utilities in `src/app/globals.css`) and from spacing (`SECTION_PAD` in `SectionHeader.tsx`, with content starting at `mt-12 md:mt-16` below the header). The mono `label` style is kept only for metadata inside components: the gallery counter, hosts and open links, the live-preview loading line, and the footer.
+
+## Particle lab (`/lab`)
+
+A GPU particle engine: the visitor types a prompt and about 30,000 particles (8,100 on phones, 4,096 on low-power phones) assemble into it. The hero links to it; nothing else on the homepage changes.
+
+| Path | What it is |
+| --- | --- |
+| `src/lib/particles/simulation.ts` | `ParticleSimulation`: positions and velocities live in float textures advanced by two fragment-shader passes per frame (three's `GPUComputationRenderer`); the render pass reads the position texture per vertex. Targets are uploaded as a texture; pointer, impulses and mode ramps are uniforms. Nothing per-particle runs in JavaScript after setup. |
+| `src/lib/particles/shaders/*` | Simplex and curl noise, the velocity pass (spring to target, curl turbulence, dispersion burst, cursor repulsion, click impulses, soft containment, damping, speed clamp), the position pass, and the point sprite shaders (size by depth and seed, palette or image colour, lichen on fast movers, twinkle). |
+| `src/lib/particles/textSampler.ts` | Offscreen-canvas text rendering sampled into targets; edges get full emphasis so letters stay legible. |
+| `src/lib/particles/geometrySampler.ts` | Procedural forms (sphere, basketball, galaxy, ring, torus, helix, wave, heart, star, moon, black hole, cube, rose, saturn, tornado, cloud, and a seeded `concept` blob used as the image fallback). Pure functions, unit-tested. |
+| `src/lib/particles/imageSampler.ts` | Turns a generated silhouette into targets: adaptive threshold, speck removal, contour plus interior sampling, slight 2.5D depth, optional image colour. |
+| `src/lib/particles/targetGenerator.ts` | Builds a `TargetData` for an interpretation at the current particle count, falling back to the procedural form when no image is available. |
+| `src/lib/particles/transitions.ts` | The state machine (IDLE, DISPERSING, GENERATING, ASSEMBLING, FORMED, INTERACTIVE, ERROR) and the controller the UI subscribes to. One submission at a time; the scene is re-targeted, never rebuilt. Text and geometry prompts the rules recognise never leave the browser. |
+| `src/lib/particles/performance.ts` | Device tiering, WebGL2 probing (float or half-float render targets), reduced-motion check, and the frame-rate monitor. |
+| `src/lib/ai/schema.ts` | Zod schema of an interpretation (category, subject, method, text or geometry kind, aspect, depth, motion, palette) and the API response shapes. |
+| `src/lib/ai/rules.ts` | Rule-based interpretation that runs anywhere and never fails. |
+| `src/lib/ai/promptInterpreter.ts` | Server-only: Claude classification on top of the rules when `ANTHROPIC_API_KEY` is set, validated and reconciled; falls back to the rules on any failure. |
+| `src/lib/ai/imageProvider.ts` | Silhouette generation behind one interface; an OpenAI Images adapter ships, selected through env. |
+| `src/lib/ai/rateLimit.ts`, `labLimits.ts` | Per-visitor token buckets, concurrency caps, a daily image cap and TTL caches for the two routes (in-memory, per server instance). |
+| `src/app/api/lab/interpret`, `src/app/api/lab/image` | The routes. Prompts are normalised and capped at 80 characters; keys never reach the browser. |
+| `src/components/particle-engine/*` | `ParticleCanvas` (R3F canvas: DPR cap, pause when hidden, context-loss recovery), `ParticleSystem` (owns the simulation, pointer and orbit input, parallax, FPS step-down), `ParticleInput`, `ParticleControls`, `ParticleStatus`, `ParticleLab` (layout and the no-WebGL fallback), `LabClient` (client-only loader). |
+
+**Environment variables** (all optional; without them the lab runs text and geometry deterministically and shows a procedural stand-in for image prompts):
+
+| Variable | Purpose |
+| --- | --- |
+| `ANTHROPIC_API_KEY` | Enables Claude prompt interpretation (`claude-opus-5-5` by default, `LAB_INTERPRET_MODEL` overrides). Low effort, structured output, 8 s timeout, server-side refusal fallback on. |
+| `OPENAI_API_KEY` | Enables silhouette generation through the OpenAI Images API (`LAB_IMAGE_PROVIDER=openai`, the default when the key is set; `LAB_IMAGE_MODEL` default `gpt-image-1`; `LAB_IMAGE_SIZE` default `1024x1024`). Set `LAB_IMAGE_PROVIDER=none` to keep the key but turn generation off. |
+| `LAB_IMAGE_DAILY_CAP` | Global images per UTC day per server instance (default 200). |
+| `LAB_IMAGE_CONCURRENCY`, `LAB_INTERPRET_CONCURRENCY` | In-flight caps (defaults 2 and 4). |
+| `LAB_IMAGE_TIMEOUT_MS` | Image generation timeout (default 45000). |
+
+Per-visitor limits: 20 interpretations and 6 images per minute. Results are cached for an hour (interpretations) and a day (images, 40 entries).
+
+**Adding another image provider**: implement `ImageProvider` in `src/lib/ai/imageProvider.ts` (return a PNG data URL of a bright subject on black) and select it in `getImageProvider()`. The browser does the sampling, so the server never decodes pixels.
+
+**Performance knobs**: particle budgets and the DPR cap in `detectTier()`; point size in `ParticleSystem`; spring, damping, noise and interaction constants as uniforms in `ParticleSimulation`. The first low-FPS reading halves the drawn particles without a rebuild; the next halves the simulation itself and re-samples the formation.
 
 ## Tuning the effects
 

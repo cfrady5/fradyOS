@@ -3,6 +3,7 @@ import { site } from "@/lib/site/copy";
 import { PixelCanvas } from "../PixelCanvas";
 import { TwoTone } from "../TwoTone";
 import { Button } from "../Button";
+import Link from "next/link";
 
 /** Headline first, the description directly beneath it, then the two calls to action. */
 export function Hero() {
@@ -20,6 +21,9 @@ export function Hero() {
             <Button href="#gallery" variant="secondary">
               {site.hero.secondary}
             </Button>
+            <Link href="/lab" className="inline-flex h-12 items-center gap-2 px-1 text-[15px] text-body transition-colors hover:text-ink">
+              Particle lab <span aria-hidden="true">→</span>
+            </Link>
           </div>
         </div>
       </div>
