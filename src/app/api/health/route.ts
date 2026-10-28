@@ -7,6 +7,8 @@ import { diagnosePlaidKeys, isPlaidConfigured, plaidEnv } from "@/lib/plaid/clie
 import { isAuthorizedCron } from "@/lib/cron-auth";
 import { timingSafeEqual } from "@/lib/monday/webhook";
 import { keySource } from "@/lib/plaid/crypto";
+import { isClaudeConfigured } from "@/lib/ai/promptInterpreter";
+import { getImageProvider } from "@/lib/ai/imageProvider";
 
 export async function GET(request: NextRequest) {
   // ?probe=plaid with the CRON_SECRET (Bearer or x-cron-secret header, or ?key=) runs the Plaid key diagnosis.
@@ -29,5 +31,7 @@ export async function GET(request: NextRequest) {
     plaid: isPlaidConfigured(),
     plaid_env: plaidEnv(),
     plaid_token_key: keySource(),
+    lab_claude: isClaudeConfigured(),
+    lab_image_provider: getImageProvider()?.name ?? null,
   });
 }
