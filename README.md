@@ -120,6 +120,12 @@ The interface uses a single graphite theme ("performance-driven modernism"): bac
 
 All deadlines, planned dates and event dates are stored as Postgres `date` values and handled as `YYYY-MM-DD` strings end to end, so they never shift through UTC conversion. "Today" is computed in the user's time zone (default `America/Indiana/Indianapolis`, editable in Settings). Timestamps (created/completed/synced) are `timestamptz` and displayed in the user's zone.
 
+## Native apps (iOS and Android)
+
+`ios/` and `android/` hold a Capacitor shell that loads the deployed site in a native WebView, with icons, splash
+screens, status-bar handling and app links for magic-link sign-in. Open them with `npm run cap:ios` or
+`npm run cap:android` on a Mac. Build and release steps are in [NATIVE.md](./NATIVE.md).
+
 ## Health (WHOOP via NOOP)
 
 `/health` shows recovery, strain, HRV and sleep from a WHOOP strap. Data comes in through **Health → Data**: import the WHOOP data export zip (WHOOP app → More → App settings → Data export) or the CSV export from [NOOP](https://github.com/ryanbr/noop), the offline WHOOP companion app (Settings → Backup and restore → Export CSV; it writes the same layout). Days and sessions are upserted on their date and start time, so re-importing only adds what is new. Nothing in FRADY OS talks to WHOOP's cloud or to the strap. Today gets a "Body" block with the latest recovery, HRV, sleep and strain.

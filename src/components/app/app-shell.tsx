@@ -84,7 +84,7 @@ export function AppShell({ children, unreadNotifications }: { children: React.Re
 
           {/* Main column */}
           <div className="flex min-w-0 flex-1 flex-col">
-            <header className="bg-surface-0/85 supports-[backdrop-filter]:bg-surface-0/70 border-line-1 sticky top-0 z-30 flex h-14 items-center gap-2 border-b px-3 backdrop-blur md:px-6">
+            <header className="shell-header bg-surface-0/85 supports-[backdrop-filter]:bg-surface-0/70 border-line-1 sticky top-0 z-30 flex h-14 items-center gap-2 border-b px-3 backdrop-blur md:px-6">
               <Button variant="ghost" size="icon" className="md:hidden" aria-label="Open navigation" onClick={() => setMobileNavOpen(true)}>
                 <Menu />
               </Button>

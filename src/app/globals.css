@@ -449,3 +449,21 @@ html:has(.site) {
   background-position: 3px 3px;
 }
 
+
+/* Native shell (Capacitor). `html.native` is set by NativeBridge; content runs under the iOS status bar. */
+html.native .shell-header {
+  height: calc(3.5rem + env(safe-area-inset-top));
+  padding-top: env(safe-area-inset-top);
+}
+html.native [data-slot="sheet-content"] {
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+html.native .site {
+  padding-top: env(safe-area-inset-top);
+}
+html.native {
+  /* Stop the rubber-band overscroll glow and the WebView's long-press callouts on chrome. */
+  overscroll-behavior-y: none;
+  -webkit-tap-highlight-color: transparent;
+}

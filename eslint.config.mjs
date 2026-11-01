@@ -12,6 +12,10 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Native shells (Capacitor) carry no lintable JS.
+    "ios/**",
+    "android/**",
+    "native/**",
   ]),
 ]);
 

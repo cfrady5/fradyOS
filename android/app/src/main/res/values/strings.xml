@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">FRADY</string>
+    <string name="title_activity_main">FRADY</string>
+    <string name="package_name">com.frady.os</string>
+    <string name="custom_url_scheme">com.frady.os</string>
+</resources>

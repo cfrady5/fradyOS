@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { geist, geistMono } from "./fonts";
 import { Toaster } from "@/components/ui/sonner";
+import { NativeBridge } from "@/components/native/NativeBridge";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -21,6 +22,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="min-h-full flex flex-col">
         {children}
         <Toaster />
+        <NativeBridge />
       </body>
     </html>
   );
