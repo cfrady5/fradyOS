@@ -165,6 +165,14 @@ export interface HealthData {
   imports: HealthImportRow[];
   summary: HealthSummary;
   isEmpty: boolean;
+  /** True when the health tables do not exist yet (migration 0011 has not been applied). */
+  notReady: boolean;
+}
+
+/** PostgREST reports a missing relation as PGRST205; older versions only carry the message. */
+export function isMissingTable(error: { code?: string; message?: string } | null | undefined) {
+  if (!error) return false;
+  return error.code === "PGRST205" || /could not find the table/i.test(error.message ?? "") || /relation .* does not exist/i.test(error.message ?? "");
 }
 
 /** Everything the health screens need for the last `windowDays` days, oldest first. */
@@ -177,7 +185,13 @@ export const getHealthData = cache(async (userId: string, today: string, windowD
     supabase.from("health_workouts").select("*").eq("user_id", userId).gte("day", from).order("start_at", { ascending: true }),
     supabase.from("health_imports").select("*").eq("user_id", userId).order("created_at", { ascending: false }).limit(20),
   ]);
-  for (const r of [days, sleeps, workouts, imports]) if (r.error) throw new Error(r.error.message);
+  for (const r of [days, sleeps, workouts, imports]) {
+    if (!r.error) continue;
+    if (isMissingTable(r.error)) {
+      return { days: [], sleeps: [], workouts: [], imports: [], summary: summarize([], today), isEmpty: true, notReady: true };
+    }
+    throw new Error(r.error.message);
+  }
   const dayRows = ((days.data ?? []) as Record<string, unknown>[]).map(shapeDay);
   return {
     days: dayRows,
@@ -186,6 +200,7 @@ export const getHealthData = cache(async (userId: string, today: string, windowD
     imports: ((imports.data ?? []) as Record<string, unknown>[]).map(shapeImport),
     summary: summarize(dayRows, today),
     isEmpty: dayRows.length === 0 && (imports.data ?? []).length === 0,
+    notReady: false,
   };
 });
 
@@ -194,7 +209,10 @@ export async function getHealthSummary(userId: string, today: string): Promise<H
   const supabase = await createClient();
   const from = new Date(Date.parse(today) - 29 * 86_400_000).toISOString().slice(0, 10);
   const { data, error } = await supabase.from("health_days").select("*").eq("user_id", userId).gte("day", from).order("day", { ascending: true });
-  if (error) throw new Error(error.message);
+  if (error) {
+    if (isMissingTable(error)) return null;
+    throw new Error(error.message);
+  }
   const rows = ((data ?? []) as Record<string, unknown>[]).map(shapeDay);
   if (!rows.length) return null;
   return summarize(rows, today);

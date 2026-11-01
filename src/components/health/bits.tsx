@@ -4,6 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { EmptyState } from "@/components/ui/empty-state";
 
 export const HEALTH_TABS: { href: string; label: string }[] = [
   { href: "/health", label: "Overview" },
@@ -55,5 +56,15 @@ export function HealthRow({ title, meta, value, sub }: { title: React.ReactNode;
         </div>
       ) : null}
     </div>
+  );
+}
+
+/** Shown on every Health screen until migration 0011 has been applied to the Supabase project. */
+export function HealthNotReady() {
+  return (
+    <EmptyState
+      title="Health is not set up yet"
+      description="The health tables are missing from the database. Run supabase/migrations/0011_health.sql in the Supabase SQL editor, then reload this page."
+    />
   );
 }
