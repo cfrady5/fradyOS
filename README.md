@@ -120,6 +120,12 @@ The interface uses a single graphite theme ("performance-driven modernism"): bac
 
 All deadlines, planned dates and event dates are stored as Postgres `date` values and handled as `YYYY-MM-DD` strings end to end, so they never shift through UTC conversion. "Today" is computed in the user's time zone (default `America/Indiana/Indianapolis`, editable in Settings). Timestamps (created/completed/synced) are `timestamptz` and displayed in the user's zone.
 
+## Health (WHOOP via NOOP)
+
+`/health` shows recovery, strain, HRV and sleep from a WHOOP strap. Data comes in through **Health → Data**: import the WHOOP data export zip (WHOOP app → More → App settings → Data export) or the CSV export from [NOOP](https://github.com/ryanbr/noop), the offline WHOOP companion app (Settings → Backup and restore → Export CSV; it writes the same layout). Days and sessions are upserted on their date and start time, so re-importing only adds what is new. Nothing in FRADY OS talks to WHOOP's cloud or to the strap. Today gets a "Body" block with the latest recovery, HRV, sleep and strain.
+
+Tables: `health_days`, `health_sleeps`, `health_workouts`, `health_journal`, `health_imports` (migration `0011_health.sql`). Parser and stats live in `src/lib/health/` with tests; the import runs through a server action with a 32 MB body limit.
+
 ## Public homepage
 
 `/` is Caleb Frady's public homepage (hand-written Canvas 2D pixel effects, no WebGL or animation libraries). `/lab` is the particle lab, a GPU particle engine built on three.js and React Three Fiber that forms visitor prompts out of particles; see the "Particle lab" section of `SITE.md` for its optional `ANTHROPIC_API_KEY` and `OPENAI_API_KEY` integrations and limits. The OS itself lives at `/today` and the other authenticated routes; the "Portal" link in the homepage footer leads there. See `SITE.md` for the site tokens, components and effect tuning.

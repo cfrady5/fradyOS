@@ -7,11 +7,12 @@ import {
   CalendarRange,
   Trophy,
   Wallet,
+  HeartPulse,
   Settings,
   type LucideIcon,
 } from "lucide-react";
 
-export type NavGroup = "work" | "money" | "system";
+export type NavGroup = "work" | "money" | "health" | "system";
 export type NavItem = { href: string; label: string; icon: LucideIcon; key: string; group: NavGroup; mobile?: boolean };
 
 export const NAV_ITEMS: NavItem[] = [
@@ -23,6 +24,7 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/calendar", label: "Calendar", icon: CalendarRange, key: "c", group: "work", mobile: true },
   { href: "/completed", label: "Completed", icon: Trophy, key: "d", group: "work" },
   { href: "/finances", label: "Finances", icon: Wallet, key: "f", group: "money", mobile: true },
+  { href: "/health", label: "Health", icon: HeartPulse, key: "h", group: "health" },
   { href: "/settings", label: "Settings", icon: Settings, key: "s", group: "system" },
 ];
 
@@ -30,6 +32,7 @@ export const NAV_ITEMS: NavItem[] = [
 export const NAV_GROUPS: { key: NavGroup; label: string | null; index: string | null }[] = [
   { key: "work", label: "Work", index: "01" },
   { key: "money", label: "Money", index: "02" },
+  { key: "health", label: "Body", index: "03" },
   { key: "system", label: null, index: null },
 ];
 

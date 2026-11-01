@@ -3,6 +3,7 @@ import { requireWorkspace } from "@/lib/data/workspace";
 import { getTodayData } from "@/lib/data/today";
 import { listProjects } from "@/lib/data/projects";
 import { getFinanceData } from "@/lib/data/finance";
+import { getHealthSummary } from "@/lib/data/health";
 import { runProjection } from "@/lib/finance/engine";
 import { formatDate } from "@/lib/dates";
 import { TodayView, type Standing } from "./today-view";
@@ -11,10 +12,11 @@ export const metadata: Metadata = { title: "Today" };
 
 export default async function TodayPage() {
   const ws = await requireWorkspace();
-  const [data, projects, finance] = await Promise.all([
+  const [data, projects, finance, health] = await Promise.all([
     getTodayData(ws.userId, ws.today),
     listProjects(ws.userId, ws.today, { status: "active" }),
     getFinanceData().catch(() => null),
+    getHealthSummary(ws.userId, ws.today).catch(() => null),
   ]);
 
   let financeStanding: Standing["finance"] = null;
@@ -43,6 +45,19 @@ export default async function TodayPage() {
   const active = projects.filter((p) => p.status === "active");
   const standing: Standing = {
     finance: financeStanding,
+    health: health?.latest
+      ? {
+          day: health.latest.day,
+          staleDays: health.staleDays ?? 0,
+          recovery: health.latest.recovery,
+          hrv: health.latest.hrv_ms,
+          hrvDelta: health.hrv7 != null && health.hrv30 ? Math.round(((health.hrv7 - health.hrv30) / health.hrv30) * 100) : null,
+          sleepMin: health.latest.sleep_total_min,
+          sleepPerformance: health.latest.sleep_performance_pct,
+          strain: health.latest.strain,
+          strainWeek: health.strainWeek,
+        }
+      : null,
     projects: {
       active: active.length,
       overdue: active.reduce((s, p) => s + p.overdue_count, 0),

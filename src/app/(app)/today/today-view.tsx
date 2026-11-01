@@ -22,6 +22,7 @@ import type { TaskWithRefs } from "@/lib/types";
 import type { GoalStatusKey } from "@/lib/finance/engine";
 import { GOAL_STATUS_META } from "@/lib/finance/model";
 import { fmtMoney, fmtMonths } from "@/lib/finance/format";
+import { fmt0, fmt1, fmtHours, recoveryTone, sleepPerformanceTone, strainTone } from "@/lib/health/stats";
 import { relativeDayLabel, formatDate, timeAgo, diffDays } from "@/lib/dates";
 import { cn } from "@/lib/utils";
 
@@ -37,6 +38,17 @@ export type Standing = {
     firstShortfallDate: string | null;
     lastSyncedAt: string | null;
     goals: { id: string; name: string; progressPct: number; status: GoalStatusKey; projectedDate: string | null; targetDate: string | null; startAmount: number; targetAmount: number }[];
+  } | null;
+  health: {
+    day: string;
+    staleDays: number;
+    recovery: number | null;
+    hrv: number | null;
+    hrvDelta: number | null;
+    sleepMin: number | null;
+    sleepPerformance: number | null;
+    strain: number | null;
+    strainWeek: number | null;
   } | null;
   projects: {
     active: number;
@@ -372,6 +384,30 @@ export function TodayView({ data, standing, greeting, dateLabel }: { data: Today
                 )}
               </div>
             </div>
+          </section>
+
+          {/* 06 — How is my body? */}
+          <section aria-labelledby="today-body">
+            <SectionHeader index="06" title={<span id="today-body">Body</span>} hint={standing.health ? (standing.health.staleDays > 1 ? `Last data ${formatDate(standing.health.day, "medium", today)}` : undefined) : undefined} action={<SectionLink href="/health">Health</SectionLink>} />
+            {standing.health ? (
+              <MetricStrip cols={2} className="mt-3">
+                <Metric size="sm" label="Recovery" value={fmt0(standing.health.recovery, "%")} tone={recoveryTone(standing.health.recovery)} muted={standing.health.recovery == null} href="/health" />
+                <Metric size="sm" label="HRV" value={fmt0(standing.health.hrv, " ms")} sub={standing.health.hrvDelta != null ? `${standing.health.hrvDelta >= 0 ? "+" : ""}${standing.health.hrvDelta}% vs 30-day` : undefined} tone={standing.health.hrvDelta != null && standing.health.hrvDelta <= -10 ? "warning" : "neutral"} muted={standing.health.hrv == null} href="/health" />
+                <Metric size="sm" label="Sleep" value={fmtHours(standing.health.sleepMin)} sub={standing.health.sleepPerformance != null ? `${fmt0(standing.health.sleepPerformance, "%")} of need` : undefined} tone={sleepPerformanceTone(standing.health.sleepPerformance)} muted={standing.health.sleepMin == null} href="/health" />
+                <Metric size="sm" label="Strain" value={fmt1(standing.health.strain)} sub={standing.health.strainWeek != null ? `Week ${fmt0(standing.health.strainWeek)}` : undefined} tone={strainTone(standing.health.strain)} muted={standing.health.strain == null} href="/health/workouts" />
+              </MetricStrip>
+            ) : (
+              <EmptyState
+                className="mt-3"
+                title="No health data yet"
+                description="Import a WHOOP or NOOP export to see recovery, HRV and sleep here."
+                action={
+                  <Button asChild size="sm" variant="outline">
+                    <Link href="/health/data">Import</Link>
+                  </Button>
+                }
+              />
+            )}
           </section>
         </aside>
       </div>

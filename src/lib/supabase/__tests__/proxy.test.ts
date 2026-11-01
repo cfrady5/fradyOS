@@ -8,7 +8,7 @@ describe("proxy public paths", () => {
     }
   });
   it("protects everything else", () => {
-    for (const p of ["/today", "/tasks", "/projects/abc", "/settings", "/finances", "/api/export", "/loginx", "/work", "/api/webhooksx"]) {
+    for (const p of ["/today", "/tasks", "/projects/abc", "/settings", "/finances", "/health", "/health/data", "/api/export", "/loginx", "/work", "/api/webhooksx"]) {
       expect(isPublicPath(p), p).toBe(false);
     }
   });

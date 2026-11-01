@@ -40,7 +40,7 @@ Raw hex values exist only in `globals.css`. Everything else references semantic 
 
 ## Shell
 
-- Sidebar (232px) with numbered groups: `01 Work`, `02 Money`, Settings pinned at the bottom. One brand bar slides to the active link; hover only lifts text. Each item reveals its `G`+key shortcut on hover.
+- Sidebar (232px) with numbered groups: `01 Work`, `02 Money`, `03 Body`, Settings pinned at the bottom. One brand bar slides to the active link; hover only lifts text. Each item reveals its `G`+key shortcut on hover.
 - Compact account control (initials, name, timezone) opens a menu with Settings, Reminders and Sign out.
 - Top bar: persistent search (`⌘K`), shortcuts help (`?`), notifications, `Add task` (`N`).
 - Phones: bottom bar (Today, Tasks, Calendar, Finances, More), floating add button, left drawer with the same numbered navigation.

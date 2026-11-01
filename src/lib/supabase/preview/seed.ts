@@ -232,6 +232,40 @@ export function seedTables(): Record<string, Row[]> {
   const plaidItems = [{ id: "pi-1", user_id: uid, item_id: "item-chase", institution_id: "ins_56", institution_name: "Chase", environment: "sandbox", status: "active", error_code: null, error_message: null, products: ["transactions"], transactions_cursor: "c-1", last_synced_at: iso(0, 6), last_webhook_at: iso(0, 5), consent_expires_at: null, ...ts }];
   const plaidRuns = [{ id: "pr-1", user_id: uid, item_id: "item-chase", trigger: "webhook", started_at: iso(0, 6), finished_at: iso(0, 6), status: "success", result: { accounts_seen: 3, accounts_created: 0, accounts_updated: 3, transactions_added: 4, transactions_modified: 0, transactions_removed: 0, liabilities: false, realtime: false, warnings: [] }, error: null }];
 
+  // Health: 90 days of plausible WHOOP-style data, deterministic so the preview is stable.
+  const healthDays: Row[] = [];
+  const healthSleeps: Row[] = [];
+  const healthWorkouts: Row[] = [];
+  const sports = ["Running", "Weightlifting", "Cycling", "Walking", "HIIT"];
+  for (let i = 89; i >= 1; i--) {
+    const day = d(-i);
+    const w = Math.sin(i * 0.7) * 0.5 + Math.sin(i * 0.23) * 0.3 + ((i * 7919) % 13) / 26 - 0.25; // -1..1 noise
+    const sleepMin = Math.round(400 + w * 70);
+    const recovery = Math.max(8, Math.min(98, Math.round(62 + w * 28)));
+    const hrv = Math.round(78 + w * 18 + Math.sin(i * 0.05) * 6);
+    const rhr = Math.round(52 - w * 4);
+    const trained = (i * 31) % 7 < 4;
+    const strain = Math.round((trained ? 12 + ((i * 17) % 60) / 10 : 6 + ((i * 11) % 40) / 10) * 10) / 10;
+    healthDays.push({
+      id: `hd-${i}`, user_id: uid, day, recovery, strain, resting_hr: rhr, hrv_ms: hrv, spo2_pct: 96 + ((i * 3) % 3), skin_temp_c: 33 + ((i * 5) % 10) / 10, resp_rate: 14.5 + ((i * 7) % 15) / 10,
+      energy_kcal: Math.round(1900 + strain * 90), max_hr: trained ? 165 + ((i * 13) % 20) : 120 + ((i * 13) % 20), avg_hr: 68 + ((i * 3) % 10),
+      sleep_performance_pct: Math.max(45, Math.min(100, Math.round((sleepMin / 470) * 100))), sleep_total_min: sleepMin, in_bed_min: sleepMin + 35,
+      light_min: Math.round(sleepMin * 0.5), deep_min: Math.round(sleepMin * 0.22), rem_min: Math.round(sleepMin * 0.28), awake_min: 30 + ((i * 7) % 20),
+      sleep_efficiency_pct: 86 + ((i * 7) % 10), sleep_consistency_pct: 70 + ((i * 11) % 25), sleep_need_min: 470, sleep_debt_min: Math.max(0, 470 - sleepMin), source: "whoop", ...ts,
+    });
+    const onset = new Date(Date.parse(`${d(-i - 1)}T23:10:00-04:00`)).toISOString();
+    const wake = new Date(Date.parse(`${day}T06:${String(30 + ((i * 7) % 30)).padStart(2, "0")}:00-04:00`)).toISOString();
+    healthSleeps.push({ id: `hs-${i}`, user_id: uid, start_at: onset, end_at: wake, day, nap: false, performance_pct: 80 + ((i * 7) % 20), resp_rate: 14.5, asleep_min: sleepMin, in_bed_min: sleepMin + 35, light_min: Math.round(sleepMin * 0.5), deep_min: Math.round(sleepMin * 0.22), rem_min: Math.round(sleepMin * 0.28), awake_min: 30, efficiency_pct: 90, consistency_pct: 75, need_min: 470, debt_min: Math.max(0, 470 - sleepMin), source: "whoop", created_at: ts.created_at });
+    if (trained) {
+      const sport = sports[(i * 3) % sports.length];
+      const mins = 35 + ((i * 13) % 50);
+      const start = new Date(Date.parse(`${day}T07:05:00-04:00`)).toISOString();
+      const end = new Date(Date.parse(start) + mins * 60_000).toISOString();
+      healthWorkouts.push({ id: `hw-${i}`, user_id: uid, start_at: start, end_at: end, day, activity: sport, strain: Math.round((strain * 0.7) * 10) / 10, energy_kcal: Math.round(mins * 9), max_hr: 160 + ((i * 13) % 25), avg_hr: 128 + ((i * 7) % 25), zone1_pct: 10, zone2_pct: 25, zone3_pct: 35, zone4_pct: 22, zone5_pct: 8, distance_m: sport === "Running" ? mins * 160 : sport === "Cycling" ? mins * 400 : null, source: "whoop", created_at: ts.created_at });
+    }
+  }
+  const healthImports: Row[] = [{ id: "hi-1", user_id: uid, filename: "my_whoop_data_2026_10_28.zip", source: "whoop", days: 89, sleeps: 89, workouts: healthWorkouts.length, journal: 0, first_day: d(-89), last_day: d(-1), created_at: iso(-1, 8) }];
+
   return {
     profiles: [{ id: uid, display_name: "Caleb Frady", timezone: DEFAULT_TIMEZONE, week_starts_on: 1, reminder_days_before_due: 2, reminder_days_before_social: 2, reminder_days_before_event: 7, email_reminders_enabled: false, notifications_generated_at: iso(0, 6), ...ts }],
     work_areas: areas,
@@ -262,5 +296,10 @@ export function seedTables(): Record<string, Row[]> {
     plaid_items: plaidItems,
     plaid_item_secrets: [],
     plaid_sync_runs: plaidRuns,
+    health_days: healthDays,
+    health_sleeps: healthSleeps,
+    health_workouts: healthWorkouts,
+    health_journal: [],
+    health_imports: healthImports
   };
 }
