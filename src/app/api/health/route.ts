@@ -1,3 +1,4 @@
+import { isWhoopConfigured } from "@/lib/whoop/client";
 import { type NextRequest, NextResponse } from "next/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { isMondayConfigured } from "@/lib/monday/client";
@@ -33,5 +34,6 @@ export async function GET(request: NextRequest) {
     plaid_token_key: keySource(),
     lab_claude: isClaudeConfigured(),
     lab_image_provider: getImageProvider()?.name ?? null,
+    whoop_api: isWhoopConfigured(),
   });
 }

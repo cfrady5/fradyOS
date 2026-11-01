@@ -8,6 +8,7 @@ import { parseWhoopExport } from "@/lib/health/whoopImport";
 import { z } from "zod";
 import { sessionStats, type LiveSample } from "@/lib/ble/heartRate";
 import { isMissingTable } from "@/lib/data/health";
+import { runHealthIntelligence } from "@/lib/intel/pipeline";
 
 const MAX_FILES = 8;
 const MAX_TOTAL_BYTES = 30 * 1024 * 1024;
@@ -88,6 +89,7 @@ export async function importHealthExport(formData: FormData): Promise<ActionResu
       last_day: summary.lastDay,
     });
     if (error) return fail(error.message);
+    await runHealthIntelligence(supabase, ws.userId, { kind: "import", today: ws.today, timezone: ws.timezone }).catch(() => undefined);
     revalidate();
     return ok(summary);
   } catch (e) {

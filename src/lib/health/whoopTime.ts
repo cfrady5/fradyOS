@@ -26,3 +26,15 @@ export function localDay(local: string | undefined): string | null {
   const m = local?.trim().match(/^(\d{4}-\d{2}-\d{2})/);
   return m ? m[1] : null;
 }
+
+/**
+ * The wake day of a cycle: the local date twelve hours after the cycle began. A cycle starts at sleep
+ * onset in the evening, so this lands on the morning the recovery belongs to; a cycle starting after
+ * midnight stays on the same date. Every health row is keyed by this day.
+ */
+export function wakeDay(local: string | undefined): string | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2}))?/.exec((local ?? "").trim());
+  if (!m) return null;
+  const t = Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]), m[4] ? Number(m[4]) : 0, m[5] ? Number(m[5]) : 0) + 12 * 3_600_000;
+  return new Date(t).toISOString().slice(0, 10);
+}

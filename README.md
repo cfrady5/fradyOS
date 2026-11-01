@@ -126,6 +126,17 @@ All deadlines, planned dates and event dates are stored as Postgres `date` value
 screens, status-bar handling and app links for magic-link sign-in. Open them with `npm run cap:ios` or
 `npm run cap:android` on a Mac. Build and release steps are in [NATIVE.md](./NATIVE.md).
 
+## Health Intelligence
+
+An analytics and detection layer over the Health data: a unified daily model, personal baselines (rolling
+means, 90-day median, MAD, percentiles, slopes, EWMA), ten detection engines (cardiovascular, sleep, recovery
+and readiness, respiratory and oxygen, temperature, activity and training load, physiological load, long-term
+trends, anomaly detection, behaviour correlations), four FRADY scores with transparent factor breakdowns, a
+ranked insight feed and in-app notifications. Everything is a comparison with your own history and is worded
+as such, never as a diagnosis. Health tabs: Overview, Sleep, Heart, Breathing, Load, Trends, Events, Habits.
+Migration `0013_biometrics.sql`; optional WHOOP developer API connection (`WHOOP_CLIENT_ID`,
+`WHOOP_CLIENT_SECRET`); details and the Phase 1 audit in [docs/HEALTH_INTELLIGENCE.md](./docs/HEALTH_INTELLIGENCE.md).
+
 ## Health (WHOOP via NOOP)
 
 `/health` shows recovery, strain, HRV and sleep from a WHOOP strap. Data comes in through **Health → Data**: import the WHOOP data export zip (WHOOP app → More → App settings → Data export) or the CSV export from [NOOP](https://github.com/ryanbr/noop), the offline WHOOP companion app (Settings → Backup and restore → Export CSV; it writes the same layout). Days and sessions are upserted on their date and start time, so re-importing only adds what is new. Nothing in FRADY OS talks to WHOOP's cloud or to the strap. Today gets a "Body" block with the latest recovery, HRV, sleep and strain.

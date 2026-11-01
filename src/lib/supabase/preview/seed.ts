@@ -1,5 +1,8 @@
 /** Demo data for FRADYOS_PREVIEW mode. Dates are relative to today so every screen has content. */
 import { addDays, todayIn, DEFAULT_TIMEZONE, startOfMonth, addMonths } from "@/lib/dates";
+import { computeIntelligence } from "@/lib/intel/compute";
+import { METRIC_KEYS } from "@/lib/intel/types";
+import { shapeDay, shapeSleep, shapeWorkout } from "@/lib/data/health";
 
 export const PREVIEW_USER = { id: "00000000-0000-4000-8000-000000000001", email: "cjfrady5@gmail.com" };
 
@@ -270,6 +273,11 @@ export function seedTables(): Record<string, Row[]> {
     const hrs = samples.map((s) => s[1]);
     return { id: `hl-${i}`, user_id: uid, start_at: start, end_at: new Date(Date.parse(start) + 25 * 60_000).toISOString(), device_name: "WHOOP 4A0XXXXX", sample_count: samples.length, avg_hr: Math.round(hrs.reduce((a, b) => a + b, 0) / hrs.length), max_hr: Math.max(...hrs), min_hr: Math.min(...hrs), rmssd_ms: 38 + i * 6, samples, created_at: start };
   });
+  const healthBehaviors: Row[] = Array.from({ length: 40 }, (_, i) => {
+    const ago = 1 + i * 2;
+    const late = i % 3 === 0;
+    return { id: `hb-${i}`, user_id: uid, day: d(-ago), at: iso(-ago, late ? 16 : 8), kind: "caffeine", amount: late ? 180 : 120, unit: "mg", note: null, private: false, created_at: iso(-ago, 9) };
+  });
   const healthImports: Row[] = [{ id: "hi-1", user_id: uid, filename: "my_whoop_data_2026_10_28.zip", source: "whoop", days: 89, sleeps: 89, workouts: healthWorkouts.length, journal: 0, first_day: d(-89), last_day: d(-1), created_at: iso(-1, 8) }];
 
   return {
@@ -307,6 +315,41 @@ export function seedTables(): Record<string, Row[]> {
     health_workouts: healthWorkouts,
     health_journal: [],
     health_imports: healthImports,
-    health_live_sessions: healthLive
+    health_live_sessions: healthLive,
+    ...intelligenceTables(uid, today, healthDays, healthSleeps, healthWorkouts, healthBehaviors),
+    health_behaviors: healthBehaviors
+  };
+}
+
+
+/** Runs the pure intelligence layer over the seeded health rows so every biometric table has preview data. */
+function intelligenceTables(uid: string, today: string, days: Row[], sleeps: Row[], workouts: Row[], behaviors: Row[]): Record<string, Row[]> {
+  const r = computeIntelligence({
+    days: days.map((x) => shapeDay(x as Record<string, unknown>)),
+    sleeps: sleeps.map((x) => shapeSleep(x as Record<string, unknown>)),
+    workouts: workouts.map((x) => shapeWorkout(x as Record<string, unknown>)),
+    behaviors: behaviors.map((b) => ({ id: String(b.id), day: String(b.day), at: b.at ? String(b.at) : null, kind: b.kind as "caffeine", amount: b.amount as number, unit: b.unit as string, note: null })),
+    today,
+    timezone: DEFAULT_TIMEZONE,
+    scoreHistoryDays: 60,
+  });
+  const now = new Date().toISOString();
+  return {
+    biometric_daily_summaries: r.summaries.map((s, i) => {
+      const values: Record<string, number | null> = {};
+      for (const k of METRIC_KEYS) values[k] = s[k];
+      return { id: `bds-${i}`, user_id: uid, day: s.day, provider: s.provider, values, completeness: s.completeness, scored: s.scored, algorithm_version: r.version, computed_at: now };
+    }),
+    biometric_baselines: METRIC_KEYS.map((k) => ({ id: `bb-${k}`, user_id: uid, metric: k, as_of: today, version: 1, sample_n: r.baselines[k].n, ready: r.baselines[k].ready, stats: r.baselines[k], computed_at: now })),
+    biometric_detected_events: r.findings.map((f, i) => ({ id: `be-${i}`, user_id: uid, rule_key: f.rule, engine: f.engine, kind: f.kind, metric: f.metric, day: f.day, severity: f.severity, status: "open", title: f.title, value: f.value, baseline: f.baseline, delta: f.delta, delta_pct: f.deltaPct, method: f.method, completeness: f.completeness, explanation: f.explanation, next_step: f.nextStep, evidence: f.evidence ?? null, algorithm_version: r.version, detected_at: now, last_seen_at: now, resolved_at: null, dismissed_at: null })),
+    biometric_derived_metrics: r.derived.map((d, i) => ({ id: `bd-${i}`, user_id: uid, key: d.key, day: d.day, value: d.value, formula_version: d.version, factors: d.factors, completeness: d.completeness, note: d.note, computed_at: now })),
+    biometric_correlations: r.correlations.map((c, i) => ({ id: `bc-${i}`, user_id: uid, key: c.key, x_label: c.xLabel, y_label: c.yLabel, lag_days: c.lagDays, method: c.method, sample_n: c.n, r: c.r, ci_low: c.ciLow, ci_high: c.ciHigh, diff: c.diff, diff_ci_low: c.diffCiLow, diff_ci_high: c.diffCiHigh, period_start: c.periodStart, period_end: c.periodEnd, detail: c.detail, computed_at: now })),
+    biometric_insights: r.insights.map((x, i) => ({ id: `bi-${i}`, user_id: uid, key: x.key, day: today, rank: x.rank, category: x.category, severity: x.severity, title: x.title, body: x.body, recommendation: x.recommendation, href: x.href, confidence: x.confidence, evidence: x.evidence, generated_at: now })),
+    biometric_detection_rules: [],
+    biometric_notification_preferences: [],
+    biometric_processing_jobs: [{ id: "bj-1", user_id: uid, kind: "recompute", status: "succeeded", window_start: r.calendar[0]?.day ?? null, window_end: today, attempts: 1, stats: { findings: r.findings.length, days: r.summaries.length }, error: null, started_at: now, finished_at: now }],
+    biometric_source_capabilities: [],
+    whoop_connections: [],
+    whoop_records: [],
   };
 }

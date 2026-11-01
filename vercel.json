@@ -11,6 +11,14 @@
     {
       "path": "/api/cron/plaid-sync",
       "schedule": "15 11 * * *"
+    },
+    {
+      "path": "/api/cron/whoop-sync",
+      "schedule": "45 10 * * *"
+    },
+    {
+      "path": "/api/cron/health-intelligence",
+      "schedule": "5 12 * * *"
     }
   ]
 }

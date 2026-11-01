@@ -1,5 +1,5 @@
 import { bool, num, parseCsv } from "./csv";
-import { localDay, toInstant } from "./whoopTime";
+import { localDay, toInstant, wakeDay } from "./whoopTime";
 import { readZip } from "./zip";
 
 /**
@@ -130,7 +130,7 @@ export function parseWhoopExport(files: { name: string; data: Buffer }[]): Whoop
     for (const r of table.rows) {
       const src = r.source || (result.source === "noop" ? "noop" : "whoop");
       if (kind === "cycles") {
-        const day = localDay(r.cycle_start_time);
+        const day = wakeDay(r.cycle_start_time);
         if (!day || seenDays.has(day)) continue;
         seenDays.add(day);
         result.days.push({
@@ -161,7 +161,7 @@ export function parseWhoopExport(files: { name: string; data: Buffer }[]): Whoop
       } else if (kind === "sleeps") {
         const start = toInstant(r.sleep_onset, r.cycle_timezone);
         const end = toInstant(r.wake_onset, r.cycle_timezone);
-        const day = localDay(r.cycle_start_time) ?? localDay(r.wake_onset);
+        const day = localDay(r.wake_onset) ?? wakeDay(r.cycle_start_time);
         if (!start || !end || !day || seenSleeps.has(start)) continue;
         seenSleeps.add(start);
         result.sleeps.push({
@@ -186,7 +186,7 @@ export function parseWhoopExport(files: { name: string; data: Buffer }[]): Whoop
       } else if (kind === "workouts") {
         const start = toInstant(r.workout_start_time, r.cycle_timezone);
         const end = toInstant(r.workout_end_time, r.cycle_timezone);
-        const day = localDay(r.workout_start_time) ?? localDay(r.cycle_start_time);
+        const day = localDay(r.workout_start_time) ?? wakeDay(r.cycle_start_time);
         const activity = (r.activity_name || "Activity").trim();
         const key = `${start}|${activity}`;
         if (!start || !end || !day || seenWorkouts.has(key)) continue;
@@ -209,7 +209,7 @@ export function parseWhoopExport(files: { name: string; data: Buffer }[]): Whoop
           source: src,
         });
       } else if (kind === "journal") {
-        const day = localDay(r.cycle_start_time);
+        const day = wakeDay(r.cycle_start_time);
         const question = (r.question_text ?? "").trim();
         if (!day || !question) continue;
         result.journal.push({ day, question, answered_yes: bool(r.answered_yes_no) ?? false, notes: r.notes?.trim() || null });
