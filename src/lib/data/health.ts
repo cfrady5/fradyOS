@@ -2,6 +2,7 @@ import "server-only";
 import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { summarize, type DayStat, type HealthSummary } from "@/lib/health/stats";
+import type { LiveSample } from "@/lib/ble/heartRate";
 
 /** Rows as the health screens use them. PostgREST returns numeric columns as strings, so everything is coerced here. */
 export interface HealthDayRow extends DayStat {
@@ -216,4 +217,61 @@ export async function getHealthSummary(userId: string, today: string): Promise<H
   const rows = ((data ?? []) as Record<string, unknown>[]).map(shapeDay);
   if (!rows.length) return null;
   return summarize(rows, today);
+}
+
+export interface HealthLiveSessionRow {
+  id: string;
+  start_at: string;
+  end_at: string;
+  device_name: string | null;
+  sample_count: number;
+  avg_hr: number | null;
+  max_hr: number | null;
+  min_hr: number | null;
+  rmssd_ms: number | null;
+  created_at: string;
+}
+
+export function shapeLiveSession(r: Record<string, unknown>): HealthLiveSessionRow {
+  return {
+    id: String(r.id),
+    start_at: String(r.start_at),
+    end_at: String(r.end_at),
+    device_name: r.device_name ? String(r.device_name) : null,
+    sample_count: int(r.sample_count) ?? 0,
+    avg_hr: int(r.avg_hr),
+    max_hr: int(r.max_hr),
+    min_hr: int(r.min_hr),
+    rmssd_ms: num(r.rmssd_ms),
+    created_at: String(r.created_at),
+  };
+}
+
+/** Recent live Bluetooth sessions, newest first, without their sample arrays. */
+export const getLiveSessions = cache(async (userId: string, limit = 30): Promise<{ sessions: HealthLiveSessionRow[]; notReady: boolean }> => {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("health_live_sessions")
+    .select("id,start_at,end_at,device_name,sample_count,avg_hr,max_hr,min_hr,rmssd_ms,created_at")
+    .eq("user_id", userId)
+    .order("start_at", { ascending: false })
+    .limit(limit);
+  if (error) {
+    if (isMissingTable(error)) return { sessions: [], notReady: true };
+    throw new Error(error.message);
+  }
+  return { sessions: ((data ?? []) as Record<string, unknown>[]).map(shapeLiveSession), notReady: false };
+});
+
+/** One session with its samples, for the detail view. */
+export async function getLiveSession(userId: string, id: string): Promise<(HealthLiveSessionRow & { samples: LiveSample[] }) | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("health_live_sessions").select("*").eq("user_id", userId).eq("id", id).maybeSingle();
+  if (error) {
+    if (isMissingTable(error)) return null;
+    throw new Error(error.message);
+  }
+  if (!data) return null;
+  const row = data as Record<string, unknown>;
+  return { ...shapeLiveSession(row), samples: Array.isArray(row.samples) ? (row.samples as LiveSample[]) : [] };
 }

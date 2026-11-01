@@ -264,6 +264,12 @@ export function seedTables(): Record<string, Row[]> {
       healthWorkouts.push({ id: `hw-${i}`, user_id: uid, start_at: start, end_at: end, day, activity: sport, strain: Math.round((strain * 0.7) * 10) / 10, energy_kcal: Math.round(mins * 9), max_hr: 160 + ((i * 13) % 25), avg_hr: 128 + ((i * 7) % 25), zone1_pct: 10, zone2_pct: 25, zone3_pct: 35, zone4_pct: 22, zone5_pct: 8, distance_m: sport === "Running" ? mins * 160 : sport === "Cycling" ? mins * 400 : null, source: "whoop", created_at: ts.created_at });
     }
   }
+  const healthLive: Row[] = [1, 3].map((ago, i) => {
+    const start = iso(-ago, 7);
+    const samples = Array.from({ length: 25 * 60 }, (_, t) => [t, Math.round(95 + 40 * Math.sin(t / 240) + ((t * 7919) % 11) - 5)]);
+    const hrs = samples.map((s) => s[1]);
+    return { id: `hl-${i}`, user_id: uid, start_at: start, end_at: new Date(Date.parse(start) + 25 * 60_000).toISOString(), device_name: "WHOOP 4A0XXXXX", sample_count: samples.length, avg_hr: Math.round(hrs.reduce((a, b) => a + b, 0) / hrs.length), max_hr: Math.max(...hrs), min_hr: Math.min(...hrs), rmssd_ms: 38 + i * 6, samples, created_at: start };
+  });
   const healthImports: Row[] = [{ id: "hi-1", user_id: uid, filename: "my_whoop_data_2026_10_28.zip", source: "whoop", days: 89, sleeps: 89, workouts: healthWorkouts.length, journal: 0, first_day: d(-89), last_day: d(-1), created_at: iso(-1, 8) }];
 
   return {
@@ -300,6 +306,7 @@ export function seedTables(): Record<string, Row[]> {
     health_sleeps: healthSleeps,
     health_workouts: healthWorkouts,
     health_journal: [],
-    health_imports: healthImports
+    health_imports: healthImports,
+    health_live_sessions: healthLive
   };
 }

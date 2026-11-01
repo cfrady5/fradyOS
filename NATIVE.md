@@ -83,7 +83,14 @@ Because the UI is served from Vercel, a store release is only needed when the na
 - Links to other sites open in the system browser; links within the deployment stay in the WebView.
 - If the site is unreachable the shell shows `native/www/offline.html` with a retry button.
 
+## Bluetooth
+
+Health, Live connects to the strap through `@capacitor-community/bluetooth-le` inside the app (Web Bluetooth
+on the plain web). `Info.plist` carries `NSBluetoothAlwaysUsageDescription` and the Android manifest the
+`BLUETOOTH_SCAN` / `BLUETOOTH_CONNECT` permissions with the never-for-location flag. The iOS simulator has no
+Bluetooth, so test on a real phone. Streaming stops when the app goes to the background; add the
+`bluetooth-central` background mode in Xcode if you want sessions to continue with the screen off.
+
 ## Not yet in the shell
 
-- Bluetooth pairing for the WHOOP strap (NOOP phase 2) will need a native Bluetooth plugin; the shell makes that possible on iPhone later.
 - Push notifications. The web notifications centre still works inside the app.

@@ -5,6 +5,9 @@ import { createClient } from "@/lib/supabase/server";
 import { requireWorkspace } from "@/lib/data/workspace";
 import { fail, ok, errorMessage, type ActionResult } from "@/lib/action-result";
 import { parseWhoopExport } from "@/lib/health/whoopImport";
+import { z } from "zod";
+import { sessionStats, type LiveSample } from "@/lib/ble/heartRate";
+import { isMissingTable } from "@/lib/data/health";
 
 const MAX_FILES = 8;
 const MAX_TOTAL_BYTES = 30 * 1024 * 1024;
@@ -101,6 +104,79 @@ export async function clearHealthData(): Promise<ActionResult<undefined>> {
       const { error } = await supabase.from(table).delete().eq("user_id", ws.userId);
       if (error) return fail(`${table}: ${error.message}`);
     }
+    revalidate();
+    return ok(undefined);
+  } catch (e) {
+    return fail(errorMessage(e));
+  }
+}
+
+const MAX_LIVE_SAMPLES = 12 * 60 * 60; // twelve hours at one reading per second
+const MAX_RR_PER_SAMPLE = 32;
+
+const liveSessionSchema = z.object({
+  startAt: z.iso.datetime(),
+  endAt: z.iso.datetime(),
+  deviceName: z.string().trim().max(80).nullable(),
+  samples: z
+    .array(z.tuple([z.number().int().min(0).max(MAX_LIVE_SAMPLES * 2), z.number().int().min(0).max(300)], z.array(z.number().int().min(0).max(5000)).max(MAX_RR_PER_SAMPLE)))
+    .min(1)
+    .max(MAX_LIVE_SAMPLES),
+});
+
+export interface LiveSessionInput {
+  startAt: string;
+  endAt: string;
+  deviceName: string | null;
+  samples: LiveSample[];
+}
+
+/** Store a live Bluetooth session. Stats are recomputed here so the row never trusts client maths. */
+export async function saveLiveSession(input: LiveSessionInput): Promise<ActionResult<{ id: string }>> {
+  const parsed = liveSessionSchema.safeParse(input);
+  if (!parsed.success) return fail(parsed.error.issues[0]?.message ?? "Invalid session.");
+  const { startAt, endAt, deviceName } = parsed.data;
+  if (Date.parse(endAt) < Date.parse(startAt)) return fail("The session ends before it starts.");
+  const samples: LiveSample[] = parsed.data.samples.map(([t, bpm, ...rest]) => (rest[0]?.length ? [t, bpm, rest[0]] : [t, bpm]));
+  const stats = sessionStats(samples);
+  try {
+    const ws = await requireWorkspace();
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from("health_live_sessions")
+      .insert({
+        user_id: ws.userId,
+        start_at: startAt,
+        end_at: endAt,
+        device_name: deviceName || null,
+        sample_count: stats.sampleCount,
+        avg_hr: stats.avgHr,
+        max_hr: stats.maxHr,
+        min_hr: stats.minHr,
+        rmssd_ms: stats.rmssdMs,
+        samples,
+      })
+      .select("id")
+      .single();
+    if (error) {
+      if (isMissingTable(error)) return fail("Live sessions are not set up yet. Run supabase/migrations/0012_health_live.sql, then save again.");
+      return fail(error.message);
+    }
+    revalidate();
+    return ok({ id: String((data as { id: string }).id) });
+  } catch (e) {
+    return fail(errorMessage(e));
+  }
+}
+
+export async function deleteLiveSession(id: string): Promise<ActionResult<undefined>> {
+  const parsed = z.string().uuid().safeParse(id);
+  if (!parsed.success) return fail("Invalid session.");
+  try {
+    const ws = await requireWorkspace();
+    const supabase = await createClient();
+    const { error } = await supabase.from("health_live_sessions").delete().eq("user_id", ws.userId).eq("id", parsed.data);
+    if (error) return fail(error.message);
     revalidate();
     return ok(undefined);
   } catch (e) {

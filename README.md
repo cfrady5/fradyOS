@@ -132,6 +132,13 @@ screens, status-bar handling and app links for magic-link sign-in. Open them wit
 
 Tables: `health_days`, `health_sleeps`, `health_workouts`, `health_journal`, `health_imports` (migration `0011_health.sql`). Parser and stats live in `src/lib/health/` with tests; the import runs through a server action with a 32 MB body limit.
 
+**Live over Bluetooth.** The Live tab reads heart rate and R-R intervals straight from the strap through the
+standard Bluetooth heart-rate profile, which needs no bond, so the strap stays paired to the WHOOP app. It works
+in Chrome on Android and desktop (Web Bluetooth) and inside the iOS / Android app (Capacitor Bluetooth plugin).
+Ended sessions can be saved to `health_live_sessions` (migration `0012_health_live.sql`) with average, max and
+RMSSD computed on the server. The deeper WHOOP protocol (history offload, recovery, strain) is proprietary and
+needs an exclusive encrypted bond that would unpair the strap from the WHOOP app, so it is not part of FRADY.
+
 ## Public homepage
 
 `/` is Caleb Frady's public homepage (hand-written Canvas 2D pixel effects, no WebGL or animation libraries). `/lab` is the particle lab, a GPU particle engine built on three.js and React Three Fiber that forms visitor prompts out of particles; see the "Particle lab" section of `SITE.md` for its optional `ANTHROPIC_API_KEY` and `OPENAI_API_KEY` integrations and limits. The OS itself lives at `/today` and the other authenticated routes; the "Portal" link in the homepage footer leads there. See `SITE.md` for the site tokens, components and effect tuning.
