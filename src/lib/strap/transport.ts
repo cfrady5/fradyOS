@@ -1,5 +1,5 @@
 import { Capacitor } from "@capacitor/core";
-import { BATTERY_SERVICE, FAMILY_GATT, HEART_RATE_SERVICE, WHOOP4_SERVICE, WHOOP5_SERVICE, StrapSession, type Effect, type StrapFamily, type StrapModel } from "./protocol";
+import { BATTERY_SERVICE, DEVICE_INFORMATION_SERVICE, DIS_SERIAL_NUMBER, FAMILY_GATT, HEART_RATE_SERVICE, WHOOP4_SERVICE, WHOOP5_SERVICE, StrapSession, type Effect, type StrapFamily, type StrapModel } from "./protocol";
 import { aggregateMinutes, type StrapMinute, type StrapRecord } from "./derive";
 
 /**
@@ -43,6 +43,8 @@ interface Link {
   name: string | null;
   subscribe(characteristic: string, onValue: (bytes: Uint8Array) => void): Promise<void>;
   write(characteristic: string, bytes: Uint8Array, withResponse: boolean): Promise<void>;
+  /** Device Information serial (2A25), which a WHOOP 5.0 exposes; null when absent. */
+  readSerial(): Promise<string | null>;
   onDisconnect(cb: () => void): void;
   disconnect(): Promise<void>;
 }
@@ -52,7 +54,7 @@ const toBytes = (view: DataView) => new Uint8Array(view.buffer.slice(view.byteOf
 async function connectWeb(log: OffloadCallbacks["onLog"]): Promise<Link> {
   const device = await navigator.bluetooth.requestDevice({
     filters: [{ services: [WHOOP4_SERVICE] }, { services: [WHOOP5_SERVICE] }, { namePrefix: "WHOOP" }],
-    optionalServices: [WHOOP4_SERVICE, WHOOP5_SERVICE, BATTERY_SERVICE, HEART_RATE_SERVICE],
+    optionalServices: [WHOOP4_SERVICE, WHOOP5_SERVICE, BATTERY_SERVICE, HEART_RATE_SERVICE, DEVICE_INFORMATION_SERVICE],
   });
   if (!device.gatt) throw new Error("This device does not expose a GATT server.");
   const server = await device.gatt.connect();
@@ -100,6 +102,15 @@ async function connectWeb(log: OffloadCallbacks["onLog"]): Promise<Link> {
       else if (!withResponse && withoutResp) await withoutResp.call(c, buf);
       else await c.writeValue(buf);
     },
+    async readSerial() {
+      try {
+        const dis = await server.getPrimaryService(DEVICE_INFORMATION_SERVICE);
+        const v = await (await dis.getCharacteristic(DIS_SERIAL_NUMBER)).readValue();
+        return new TextDecoder().decode(toBytes(v)).replace(/\0+$/, "").trim() || null;
+      } catch {
+        return null;
+      }
+    },
     onDisconnect(cb) {
       disconnectCb = cb;
     },
@@ -112,7 +123,7 @@ async function connectWeb(log: OffloadCallbacks["onLog"]): Promise<Link> {
 async function connectNative(log: OffloadCallbacks["onLog"]): Promise<Link> {
   const { BleClient } = await import("@capacitor-community/bluetooth-le");
   await BleClient.initialize({ androidNeverForLocation: true });
-  const device = await BleClient.requestDevice({ services: [WHOOP4_SERVICE, WHOOP5_SERVICE], optionalServices: [BATTERY_SERVICE, HEART_RATE_SERVICE], namePrefix: "WHOOP" });
+  const device = await BleClient.requestDevice({ services: [WHOOP4_SERVICE, WHOOP5_SERVICE], optionalServices: [BATTERY_SERVICE, HEART_RATE_SERVICE, DEVICE_INFORMATION_SERVICE], namePrefix: "WHOOP" });
   let disconnectCb: (() => void) | null = null;
   await BleClient.connect(device.deviceId, () => disconnectCb?.());
   const services = await BleClient.getServices(device.deviceId);
@@ -131,6 +142,14 @@ async function connectNative(log: OffloadCallbacks["onLog"]): Promise<Link> {
       const view = new DataView(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength));
       if (withResponse) await BleClient.write(device.deviceId, service, uuid, view);
       else await BleClient.writeWithoutResponse(device.deviceId, service, uuid, view);
+    },
+    async readSerial() {
+      try {
+        const v = await BleClient.read(device.deviceId, DEVICE_INFORMATION_SERVICE, DIS_SERIAL_NUMBER);
+        return new TextDecoder().decode(toBytes(v)).replace(/\0+$/, "").trim() || null;
+      } catch {
+        return null;
+      }
     },
     onDisconnect(cb) {
       disconnectCb = cb;
@@ -169,7 +188,7 @@ export async function runOffload({ model, signal, callbacks }: RunOffloadOptions
   if (support === "none") throw new Error("Bluetooth is not available in this browser.");
   if (signal.aborted) throw new Error("Cancelled before start.");
   const link = support === "native" ? await connectNative(callbacks.onLog) : await connectWeb(callbacks.onLog);
-  callbacks.onDevice({ name: link.name });
+  callbacks.onDevice({ name: link.name, serial: link.family === "whoop5" ? await link.readSerial() : null });
 
   const gatt = FAMILY_GATT[link.family];
   const batcher = new MinuteBatcher();

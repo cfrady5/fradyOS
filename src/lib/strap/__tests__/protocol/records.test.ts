@@ -56,12 +56,16 @@ function frame5(type: number, seq: number, inner: Uint8Array) {
   return parseFrame5(buildFrame5({ type, seq, cmd: inner[0], payload: inner.subarray(1) }, [1, 0]));
 }
 
-/** A WHOOP 4 frame body laid out by absolute frame offset: `abs(o)` maps to the inner buffer. */
-function body4(length: number) {
-  return { b: new Buf(length - 6), abs: (o: number) => o - 6 };
+/**
+ * A frame body laid out by absolute frame offset: `abs(o)` maps to the inner buffer that
+ * starts at the cmd slot (frame[6] on 4.0, frame[10] on 5.0). `innerEnd` is where the CRC32
+ * trailer starts, so the complete frame is `innerEnd + 4` bytes.
+ */
+function body4(innerEnd: number) {
+  return { b: new Buf(innerEnd - 6), abs: (o: number) => o - 6 };
 }
-function body5(length: number) {
-  return { b: new Buf(length - 10), abs: (o: number) => o - 10 };
+function body5(innerEnd: number) {
+  return { b: new Buf(innerEnd - 10), abs: (o: number) => o - 10 };
 }
 
 describe("decodeCommandResponse", () => {
@@ -211,7 +215,7 @@ describe("decodeHistorical", () => {
     expect(r.rr).toEqual([900, 910, 920, 930]); // five words read (900,0,910,920,930), zero omitted
   });
   it("decodes the 84-byte v25 record: unix at 11, i16 gravity / 16384 at 73/75/77, no HR", () => {
-    const { b, abs } = body4(84);
+    const { b, abs } = body4(80); // complete frame = 84 bytes
     b.u32(abs(11), 1_690_000_000).i16(abs(73), 16384).i16(abs(75), -8192).i16(abs(77), 0);
     const r = decodeHistorical(frame4(PacketType.HISTORICAL_DATA, 25, b.bytes))!;
     expect(r.version).toBe(25);
@@ -219,7 +223,7 @@ describe("decodeHistorical", () => {
     expect(r.rr).toEqual([]);
     expect(r.gravity).toEqual([1, -0.5, 0]);
     // A v25 byte that is not 84 bytes long is not the documented layout.
-    const { b: short, abs: a2 } = body4(80);
+    const { b: short, abs: a2 } = body4(76);
     short.u32(a2(11), 1_690_000_000);
     expect(decodeHistorical(frame4(PacketType.HISTORICAL_DATA, 25, short.bytes))).toBeNull();
   });
@@ -238,7 +242,7 @@ describe("decodeHistorical", () => {
     expect(decodeHistorical(frame4(PacketType.HISTORICAL_DATA, 18, new Uint8Array(110)))).toBeNull();
   });
   it("decodes the WHOOP 5 v18 (R18) 124-byte record at its absolute offsets", () => {
-    const { b, abs } = body5(124);
+    const { b, abs } = body5(120); // complete frame = 124 bytes, CRC at 120
     b.u32(abs(11), 4242).u32(abs(15), 1_710_000_000).u8(abs(22), 62).u8(abs(23), 2).u16(abs(24), 1024).u16(abs(26), 1000);
     b.u8(abs(36), 0x30).f32(abs(45), 0.0).f32(abs(49), 0.6).f32(abs(53), 0.8);
     b.u16(abs(57), 1234).u8(abs(63), 1).u16(abs(73), 3312).u8(abs(81), 0x20);

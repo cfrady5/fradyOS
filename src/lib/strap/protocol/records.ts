@@ -497,11 +497,24 @@ export interface DataRangeInfo {
  */
 export function decodeDataRange(body: Uint8Array, family: StrapFamily): DataRangeInfo {
   const view = new DataView(body.buffer, body.byteOffset, body.byteLength);
-  const candidates: number[] = [];
-  for (const start of [0, 1, 2, 3]) {
-    for (let o = start; o + 4 <= body.length; o += 4) {
+  const structured = family === "whoop5" && body.length >= 65 && body[0] === 1;
+  let candidates: number[] = [];
+  if (structured) {
+    // Documented clock pairs: the first word of each pair at 33, 41, 49, 57 is seconds-like.
+    for (const o of [33, 41, 49, 57]) {
       const v = view.getUint32(o, true);
       if (isPlausibleUnix(v) && !candidates.includes(v)) candidates.push(v);
+    }
+  } else {
+    // Undocumented body: take the 4-byte alignment that yields the most plausible words,
+    // so overlapping byte runs at other alignments cannot masquerade as timestamps.
+    for (const start of [0, 1, 2, 3]) {
+      const found: number[] = [];
+      for (let o = start; o + 4 <= body.length; o += 4) {
+        const v = view.getUint32(o, true);
+        if (isPlausibleUnix(v) && !found.includes(v)) found.push(v);
+      }
+      if (found.length > candidates.length) candidates = found;
     }
   }
   const info: DataRangeInfo = {
@@ -509,7 +522,7 @@ export function decodeDataRange(body: Uint8Array, family: StrapFamily): DataRang
     newestUnix: candidates.length ? Math.max(...candidates) : null,
     candidates,
   };
-  if (family === "whoop5" && body.length >= 65 && body[0] === 1) {
+  if (structured) {
     const w = (o: number) => view.getUint32(o, true);
     info.ring = {
       boundaryA: w(1),

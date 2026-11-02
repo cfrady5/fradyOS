@@ -338,6 +338,7 @@ export class StrapSession {
       }
       this.route(frame);
     }
+    this.dispatch();
   }
 
   /** The transport must report every write effect, with response or not, exactly once. */
