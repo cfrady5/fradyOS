@@ -31,7 +31,7 @@ const KINDS: { kind: BehaviorKind; label: string; unit?: string; amount?: string
   { kind: "medication", label: "Medication (private)" },
 ];
 
-export function HabitsView({ behaviors, insights, events, today }: { behaviors: BehaviorEntry[]; insights: Insight[]; events: IntelEvent[]; today: string; timezone: string }) {
+export function HabitsView({ behaviors, insights, events, today }: { behaviors: BehaviorEntry[]; insights: Insight[]; events: IntelEvent[]; today: string }) {
   const router = useRouter();
   const [pending, startTransition] = React.useTransition();
   const [kind, setKind] = React.useState<BehaviorKind>("caffeine");

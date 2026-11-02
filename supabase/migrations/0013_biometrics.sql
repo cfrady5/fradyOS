@@ -1,6 +1,5 @@
 -- Health Intelligence: the unified biometric model, baselines, detections, derived scores,
--- correlations, insights, rules, preferences, processing jobs, source capabilities, behaviour logs
--- and the WHOOP developer-API connection. Every user-scoped table is owner-only under RLS.
+-- correlations, insights, rules, preferences, processing jobs, source capabilities and behaviour logs. Every user-scoped table is owner-only under RLS.
 -- Safe to re-run: every statement skips or replaces what already exists.
 
 create table if not exists public.biometric_measurements (
@@ -12,7 +11,7 @@ create table if not exists public.biometric_measurements (
   unit text not null default '' check (length(unit) <= 16),
   period_start timestamptz,
   period_end timestamptz,
-  provider text not null check (provider in ('whoop_api', 'whoop_export', 'noop_export', 'ble', 'manual')),
+  provider text not null check (provider in ('ble', 'noop_export', 'whoop_export', 'manual')),
   source_field text check (source_field is null or length(source_field) <= 80),
   source_record_id text check (source_record_id is null or length(source_record_id) <= 120),
   measurement_type text not null default 'daily' check (measurement_type in ('daily', 'sleep', 'workout', 'session', 'body')),
@@ -33,7 +32,7 @@ create table if not exists public.biometric_daily_summaries (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
   day date not null,
-  provider text check (provider is null or provider in ('whoop_api', 'whoop_export', 'noop_export', 'ble', 'manual')),
+  provider text check (provider is null or provider in ('ble', 'noop_export', 'whoop_export', 'manual')),
   values jsonb not null default '{}'::jsonb,          -- { metric: number | null }
   completeness numeric(4,3) not null default 0,
   scored boolean not null default true,
@@ -199,7 +198,7 @@ create policy "biometric_notification_preferences: owner all" on public.biometri
 create table if not exists public.biometric_processing_jobs (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
-  kind text not null check (kind in ('recompute', 'import', 'whoop_sync', 'whoop_webhook', 'scheduled')),
+  kind text not null check (kind in ('recompute', 'import', 'strap', 'scheduled')),
   status text not null default 'running' check (status in ('running', 'succeeded', 'failed')),
   window_start date,
   window_end date,
@@ -239,24 +238,16 @@ insert into public.biometric_source_capabilities (provider, metric, available, n
   ('whoop_export', 'wake_min', true, null), ('whoop_export', 'nap_min', true, null), ('whoop_export', 'nap_count', true, null),
   ('whoop_export', 'workout_count', true, null), ('whoop_export', 'workout_min', true, null), ('whoop_export', 'workout_strain', true, null),
   ('whoop_export', 'workout_avg_hr', true, null), ('whoop_export', 'workout_max_hr', true, null), ('whoop_export', 'workout_kcal', true, null),
-  ('whoop_api', 'recovery_score', true, 'recovery.score.recovery_score'), ('whoop_api', 'resting_hr', true, 'recovery.score.resting_heart_rate'),
-  ('whoop_api', 'hrv_rmssd', true, 'recovery.score.hrv_rmssd_milli'), ('whoop_api', 'spo2', true, 'recovery.score.spo2_percentage'),
-  ('whoop_api', 'skin_temp', true, 'recovery.score.skin_temp_celsius'), ('whoop_api', 'resp_rate', true, 'sleep.score.respiratory_rate'),
-  ('whoop_api', 'day_strain', true, 'cycle.score.strain'), ('whoop_api', 'avg_hr', true, 'cycle.score.average_heart_rate'),
-  ('whoop_api', 'max_hr', true, 'cycle.score.max_heart_rate'), ('whoop_api', 'energy_kcal', true, 'cycle.score.kilojoule / 4.184'),
-  ('whoop_api', 'steps', false, 'Not exposed by the WHOOP developer API'),
-  ('whoop_api', 'sleep_total_min', true, 'sleep.score.stage_summary'), ('whoop_api', 'in_bed_min', true, 'sleep.score.stage_summary.total_in_bed_time_milli'),
-  ('whoop_api', 'awake_min', true, 'sleep.score.stage_summary.total_awake_time_milli'), ('whoop_api', 'light_min', true, 'sleep.score.stage_summary.total_light_sleep_time_milli'),
-  ('whoop_api', 'deep_min', true, 'sleep.score.stage_summary.total_slow_wave_sleep_time_milli'), ('whoop_api', 'rem_min', true, 'sleep.score.stage_summary.total_rem_sleep_time_milli'),
-  ('whoop_api', 'sleep_cycles', true, 'sleep.score.stage_summary.sleep_cycle_count'), ('whoop_api', 'disturbances', true, 'sleep.score.stage_summary.disturbance_count'),
-  ('whoop_api', 'sleep_efficiency', true, 'sleep.score.sleep_efficiency_percentage'), ('whoop_api', 'sleep_performance', true, 'sleep.score.sleep_performance_percentage'),
-  ('whoop_api', 'sleep_consistency', true, 'sleep.score.sleep_consistency_percentage'), ('whoop_api', 'sleep_need_min', true, 'sleep.score.sleep_needed'),
-  ('whoop_api', 'sleep_debt_min', true, 'sleep.score.sleep_needed.need_from_sleep_debt_milli'), ('whoop_api', 'sleep_onset_min', true, 'sleep.start'),
-  ('whoop_api', 'wake_min', true, 'sleep.end'), ('whoop_api', 'nap_min', true, 'sleep.nap'), ('whoop_api', 'nap_count', true, 'sleep.nap'),
-  ('whoop_api', 'workout_count', true, 'workout'), ('whoop_api', 'workout_min', true, 'workout.start/end'), ('whoop_api', 'workout_strain', true, 'workout.score.strain'),
-  ('whoop_api', 'workout_avg_hr', true, 'workout.score.average_heart_rate'), ('whoop_api', 'workout_max_hr', true, 'workout.score.max_heart_rate'),
-  ('whoop_api', 'workout_kcal', true, 'workout.score.kilojoule / 4.184'),
-  ('ble', 'avg_hr', true, 'Live sessions only; not a daily measure'), ('ble', 'hrv_rmssd', true, 'Spot RMSSD during a live session; not the overnight value')
+  ('ble', 'resting_hr', true, 'Lowest 5-minute mean during the main sleep, from strap samples'), ('ble', 'hrv_rmssd', true, 'Median 5-minute RMSSD over the last three hours of sleep'),
+  ('ble', 'resp_rate', true, 'Estimated from respiratory sinus arrhythmia in the R-R series'), ('ble', 'spo2', false, 'Raw red/IR channel is uncalibrated'),
+  ('ble', 'skin_temp', false, 'Raw ADC channel is uncalibrated'), ('ble', 'recovery_score', false, 'No strap-side score; FRADY Readiness is the equivalent'),
+  ('ble', 'day_strain', true, 'FRADY strain: Banister TRIMP mapped to 0..21'), ('ble', 'avg_hr', true, null), ('ble', 'max_hr', true, null), ('ble', 'energy_kcal', false, 'Not estimated'),
+  ('ble', 'steps', false, 'Not derived from the strap accelerometer'), ('ble', 'sleep_total_min', true, 'Actigraphy plus heart-rate sleep detection'), ('ble', 'in_bed_min', true, null), ('ble', 'awake_min', true, null),
+  ('ble', 'light_min', true, 'Heuristic stage estimate, not EEG'), ('ble', 'deep_min', true, 'Heuristic stage estimate, not EEG'), ('ble', 'rem_min', true, 'Heuristic stage estimate, not EEG'),
+  ('ble', 'sleep_cycles', false, null), ('ble', 'disturbances', true, 'Awake bouts of two minutes or more'), ('ble', 'sleep_efficiency', true, null), ('ble', 'sleep_performance', false, null),
+  ('ble', 'sleep_consistency', true, 'From bedtime deviation against the 7-day median'), ('ble', 'sleep_need_min', false, null), ('ble', 'sleep_debt_min', false, null), ('ble', 'sleep_onset_min', true, null), ('ble', 'wake_min', true, null),
+  ('ble', 'nap_min', true, null), ('ble', 'nap_count', true, null), ('ble', 'workout_count', true, 'Runs of ten minutes or more above 60% heart-rate reserve'), ('ble', 'workout_min', true, null), ('ble', 'workout_strain', true, null),
+  ('ble', 'workout_avg_hr', true, null), ('ble', 'workout_max_hr', true, null), ('ble', 'workout_kcal', false, null)
 on conflict (provider, metric) do update set available = excluded.available, notes = excluded.notes;
 
 -- Manually logged behaviours (not sensor data). Medication rows are private: never surfaced in insight text.
@@ -277,55 +268,3 @@ alter table public.health_behaviors enable row level security;
 drop policy if exists "health_behaviors: owner all" on public.health_behaviors;
 create policy "health_behaviors: owner all" on public.health_behaviors for all to authenticated
   using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
-
--- WHOOP developer API connection: tokens encrypted at rest; only the status is readable from the browser.
-create table if not exists public.whoop_connections (
-  user_id uuid primary key references auth.users(id) on delete cascade,
-  whoop_user_id text,
-  access_token_enc text not null,
-  refresh_token_enc text not null,
-  expires_at timestamptz not null,
-  scopes text not null default '',
-  status text not null default 'active' check (status in ('active', 'error', 'reauth_required', 'disconnected')),
-  error_message text,
-  last_synced_at timestamptz,
-  last_webhook_at timestamptz,
-  backfill_done boolean not null default false,
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
-);
-alter table public.whoop_connections enable row level security;
-drop policy if exists "whoop_connections: owner read status" on public.whoop_connections;
-create policy "whoop_connections: owner read status" on public.whoop_connections for select to authenticated using ((select auth.uid()) = user_id);
-drop policy if exists "whoop_connections: owner delete" on public.whoop_connections;
-create policy "whoop_connections: owner delete" on public.whoop_connections for delete to authenticated using ((select auth.uid()) = user_id);
--- Browser clients may read the connection's status but never the tokens.
-revoke select on public.whoop_connections from authenticated;
-grant select (user_id, whoop_user_id, expires_at, scopes, status, error_message, last_synced_at, last_webhook_at, backfill_done, created_at, updated_at) on public.whoop_connections to authenticated;
-create or replace trigger whoop_connections_set_updated_at before update on public.whoop_connections for each row execute function public.set_updated_at();
-
--- Raw WHOOP API records, kept verbatim for auditability. One row per record; updates replace the raw body.
-create table if not exists public.whoop_records (
-  id uuid primary key default gen_random_uuid(),
-  user_id uuid not null references auth.users(id) on delete cascade,
-  kind text not null check (kind in ('cycle', 'recovery', 'sleep', 'workout', 'body')),
-  record_id text not null check (length(record_id) <= 120),
-  raw jsonb not null,
-  record_updated_at timestamptz,
-  synced_at timestamptz not null default now(),
-  deleted_at timestamptz,
-  unique (user_id, kind, record_id)
-);
-create index if not exists whoop_records_user_kind_idx on public.whoop_records (user_id, kind, record_updated_at desc);
-alter table public.whoop_records enable row level security;
-drop policy if exists "whoop_records: owner read" on public.whoop_records;
-create policy "whoop_records: owner read" on public.whoop_records for select to authenticated using ((select auth.uid()) = user_id);
-
--- Processed webhook deliveries, so a redelivered event is a no-op.
-create table if not exists public.whoop_webhook_events (
-  id text primary key,
-  user_id uuid references auth.users(id) on delete cascade,
-  type text not null,
-  received_at timestamptz not null default now()
-);
-alter table public.whoop_webhook_events enable row level security;

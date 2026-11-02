@@ -6,7 +6,7 @@
  * data always yields the same findings for a given algorithm version.
  */
 
-export type Provider = "whoop_api" | "whoop_export" | "noop_export" | "ble" | "manual";
+export type Provider = "ble" | "noop_export" | "whoop_export" | "manual";
 
 export type MetricKey =
   | "recovery_score"

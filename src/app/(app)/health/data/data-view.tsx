@@ -13,7 +13,7 @@ import { clearHealthData, importHealthExport } from "@/actions/health";
 import type { HealthImportRow } from "@/lib/data/health";
 import { formatDate, formatTimestamp } from "@/lib/dates";
 
-/** Import a WHOOP or NOOP export, see what is stored, and clear it. Files go straight to the server action; nothing is kept but the rows. */
+/** Import a NOOP export (the offline strap companion app) as a bridge from a Mac or Android, see what is stored, and clear it. */
 export function DataView({ imports, dayCount, workoutCount, sleepCount }: { imports: HealthImportRow[]; dayCount: number; workoutCount: number; sleepCount: number }) {
   const router = useRouter();
   const inputRef = React.useRef<HTMLInputElement>(null);
@@ -65,7 +65,7 @@ export function DataView({ imports, dayCount, workoutCount, sleepCount }: { impo
             </div>
             <ul className="text-text-2 mt-4 flex flex-col gap-1.5 text-sm">
               <li>
-                <span className="text-text-1 font-medium">WHOOP:</span> in the WHOOP app, More, App settings, Data export. The emailed zip holds physiological_cycles, sleeps, workouts and journal_entries CSVs.
+                <span className="text-text-1 font-medium">Strap:</span> the primary source is the Strap tab, which reads the strap directly over Bluetooth. Exports are a bridge for history collected elsewhere.
               </li>
               <li>
                 <span className="text-text-1 font-medium">NOOP:</span> Settings, Backup and restore, Export CSV. NOOP writes the same layout, so the zip imports as is. A .noopbak file is a raw database and is not supported here.
@@ -90,7 +90,7 @@ export function DataView({ imports, dayCount, workoutCount, sleepCount }: { impo
         {imports.length ? (
           <RowList className="mt-2">
             {imports.map((i) => (
-              <HealthRow key={i.id} title={i.filename} meta={`${formatTimestamp(i.created_at)} · ${i.source === "noop" ? "NOOP export" : "WHOOP export"}${i.first_day && i.last_day ? ` · ${formatDate(i.first_day, "short")} to ${formatDate(i.last_day, "short")}` : ""}`} value={`${i.days} days · ${i.workouts} workouts`} />
+              <HealthRow key={i.id} title={i.filename} meta={`${formatTimestamp(i.created_at)} · ${i.source === "noop" ? "NOOP export" : "CSV export"}${i.first_day && i.last_day ? ` · ${formatDate(i.first_day, "short")} to ${formatDate(i.last_day, "short")}` : ""}`} value={`${i.days} days · ${i.workouts} workouts`} />
             ))}
           </RowList>
         ) : (

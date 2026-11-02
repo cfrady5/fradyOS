@@ -27,10 +27,10 @@ export function OverviewView({ intel, healthEmpty, today }: { intel: IntelData; 
         variant="page"
         icon={<HeartPulse />}
         title="No health data yet"
-        description="Import a WHOOP data export, NOOP's CSV export, or connect the WHOOP API. The intelligence layer builds personal baselines from whatever arrives."
+        description="Pair your strap on the Strap tab and offload its history. The intelligence layer builds personal baselines from what the strap holds."
         action={
           <Button asChild size="sm">
-            <Link href="/health/data">Add data</Link>
+            <Link href="/health/strap">Pair a strap</Link>
           </Button>
         }
       />
@@ -94,7 +94,7 @@ export function OverviewView({ intel, healthEmpty, today }: { intel: IntelData; 
           <Metric size="sm" label="Sleep quality" value={sqi?.value != null ? String(Math.round(sqi.value)) : "--"} sub={latest?.sleep_total_min != null ? `${fmtMetric("sleep_total_min", latest.sleep_total_min)} slept` : undefined} tone={sqi?.value == null ? "neutral" : sqi.value >= 70 ? "good" : sqi.value >= 50 ? "neutral" : "warning"} muted={sqi?.value == null} href="/health/sleep" />
           <Metric size="sm" label="Cardio baseline" value={cardioStatus.value} sub={cardioStatus.sub} tone={cardioStatus.tone} href="/health/heart" />
           <Metric size="sm" label="Day strain" value={fmtMetric("day_strain", latest?.day_strain)} sub={vsBaseline("day_strain")} tone={strainTone(latest?.day_strain)} muted={latest?.day_strain == null} href="/health/load" />
-          <Metric size="sm" label="Steps" value="No source" sub="Not in WHOOP exports or the API" muted href="/health/load" />
+          <Metric size="sm" label="Steps" value="No source" sub="Not derived from the strap" muted href="/health/load" />
           <Metric size="sm" label="Deviations" value={deviations.length ? String(deviations.length) : "None"} sub={deviations.length ? deviations[0].title : `${openEvents.length} open findings`} tone={deviations.some((d) => d.severity === "high") ? "serious" : deviations.length ? "warning" : "good"} href="/health/events" />
         </MetricStrip>
       </section>
@@ -107,7 +107,7 @@ export function OverviewView({ intel, healthEmpty, today }: { intel: IntelData; 
         <section aria-labelledby="hi-readiness">
           <SectionHeader title={<span id="hi-readiness">Readiness</span>} />
           <div className="mt-3">
-            <ScorePanel score={readiness} label="FRADY Readiness" description="FRADY's own score from HRV and resting heart rate against your baselines, sleep sufficiency, recent strain and recent recovery. It is not WHOOP's recovery and says nothing about medical fitness." />
+            <ScorePanel score={readiness} label="FRADY Readiness" description="FRADY's own score from HRV and resting heart rate against your baselines, sleep sufficiency, recent strain and recent recovery. It is FRADY's own number and says nothing about medical fitness." />
           </div>
         </section>
       </div>

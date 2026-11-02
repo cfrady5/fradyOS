@@ -8,6 +8,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 
 export const HEALTH_TABS: { href: string; label: string }[] = [
   { href: "/health", label: "Overview" },
+  { href: "/health/strap", label: "Strap" },
   { href: "/health/sleep", label: "Sleep" },
   { href: "/health/heart", label: "Heart" },
   { href: "/health/breathing", label: "Breathing" },

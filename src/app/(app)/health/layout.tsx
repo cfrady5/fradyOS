@@ -12,7 +12,7 @@ export default function HealthLayout({ children }: LayoutProps<"/health">) {
     <div className="mx-auto max-w-6xl">
       <PageHeader
         title="Health"
-        description="Recovery, strain, HRV and sleep from your WHOOP strap, imported from a WHOOP or NOOP export, plus live heart rate straight from the strap over Bluetooth. Nothing talks to WHOOP's cloud."
+        description="Sleep, resting heart rate, HRV, strain and workouts read straight from your strap over Bluetooth, with FRADY's own baselines, scores and detections on top. Nothing talks to WHOOP's cloud."
         eyebrow={
           <>
             {BODY?.index ? <span className="index">{BODY.index}</span> : null}

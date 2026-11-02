@@ -9,7 +9,7 @@ export interface ComputeInput {
   days: HealthDayRow[];
   sleeps: HealthSleepRow[];
   workouts: HealthWorkoutRow[];
-  apiDays?: Partial<DailySummary>[];
+  derivedDays?: Partial<DailySummary>[];
   behaviors: BehaviorEntry[];
   today: string;
   timezone: string;
@@ -51,7 +51,7 @@ export interface ComputeResult {
 
 /** The whole intelligence layer as one pure function of the data. */
 export function computeIntelligence(input: ComputeInput): ComputeResult {
-  const summaries = buildDailySummaries({ days: input.days, sleeps: input.sleeps, workouts: input.workouts, apiDays: input.apiDays, timezone: input.timezone });
+  const summaries = buildDailySummaries({ days: input.days, sleeps: input.sleeps, workouts: input.workouts, derivedDays: input.derivedDays, timezone: input.timezone });
   const calendar = fillCalendar(summaries, input.today, 180);
   const settings: RuleSettings = { ...DEFAULT_RULE_SETTINGS, ...input.settings, disabled: input.settings?.disabled ?? new Set() };
   const baselines = computeBaselines(calendar);

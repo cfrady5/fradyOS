@@ -22,16 +22,16 @@ detections, trends, correlations and plainly worded recommendations. Nothing her
 
 **Consequences for the build**
 
-- The "already connected WHOOP 5.0" in the brief does not exist as an API connection. The detection layer is built over a unified daily model that any source can fill, so it works today on export data and picks up API records as soon as a WHOOP developer app is connected (see "WHOOP API" below).
+- The "already connected WHOOP 5.0" in the brief does not exist as an API connection, and the owner has since decided not to use WHOOP's cloud at all. The detection layer is built over a unified daily model; the strap is read directly over Bluetooth (see below).
 - Steps, inactivity windows and minute-level movement are not implemented as detections because no connected source provides them. The source-capability registry records that honestly and the dashboard shows "no source" rather than a zero.
 - Live heart rate is a manual Bluetooth session, so no score is labelled live.
 
 ## Architecture
 
 ```
-WHOOP export / NOOP CSV ─┐
-WHOOP developer API ─────┼─> normalise (src/lib/intel/summaries.ts) ─> biometric_daily_summaries + biometric_measurements
-Live Bluetooth sessions ─┘                      │
+Strap over Bluetooth ────┬─> strap_minutes ─> derive (src/lib/strap/derive) ─> health_days / sleeps / workouts (source ble)
+NOOP CSV export ─────────┘                                                                    │
+                                   normalise (src/lib/intel/summaries.ts) ─> biometric_daily_summaries + biometric_measurements
                                                  ▼
                        baselines (stats.ts) ─> engines (engines/*.ts) ─> detected events, derived scores,
                                                  correlations, insights ─> notifications ─> dashboard
@@ -59,7 +59,7 @@ See `supabase/migrations/0013_biometrics.sql`. Every table is owner-only under R
 | `biometric_processing_jobs` | Pipeline runs with window, status, stats, errors, attempts. |
 | `biometric_source_capabilities` | Which provider exposes which metric (seeded). |
 | `health_behaviors` | Manually logged habits (caffeine, alcohol, water, meals, calories, protein, exercise timing, bedtime routine, supplements, stress, travel, illness, medication). Medication rows carry a private flag and never appear in insights text. |
-| `whoop_connections`, `whoop_records` | OAuth tokens (encrypted) and raw API records for auditability. |
+| `strap_devices`, `strap_minutes`, `strap_offloads` | Paired straps, one row per minute of strap samples, and the offload log (migration 0014). |
 
 ## Scores
 
@@ -86,14 +86,30 @@ Safety thresholds that do not depend on the person: SpO2 below 90%, resting HR a
 when not an athlete baseline, respiratory rate above 24 or below 8. These are flagged as "check with a
 clinician if this persists", never as a diagnosis.
 
-## WHOOP API
+## Reading the strap directly (no WHOOP cloud)
 
-Set `WHOOP_CLIENT_ID` and `WHOOP_CLIENT_SECRET` from a developer app at developer.whoop.com with the
-redirect `https://<site>/api/whoop/callback`, then connect from Health, Data. The sync backfills cycles,
-recovery, sleep, workouts and body measurements with pagination, stores the raw records, refreshes tokens
-before expiry and respects the documented rate limits. Webhooks post to `/api/webhooks/whoop` and are
-verified with the signature headers before any record is fetched; each event re-fetches the one record
-it names, so a webhook is a notification, not a data stream.
+The primary source is the strap itself. Health, Strap connects over Bluetooth (the FRADY app on iPhone
+or Android, or Chrome on Android or desktop), bonds, sets the strap's clock, and offloads the strap's own
+history store (about two weeks of one-second records with heart rate, R-R intervals, gravity vector and
+raw optical channels). Each chunk is saved to `strap_minutes` as one row per minute before it is
+acknowledged, so the strap never trims data FRADY has not stored. The protocol facts (service and
+characteristic ids, frame layout, CRCs, command numbers, record offsets) come from the NOOP project's
+documentation, which its licence explicitly releases for reuse; the TypeScript in `src/lib/strap/protocol`
+is an original implementation and has not yet been exercised against a real strap.
+
+Derivation (`src/lib/strap/derive`) turns minutes into the daily model: actigraphy-plus-heart-rate sleep
+detection and heuristic stage estimates, resting heart rate as the lowest five-minute mean of the main
+sleep, HRV as the median five-minute RMSSD over the last three hours of sleep, respiratory rate from
+respiratory sinus arrhythmia, FRADY strain as Banister TRIMP mapped to 0..21, and workouts as sustained
+heart-rate-reserve runs. SpO2 and skin temperature stay null because the raw channels are uncalibrated.
+Derived rows land in `health_days`, `health_sleeps` and `health_workouts` with source `ble`, and the
+intelligence layer runs unchanged on top.
+
+Constraints inherited from the strap: it holds one encrypted bond at a time, so the official app must be
+closed and may need to re-pair afterwards; a WHOOP 5.0 or MG must be put in pairing mode by tapping until
+the LEDs flash blue; the store holds roughly 14 days, so offload at least weekly.
+
+NOOP's CSV export can still be imported on the Data tab as a bridge for history collected on a Mac.
 
 ## What this layer does not do
 

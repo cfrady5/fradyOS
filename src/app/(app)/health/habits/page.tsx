@@ -6,5 +6,5 @@ export const metadata = meta("Habits");
 
 export default async function HabitsPage() {
   const { ws, intel, ctx } = await loadIntelPage();
-  return <HabitsView behaviors={intel.behaviors} insights={behaviorInsights(ctx)} events={eventsFor(intel, ["behavior"])} today={ws.today} timezone={ws.timezone} />;
+  return <HabitsView behaviors={intel.behaviors} insights={behaviorInsights(ctx)} events={eventsFor(intel, ["behavior"])} today={ws.today} />;
 }

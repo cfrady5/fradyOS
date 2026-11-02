@@ -21,12 +21,13 @@ export interface SummaryInputs {
   days: HealthDayRow[];
   sleeps: HealthSleepRow[];
   workouts: HealthWorkoutRow[];
-  /** Partial days from the WHOOP API (already normalised); their fields win over export fields. */
-  apiDays?: Partial<DailySummary>[];
+  /** Partial days derived from strap samples (provider "ble"); their fields win over export fields. */
+  derivedDays?: Partial<DailySummary>[];
   timezone: string;
 }
 
 function providerOf(source: string): Provider {
+  if (/ble|strap/i.test(source)) return "ble";
   return /noop/i.test(source) ? "noop_export" : "whoop_export";
 }
 
@@ -34,7 +35,7 @@ function providerOf(source: string): Provider {
  * Builds one DailySummary per calendar day that has any data, ascending. Export rows fill the day;
  * sleeps add timing and naps; workouts are aggregated; API days override field by field.
  */
-export function buildDailySummaries({ days, sleeps, workouts, apiDays = [], timezone }: SummaryInputs): DailySummary[] {
+export function buildDailySummaries({ days, sleeps, workouts, derivedDays = [], timezone }: SummaryInputs): DailySummary[] {
   const map = new Map<string, DailySummary>();
   const get = (day: string) => {
     let s = map.get(day);
@@ -116,7 +117,7 @@ export function buildDailySummaries({ days, sleeps, workouts, apiDays = [], time
   }
   for (const [day, acc] of hrWeight) if (acc.w > 0) get(day).workout_avg_hr = round(acc.sum / acc.w, 0);
 
-  for (const api of apiDays) {
+  for (const api of derivedDays) {
     if (!api.day) continue;
     const s = get(api.day);
     for (const [k, v] of Object.entries(api)) {
@@ -127,7 +128,7 @@ export function buildDailySummaries({ days, sleeps, workouts, apiDays = [], time
       }
       if (typeof v === "number" && Number.isFinite(v)) (s as unknown as Record<string, number | null>)[k] = v;
     }
-    s.provider = "whoop_api";
+    s.provider = (api.provider as Provider) ?? "ble";
   }
 
   const out = [...map.values()].sort((a, b) => (a.day < b.day ? -1 : 1));

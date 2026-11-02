@@ -134,8 +134,8 @@ and readiness, respiratory and oxygen, temperature, activity and training load, 
 trends, anomaly detection, behaviour correlations), four FRADY scores with transparent factor breakdowns, a
 ranked insight feed and in-app notifications. Everything is a comparison with your own history and is worded
 as such, never as a diagnosis. Health tabs: Overview, Sleep, Heart, Breathing, Load, Trends, Events, Habits.
-Migration `0013_biometrics.sql`; optional WHOOP developer API connection (`WHOOP_CLIENT_ID`,
-`WHOOP_CLIENT_SECRET`); details and the Phase 1 audit in [docs/HEALTH_INTELLIGENCE.md](./docs/HEALTH_INTELLIGENCE.md).
+Migrations `0013_biometrics.sql` and `0014_strap.sql`. The strap is read directly over Bluetooth from the Strap tab
+(no WHOOP cloud); details and the Phase 1 audit in [docs/HEALTH_INTELLIGENCE.md](./docs/HEALTH_INTELLIGENCE.md).
 
 ## Health (WHOOP via NOOP)
 

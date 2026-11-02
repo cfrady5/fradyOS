@@ -3,13 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
 import { requireWorkspace } from "@/lib/data/workspace";
 import { fail, ok, errorMessage, type ActionResult } from "@/lib/action-result";
 import { runHealthIntelligence, type RunStats } from "@/lib/intel/pipeline";
 import { isMissingTable } from "@/lib/data/health";
-import { isWhoopConfigured } from "@/lib/whoop/client";
-import { syncConnection, type WhoopConnection } from "@/lib/whoop/sync";
 
 function revalidate() {
   revalidatePath("/", "layout");
@@ -152,35 +149,6 @@ export async function setRuleEnabled(ruleKey: string, enabled: boolean): Promise
     if (error) return fail(isMissingTable(error) ? NOT_SET_UP : error.message);
     revalidate();
     return ok(undefined);
-  } catch (e) {
-    return fail(errorMessage(e));
-  }
-}
-
-export async function disconnectWhoop(): Promise<ActionResult<undefined>> {
-  try {
-    const ws = await requireWorkspace();
-    const supabase = await createClient();
-    const { error } = await supabase.from("whoop_connections").delete().eq("user_id", ws.userId);
-    if (error) return fail(error.message);
-    revalidate();
-    return ok(undefined);
-  } catch (e) {
-    return fail(errorMessage(e));
-  }
-}
-
-export async function syncWhoopNow(): Promise<ActionResult<{ cycles: number; sleeps: number; workouts: number; recoveries: number }>> {
-  try {
-    const ws = await requireWorkspace();
-    if (!isWhoopConfigured()) return fail("WHOOP_CLIENT_ID and WHOOP_CLIENT_SECRET are not set.");
-    if (!isAdminConfigured()) return fail("SUPABASE_SECRET_KEY is not set, so tokens cannot be read on the server.");
-    const admin = createAdminClient();
-    const { data } = await admin.from("whoop_connections").select("*").eq("user_id", ws.userId).maybeSingle();
-    if (!data) return fail("WHOOP is not connected.");
-    const counts = await syncConnection(admin, data as WhoopConnection, { timezone: ws.timezone, today: ws.today, trigger: "manual" });
-    revalidate();
-    return ok(counts);
   } catch (e) {
     return fail(errorMessage(e));
   }

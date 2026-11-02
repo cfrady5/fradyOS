@@ -349,7 +349,8 @@ function intelligenceTables(uid: string, today: string, days: Row[], sleeps: Row
     biometric_notification_preferences: [],
     biometric_processing_jobs: [{ id: "bj-1", user_id: uid, kind: "recompute", status: "succeeded", window_start: r.calendar[0]?.day ?? null, window_end: today, attempts: 1, stats: { findings: r.findings.length, days: r.summaries.length }, error: null, started_at: now, finished_at: now }],
     biometric_source_capabilities: [],
-    whoop_connections: [],
-    whoop_records: [],
+    strap_devices: [{ id: "sd-1", user_id: uid, serial: "4A0XXXXXX", name: "WHOOP 4A0XXXXXX", model: "whoop4", firmware: "41.17.6.0", battery_pct: 71, max_hr: 190, last_seen_at: now, last_offload_at: now, created_at: now, updated_at: now }],
+    strap_minutes: [],
+    strap_offloads: [{ id: "so-1", user_id: uid, serial: "4A0XXXXXX", platform: "ios", started_at: now, finished_at: now, status: "succeeded", records: 86400, chunks: 24, minutes: 1440, first_sample_at: now, last_sample_at: now, error: null, log: null }],
   };
 }

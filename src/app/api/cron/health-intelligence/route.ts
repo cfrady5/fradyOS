@@ -18,8 +18,7 @@ export async function GET(request: NextRequest) {
   const results: { user_id: string; ok: boolean; error?: string; findings?: number }[] = [];
   for (const p of (data ?? []) as { id: string; timezone: string | null }[]) {
     const { count } = await admin.from("health_days").select("id", { count: "exact", head: true }).eq("user_id", p.id);
-    const { count: apiCount } = await admin.from("whoop_records").select("id", { count: "exact", head: true }).eq("user_id", p.id);
-    if (!count && !apiCount) continue;
+    if (!count) continue;
     const timezone = p.timezone || "America/Indiana/Indianapolis";
     const out = await runHealthIntelligence(admin, p.id, { kind: "scheduled", today: todayIn(timezone), timezone });
     results.push(out.ok ? { user_id: p.id, ok: true, findings: out.stats.findings } : { user_id: p.id, ok: false, error: out.error });

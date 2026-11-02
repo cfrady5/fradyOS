@@ -99,7 +99,7 @@ export function FindingList({ events, today, empty = "Nothing detected in this a
 
 /** Ranked feed for the Overview. */
 export function InsightFeed({ insights }: { insights: IntelInsight[] }) {
-  if (!insights.length) return <EmptyState className="mt-3" title="No insights yet" description="Import a WHOOP export or connect the WHOOP API, then recompute. Insights need at least a couple of weeks of data." />;
+  if (!insights.length) return <EmptyState className="mt-3" title="No insights yet" description="Offload your strap a few times first. Insights need at least a couple of weeks of nights." />;
   return (
     <ol className="hairline-rows -mx-2 mt-3">
       {insights.map((i) => (

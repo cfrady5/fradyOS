@@ -3,7 +3,6 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { computeIntelligence, type ComputeResult } from "./compute";
 import { ALGORITHM_VERSION, CORE_METRICS, METRICS, METRIC_KEYS, type BehaviorEntry, type RuleSettings, type Severity } from "./types";
 import { isMissingTable, shapeDay, shapeSleep, shapeWorkout } from "@/lib/data/health";
-import { loadApiDays } from "@/lib/whoop/records";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Client = SupabaseClient<any, any, any>;
@@ -13,7 +12,7 @@ const SEVERITY_ORDER: Severity[] = ["info", "low", "moderate", "high"];
 const GROUP_TYPE: Record<string, string> = { sleep: "sleep", activity: "daily", cardio: "daily", recovery: "daily", respiratory: "sleep", temperature: "sleep" };
 
 export interface RunOptions {
-  kind: "recompute" | "import" | "whoop_sync" | "whoop_webhook" | "scheduled";
+  kind: "recompute" | "import" | "strap" | "scheduled";
   today: string;
   timezone: string;
 }
@@ -36,7 +35,7 @@ async function chunked(client: Client, table: string, rows: Record<string, unkno
 }
 
 /** Loads everything the engines need for one user. Tolerates tables that are not created yet. */
-export async function loadInputs(client: Client, userId: string, timezone: string) {
+export async function loadInputs(client: Client, userId: string) {
   const [days, sleeps, workouts, behaviors, prefs, rules] = await Promise.all([
     client.from("health_days").select("*").eq("user_id", userId).order("day", { ascending: true }).limit(400),
     client.from("health_sleeps").select("*").eq("user_id", userId).order("start_at", { ascending: true }).limit(800),
@@ -46,7 +45,6 @@ export async function loadInputs(client: Client, userId: string, timezone: strin
     client.from("biometric_detection_rules").select("rule_key,enabled").eq("user_id", userId),
   ]);
   for (const r of [days, sleeps, workouts]) if (r.error && !isMissingTable(r.error)) throw new Error(r.error.message);
-  const apiDays = await loadApiDays(client, userId, timezone);
   const pref = (prefs.data ?? null) as { in_app: boolean; email: boolean; min_severity: Severity; z_moderate: number; persist_days: number } | null;
   const disabled = new Set(((rules.data ?? []) as { rule_key: string; enabled: boolean }[]).filter((r) => !r.enabled).map((r) => r.rule_key));
   const settings: Partial<RuleSettings> = { zModerate: pref?.z_moderate ?? 2, persistDays: pref?.persist_days ?? 3, disabled };
@@ -55,7 +53,6 @@ export async function loadInputs(client: Client, userId: string, timezone: strin
     days: ((days.data ?? []) as Record<string, unknown>[]).map(shapeDay),
     sleeps: ((sleeps.data ?? []) as Record<string, unknown>[]).map(shapeSleep),
     workouts: ((workouts.data ?? []) as Record<string, unknown>[]).map(shapeWorkout),
-    apiDays,
     behaviors: behaviorRows.map(
       (b): BehaviorEntry => ({
         id: String(b.id),
@@ -80,7 +77,7 @@ export async function runHealthIntelligence(client: Client, userId: string, opts
     if (jobId) await client.from("biometric_processing_jobs").update({ ...patch, finished_at: new Date().toISOString() }).eq("id", jobId);
   };
   try {
-    const inputs = await loadInputs(client, userId, opts.timezone);
+    const inputs = await loadInputs(client, userId);
     const result = computeIntelligence({ ...inputs, today: opts.today, timezone: opts.timezone });
     const stats = await persist(client, userId, result, inputs.pref, opts);
     await finish({ status: "succeeded", stats, window_start: result.calendar[0]?.day ?? null, window_end: opts.today });

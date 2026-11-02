@@ -44,11 +44,11 @@ describe("buildDailySummaries", () => {
     expect(out[1].workout_count).toBe(0);
   });
 
-  it("lets API days override export fields", () => {
-    const out = buildDailySummaries({ days: [day("2026-10-30")], sleeps: [], workouts: [], apiDays: [{ day: "2026-10-30", resting_hr: 49, sleep_cycles: 5, scored: true }], timezone: TZ });
+  it("lets derived strap days override export fields", () => {
+    const out = buildDailySummaries({ days: [day("2026-10-30")], sleeps: [], workouts: [], derivedDays: [{ day: "2026-10-30", provider: "ble", resting_hr: 49, sleep_cycles: 5, scored: true }], timezone: TZ });
     expect(out[0].resting_hr).toBe(49);
     expect(out[0].sleep_cycles).toBe(5);
-    expect(out[0].provider).toBe("whoop_api");
+    expect(out[0].provider).toBe("ble");
   });
 
   it("fills calendar gaps with unscored days and caps the window", () => {

@@ -70,15 +70,6 @@ export interface IntelCorrelation {
   detail: Record<string, unknown> | null;
 }
 
-export interface WhoopStatus {
-  connected: boolean;
-  status: string | null;
-  error: string | null;
-  lastSyncedAt: string | null;
-  lastWebhookAt: string | null;
-  backfillDone: boolean;
-}
-
 export interface IntelJob {
   id: string;
   kind: string;
@@ -109,7 +100,6 @@ export interface IntelData {
   behaviors: BehaviorEntry[];
   rulesDisabled: string[];
   preferences: IntelPreferences;
-  whoop: WhoopStatus;
   jobs: IntelJob[];
   capabilities: { provider: string; metric: string; available: boolean; notes: string | null }[];
 }
@@ -127,7 +117,7 @@ function shapeSummary(r: Record<string, unknown>): DailySummary {
 export const getIntelData = cache(async (userId: string, today: string): Promise<IntelData> => {
   const supabase = await createClient();
   const from = new Date(Date.parse(today) - 179 * 86_400_000).toISOString().slice(0, 10);
-  const [summaries, baselines, events, derived, insights, correlations, behaviors, rules, prefs, whoop, jobs, caps] = await Promise.all([
+  const [summaries, baselines, events, derived, insights, correlations, behaviors, rules, prefs, jobs, caps] = await Promise.all([
     supabase.from("biometric_daily_summaries").select("*").eq("user_id", userId).gte("day", from).order("day", { ascending: true }),
     supabase.from("biometric_baselines").select("metric,as_of,stats").eq("user_id", userId).order("as_of", { ascending: false }).limit(METRIC_KEYS.length * 2),
     supabase.from("biometric_detected_events").select("*").eq("user_id", userId).order("day", { ascending: false }).limit(300),
@@ -137,7 +127,6 @@ export const getIntelData = cache(async (userId: string, today: string): Promise
     supabase.from("health_behaviors").select("*").eq("user_id", userId).gte("day", from).order("day", { ascending: false }).order("at", { ascending: false }),
     supabase.from("biometric_detection_rules").select("rule_key,enabled").eq("user_id", userId).eq("enabled", false),
     supabase.from("biometric_notification_preferences").select("*").eq("user_id", userId).maybeSingle(),
-    supabase.from("whoop_connections").select("status,error_message,last_synced_at,last_webhook_at,backfill_done").eq("user_id", userId).maybeSingle(),
     supabase.from("biometric_processing_jobs").select("id,kind,status,started_at,finished_at,error,stats").eq("user_id", userId).order("started_at", { ascending: false }).limit(5),
     supabase.from("biometric_source_capabilities").select("*"),
   ]);
@@ -152,7 +141,6 @@ export const getIntelData = cache(async (userId: string, today: string): Promise
   );
   const latestInsightDay = insightRows[0]?.day;
   const pref = (prefs.data ?? null) as Record<string, unknown> | null;
-  const w = (whoop.data ?? null) as Record<string, unknown> | null;
   const jobRows = ((jobs.data ?? []) as Record<string, unknown>[]).map((r): IntelJob => ({ id: String(r.id), kind: String(r.kind), status: String(r.status), started_at: String(r.started_at), finished_at: r.finished_at ? String(r.finished_at) : null, error: r.error ? String(r.error) : null, stats: (r.stats as Record<string, unknown>) ?? null }));
 
   return {
@@ -171,7 +159,6 @@ export const getIntelData = cache(async (userId: string, today: string): Promise
     behaviors: ((behaviors.data ?? []) as Record<string, unknown>[]).map((b): BehaviorEntry => ({ id: String(b.id), day: String(b.day), at: b.at ? String(b.at) : null, kind: b.kind as BehaviorEntry["kind"], amount: num(b.amount), unit: b.unit ? String(b.unit) : null, note: b.note ? String(b.note) : null })),
     rulesDisabled: ((rules.data ?? []) as { rule_key: string }[]).map((r) => r.rule_key),
     preferences: { in_app: pref?.in_app !== false, email: pref?.email === true, min_severity: (pref?.min_severity as Severity) ?? "moderate", z_moderate: num(pref?.z_moderate) ?? 2, persist_days: num(pref?.persist_days) ?? 3 },
-    whoop: { connected: !!w && w.status !== "disconnected", status: w ? String(w.status) : null, error: w?.error_message ? String(w.error_message) : null, lastSyncedAt: w?.last_synced_at ? String(w.last_synced_at) : null, lastWebhookAt: w?.last_webhook_at ? String(w.last_webhook_at) : null, backfillDone: w?.backfill_done === true },
     jobs: jobRows,
     capabilities: ((caps.data ?? []) as Record<string, unknown>[]).map((c) => ({ provider: String(c.provider), metric: String(c.metric), available: c.available !== false, notes: c.notes ? String(c.notes) : null })),
   };
