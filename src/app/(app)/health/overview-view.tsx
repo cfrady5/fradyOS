@@ -17,20 +17,25 @@ import type { MetricKey } from "@/lib/intel/types";
 import { recoveryTone, strainTone } from "@/lib/health/stats";
 
 /** The Health Intelligence front page: six status cards, the readiness score, and the ranked insight feed. */
-export function OverviewView({ intel, healthEmpty, today }: { intel: IntelData; healthEmpty: boolean; today: string }) {
+export function OverviewView({ intel, healthEmpty, today, strapMinutes = 0, strapToday = 0 }: { intel: IntelData; healthEmpty: boolean; today: string; strapMinutes?: number; strapToday?: number }) {
   const router = useRouter();
   const [pending, startTransition] = React.useTransition();
 
   if (healthEmpty && !intel.days.length) {
+    const collecting = strapMinutes > 0;
     return (
       <EmptyState
         variant="page"
         icon={<HeartPulse />}
-        title="No health data yet"
-        description="Pair your strap on the Strap tab and offload its history. The intelligence layer builds personal baselines from what the strap holds."
+        title={collecting ? "Collecting from your strap" : "No health data yet"}
+        description={
+          collecting
+            ? `${strapMinutes.toLocaleString()} minutes stored so far (${strapToday} today). A day scores once about five hours of wear are in, and sleep, resting heart rate and HRV appear after the first full night. Keep the link running.`
+            : "Pair your strap on the Strap tab and keep it connected. The intelligence layer builds personal baselines from what the strap records."
+        }
         action={
           <Button asChild size="sm">
-            <Link href="/health/strap">Pair a strap</Link>
+            <Link href="/health/strap">{collecting ? "Open the Strap tab" : "Pair a strap"}</Link>
           </Button>
         }
       />

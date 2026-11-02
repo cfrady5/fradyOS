@@ -518,8 +518,14 @@ export async function runLiveLink({ model, signal, callbacks, intervalMin = 15, 
         },
       });
       const timer = window.setInterval(() => {
-        if (run.session.state === "linked") run.session.resumeOffload();
-        else callbacks.onLog(`Skipping a recorder pull; session is ${run.session.state}`, "debug");
+        if (run.session.state === "linked") {
+          run.session.resumeOffload();
+        } else {
+          // The recorder cannot be pulled right now; still derive from the live minutes stored so far.
+          callbacks.onLog(`Skipping a recorder pull; session is ${run.session.state}. Deriving from live minutes.`, "debug");
+          callbacks.onCycle({ records: progress.records, since: cycleStart });
+          cycleStart = new Date(Date.now() - 20 * 60_000).toISOString();
+        }
       }, intervalMin * 60_000);
       const battery = window.setInterval(() => run.session.requestBattery(), 10 * 60_000);
       const onAbort = () => {
