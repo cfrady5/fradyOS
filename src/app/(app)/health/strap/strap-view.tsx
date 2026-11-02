@@ -12,6 +12,7 @@ import { HealthRow } from "@/components/health/bits";
 import { clearStrapData, deriveStrapRecent, finishStrapOffload, ingestStrapMinutes, rederiveStrap, registerStrapDevice, setStrapMaxHr, startStrapOffload } from "@/actions/strap";
 import type { StrapData } from "@/lib/data/strap";
 import { runLiveLink, runOffload, strapSupport, type OffloadProgress, type StrapModel, type StrapSupport } from "@/lib/strap/transport";
+import { MinuteQueue } from "@/lib/strap/queue";
 import { formatDate, formatTimestamp } from "@/lib/dates";
 
 type Status = "idle" | "connecting" | "bonding" | "handshake" | "offloading" | "finishing" | "done" | "error" | "linked" | "reconnecting";
@@ -21,7 +22,7 @@ const STATUS_TEXT: Record<Status, string> = {
   connecting: "Choose your strap in the picker.",
   bonding: "Bonding with the strap.",
   handshake: "Setting the clock and reading device info.",
-  offloading: "Reading the strap's history.",
+  offloading: "Pulling the strap's recorder.",
   finishing: "Deriving sleep, heart and strain from the samples.",
   done: "Offload complete.",
   error: "Stopped.",
@@ -64,6 +65,9 @@ export function StrapView({ data, today }: { data: StrapData; today: string }) {
   const [lastCycleAt, setLastCycleAt] = React.useState<string | null>(null);
   const [autolink, setAutolink] = React.useState(false);
   const [liveMode, setLiveMode] = React.useState(false);
+  const [uploaded, setUploaded] = React.useState(0);
+  const [queued, setQueued] = React.useState(0);
+  const queueRef = React.useRef<MinuteQueue | null>(null);
   const abortRef = React.useRef<AbortController | null>(null);
   const logRef = React.useRef<string[]>([]);
   const liveRef = React.useRef(false);
@@ -173,6 +177,32 @@ export function StrapView({ data, today }: { data: StrapData; today: string }) {
         const platform = support === "native" ? ((navigator.userAgent.includes("Android") ? "android" : "ios") as "ios" | "android") : "web";
         const started = await startStrapOffload({ serial: null, platform, mode: "link" });
         const offloadId = started.ok ? started.data.id : null;
+        const queue = queueRef.current ?? (queueRef.current = new MinuteQueue());
+        setQueued(await queue.pending());
+        let draining = false;
+        const drain = async () => {
+          if (draining) return;
+          draining = true;
+          try {
+            for (let i = 0; i < 20; i++) {
+              const t0 = Date.now();
+              const sent = await queue.drain(async (minutes) => {
+                const res = await ingestStrapMinutes({ offloadId, minutes, records, chunks });
+                if (!res.ok) throw new Error(res.error);
+              });
+              if (!sent) break;
+              setUploaded((u) => u + sent);
+              setQueued(await queue.pending());
+              append(`uploaded ${sent} minutes in ${Date.now() - t0} ms`);
+            }
+          } catch (e) {
+            append(`[warn] upload failed, will retry: ${e instanceof Error ? e.message : String(e)}`);
+          } finally {
+            draining = false;
+          }
+        };
+        const drainTimer = window.setInterval(() => void drain(), 4000);
+        void drain();
         let serial: string | null = null;
         let battery: number | null = null;
         let firmware: string | null = null;
@@ -200,9 +230,10 @@ export function StrapView({ data, today }: { data: StrapData; today: string }) {
                 chunks = p.chunks;
                 setProgress(p);
               },
+              // Local first: the chunk is acknowledged to the strap once IndexedDB has it; uploads run in the background.
               onMinutes: async (minutes) => {
-                const res = await ingestStrapMinutes({ offloadId, minutes, records, chunks });
-                if (!res.ok) throw new Error(res.error);
+                await queue.put(minutes);
+                setQueued((q) => q + minutes.length);
               },
               onHeartRate: (value) => setBpm(value),
               onCycle: ({ since }) => {
@@ -225,6 +256,8 @@ export function StrapView({ data, today }: { data: StrapData; today: string }) {
           if (!/cancel/i.test(message)) toast.error(message);
           setStatus("error");
         } finally {
+          window.clearInterval(drainTimer);
+          await drain();
           liveRef.current = false;
           setLiveMode(false);
           setBpm(null);
@@ -335,8 +368,9 @@ export function StrapView({ data, today }: { data: StrapData; today: string }) {
                   {lastCycleAt ? <p className="text-text-3 text-meta nums">last {formatTimestamp(lastCycleAt)}</p> : null}
                 </div>
                 <div>
-                  <p className="text-text-3 text-meta">Minutes stored</p>
-                  <p className="nums text-text-1 text-3xl font-semibold tracking-tight">{progress.minutes}</p>
+                  <p className="text-text-3 text-meta">Minutes synced</p>
+                  <p className="nums text-text-1 text-3xl font-semibold tracking-tight">{uploaded}</p>
+                  {queued ? <p className="text-text-3 text-meta nums">{queued} waiting to upload</p> : null}
                 </div>
               </div>
             ) : null}

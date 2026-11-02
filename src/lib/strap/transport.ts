@@ -353,9 +353,11 @@ async function startSession(link: Link, opts: { model: StrapModel; keepAlive: bo
       case "chunk": {
         const minutes = batcher.push(effect.records.filter((r) => r.unix > 1_000_000_000) as StrapRecord[]);
         const chunkId = effect.chunkId;
+        const t0 = Date.now();
         storeQueue = storeQueue
           .then(async () => {
             if (minutes.length) await callbacks.onMinutes(minutes);
+            callbacks.onLog(`chunk ${chunkId}: ${effect.records.length} records, ${minutes.length} minutes, stored in ${Date.now() - t0} ms`, "debug");
             progress.minutes += minutes.length;
             progress.chunks = Math.max(progress.chunks, chunkId);
             callbacks.onProgress({ ...progress });
