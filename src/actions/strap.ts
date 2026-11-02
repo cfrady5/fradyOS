@@ -55,11 +55,11 @@ export async function setStrapMaxHr(serial: string, maxHr: number | null): Promi
   }
 }
 
-export async function startStrapOffload(input: { serial: string | null; platform: "ios" | "android" | "web" }): Promise<ActionResult<{ id: string }>> {
+export async function startStrapOffload(input: { serial: string | null; platform: "ios" | "android" | "web"; mode?: "offload" | "link" }): Promise<ActionResult<{ id: string }>> {
   try {
     const ws = await requireWorkspace();
     const supabase = await createClient();
-    const { data, error } = await supabase.from("strap_offloads").insert({ user_id: ws.userId, serial: input.serial, platform: input.platform, status: "running" }).select("id").single();
+    const { data, error } = await supabase.from("strap_offloads").insert({ user_id: ws.userId, serial: input.serial, platform: input.platform, status: "running", log: input.mode === "link" ? ["live link"] : null }).select("id").single();
     if (error) return fail(isMissingTable(error) ? NOT_SET_UP : error.message);
     return ok({ id: String((data as { id: string }).id) });
   } catch (e) {
@@ -82,14 +82,15 @@ const minuteSchema = z.object({
 });
 
 /** Store a batch of minute aggregates mid-offload. The client calls this per chunk so progress survives a disconnect. */
-export async function ingestStrapMinutes(input: { offloadId: string; minutes: StrapMinute[]; records: number; chunks: number }): Promise<ActionResult<{ stored: number }>> {
-  const parsed = z.object({ offloadId: z.string().uuid(), minutes: z.array(minuteSchema).max(3000), records: z.number().int().min(0), chunks: z.number().int().min(0) }).safeParse(input);
+export async function ingestStrapMinutes(input: { offloadId: string | null; minutes: StrapMinute[]; records: number; chunks: number }): Promise<ActionResult<{ stored: number }>> {
+  const parsed = z.object({ offloadId: z.string().uuid().nullable(), minutes: z.array(minuteSchema).max(3000), records: z.number().int().min(0), chunks: z.number().int().min(0) }).safeParse(input);
   if (!parsed.success) return fail(parsed.error.issues[0]?.message ?? "Invalid batch.");
   try {
     const ws = await requireWorkspace();
     const supabase = await createClient();
     const { minutes, offloadId, records, chunks } = parsed.data;
     await upsertMinutes(supabase, ws.userId, minutes);
+    if (!offloadId) return ok({ stored: minutes.length });
     const first = minutes.length ? minutes.reduce((a, b) => (a.minute < b.minute ? a : b)).minute : null;
     const last = minutes.length ? minutes.reduce((a, b) => (a.minute > b.minute ? a : b)).minute : null;
     const { data: existing } = await supabase.from("strap_offloads").select("minutes,first_sample_at,last_sample_at").eq("id", offloadId).eq("user_id", ws.userId).maybeSingle();
@@ -136,6 +137,23 @@ export async function finishStrapOffload(input: { offloadId: string; status: "su
     const out = await deriveAndStore(supabase, ws.userId, { fromDay: o.first_sample_at.slice(0, 10), toDay: o.last_sample_at.slice(0, 10), today: ws.today, timezone: ws.timezone, maxHr });
     revalidatePath("/", "layout");
     return ok({ days: out.days, sleeps: out.sleeps, workouts: out.workouts, notes: out.notes });
+  } catch (e) {
+    return fail(errorMessage(e));
+  }
+}
+
+/** Live link: derive the days touched since `sinceIso` and recompute the intelligence layer. Cheap enough to run every cycle. */
+export async function deriveStrapRecent(input: { sinceIso: string }): Promise<ActionResult<{ days: number }>> {
+  const parsed = z.object({ sinceIso: z.iso.datetime() }).safeParse(input);
+  if (!parsed.success) return fail("Invalid window.");
+  try {
+    const ws = await requireWorkspace();
+    const supabase = await createClient();
+    const { data: dev } = await supabase.from("strap_devices").select("max_hr").eq("user_id", ws.userId).order("last_seen_at", { ascending: false }).limit(1).maybeSingle();
+    const fromDay = new Date(Date.parse(parsed.data.sinceIso) - 86_400_000).toISOString().slice(0, 10);
+    const out = await deriveAndStore(supabase, ws.userId, { fromDay, toDay: ws.today, today: ws.today, timezone: ws.timezone, maxHr: (dev as { max_hr: number | null } | null)?.max_hr ?? null });
+    revalidatePath("/", "layout");
+    return ok({ days: out.days });
   } catch (e) {
     return fail(errorMessage(e));
   }

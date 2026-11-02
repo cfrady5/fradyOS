@@ -88,8 +88,9 @@ Because the UI is served from Vercel, a store release is only needed when the na
 Health, Live (standard heart-rate profile) and Health, Strap (the strap's own service, bonded, history offload)
 both go through `@capacitor-community/bluetooth-le` inside the app (Web Bluetooth on the plain web). `Info.plist` carries `NSBluetoothAlwaysUsageDescription` and the Android manifest the
 `BLUETOOTH_SCAN` / `BLUETOOTH_CONNECT` permissions with the never-for-location flag. The iOS simulator has no
-Bluetooth, so test on a real phone. Streaming stops when the app goes to the background; add the
-`bluetooth-central` background mode in Xcode if you want sessions to continue with the screen off.
+Bluetooth, so test on a real phone. `UIBackgroundModes` includes `bluetooth-central`, so the strap link keeps
+streaming while the app is in the background; Android keeps it while the app is open and may pause it under
+battery optimisation, so exclude FRADY from battery optimisation on Android for an all-day link.
 
 ## Not yet in the shell
 

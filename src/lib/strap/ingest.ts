@@ -26,9 +26,30 @@ export function minuteRow(userId: string, m: StrapMinute) {
   };
 }
 
+/**
+ * Stores minutes, keeping the richer row when a minute already exists: a row with motion (from the
+ * strap's recorder) beats a live heart-rate-only row, otherwise more samples win, and a tie goes to
+ * the incoming row. Live streaming and recorder pulls therefore never degrade each other.
+ */
 export async function upsertMinutes(client: Client, userId: string, minutes: StrapMinute[]) {
   for (let i = 0; i < minutes.length; i += CHUNK) {
-    const { error } = await client.from("strap_minutes").upsert(minutes.slice(i, i + CHUNK).map((m) => minuteRow(userId, m)), { onConflict: "user_id,minute" });
+    const batch = minutes.slice(i, i + CHUNK);
+    const keys = batch.map((m) => m.minute);
+    const { data: existingRows, error: readError } = await client.from("strap_minutes").select("minute,motion,samples").eq("user_id", userId).in("minute", keys);
+    if (readError) throw new Error(readError.message);
+    const existing = new Map(((existingRows ?? []) as { minute: string; motion: number | null; samples: number }[]).map((r) => [new Date(r.minute).toISOString(), r]));
+    const rows = batch
+      .filter((m) => {
+        const prev = existing.get(m.minute);
+        if (!prev) return true;
+        const prevRich = prev.motion != null;
+        const nextRich = m.motion != null;
+        if (prevRich !== nextRich) return nextRich;
+        return m.samples >= (prev.samples ?? 0);
+      })
+      .map((m) => minuteRow(userId, m));
+    if (!rows.length) continue;
+    const { error } = await client.from("strap_minutes").upsert(rows, { onConflict: "user_id,minute" });
     if (error) throw new Error(error.message);
   }
 }

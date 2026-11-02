@@ -89,9 +89,12 @@ clinician if this persists", never as a diagnosis.
 ## Reading the strap directly (no WHOOP cloud)
 
 The primary source is the strap itself. Health, Strap connects over Bluetooth (the FRADY app on iPhone
-or Android, or Chrome on Android or desktop), bonds, sets the strap's clock, and offloads the strap's own
-history store (about two weeks of one-second records with heart rate, R-R intervals, gravity vector and
-raw optical channels). Each chunk is saved to `strap_minutes` as one row per minute before it is
+or Android, or Chrome on Android or desktop), bonds and sets the strap's clock. In its always-on mode
+(Keep connected) it streams heart rate and R-R intervals continuously over the standard heart-rate
+profile and pulls the strap's own recorder every 15 minutes (one-second records with heart rate, R-R
+intervals, gravity vector and raw optical channels), reconnecting by itself when the strap returns to
+range. The iOS app keeps the link alive in the background (bluetooth-central mode) and re-links on
+launch; a browser keeps it while the tab is open. A one-time pull is also available. Each chunk is saved to `strap_minutes` as one row per minute before it is
 acknowledged, so the strap never trims data FRADY has not stored. The protocol facts (service and
 characteristic ids, frame layout, CRCs, command numbers, record offsets) come from the NOOP project's
 documentation, which its licence explicitly releases for reuse; the TypeScript in `src/lib/strap/protocol`

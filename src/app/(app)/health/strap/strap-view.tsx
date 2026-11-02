@@ -3,18 +3,18 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Bluetooth, BluetoothOff, Square, RefreshCw, Trash2 } from "lucide-react";
+import { Bluetooth, BluetoothOff, Link2, Square, RefreshCw, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { SectionHeader } from "@/components/app/items";
 import { Metric, MetricStrip } from "@/components/app/metric";
 import { HealthRow } from "@/components/health/bits";
-import { clearStrapData, finishStrapOffload, ingestStrapMinutes, rederiveStrap, registerStrapDevice, setStrapMaxHr, startStrapOffload } from "@/actions/strap";
+import { clearStrapData, deriveStrapRecent, finishStrapOffload, ingestStrapMinutes, rederiveStrap, registerStrapDevice, setStrapMaxHr, startStrapOffload } from "@/actions/strap";
 import type { StrapData } from "@/lib/data/strap";
-import { runOffload, strapSupport, type OffloadProgress, type StrapModel, type StrapSupport } from "@/lib/strap/transport";
+import { runLiveLink, runOffload, strapSupport, type OffloadProgress, type StrapModel, type StrapSupport } from "@/lib/strap/transport";
 import { formatDate, formatTimestamp } from "@/lib/dates";
 
-type Status = "idle" | "connecting" | "bonding" | "handshake" | "offloading" | "finishing" | "done" | "error";
+type Status = "idle" | "connecting" | "bonding" | "handshake" | "offloading" | "finishing" | "done" | "error" | "linked" | "reconnecting";
 
 const STATUS_TEXT: Record<Status, string> = {
   idle: "Not connected.",
@@ -25,7 +25,29 @@ const STATUS_TEXT: Record<Status, string> = {
   finishing: "Deriving sleep, heart and strain from the samples.",
   done: "Offload complete.",
   error: "Stopped.",
+  linked: "Connected. Streaming heart rate; the recorder is pulled every 15 minutes.",
+  reconnecting: "Strap out of range. Reconnecting when it is back.",
 };
+
+const PREF_AUTOLINK = "strap:autolink";
+const PREF_DEVICE = "strap:deviceId";
+const PREF_MODEL = "strap:model";
+
+function readPref(key: string): string | null {
+  try {
+    return window.localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+function writePref(key: string, value: string | null) {
+  try {
+    if (value == null) window.localStorage.removeItem(key);
+    else window.localStorage.setItem(key, value);
+  } catch {
+    // Storage may be unavailable; the link still works for this session.
+  }
+}
 
 /** Pair the strap, offload its stored history, and see what has been collected. */
 export function StrapView({ data, today }: { data: StrapData; today: string }) {
@@ -37,11 +59,22 @@ export function StrapView({ data, today }: { data: StrapData; today: string }) {
   const [progress, setProgress] = React.useState<OffloadProgress>({ records: 0, chunks: 0, minutes: 0 });
   const [maxHr, setMaxHr] = React.useState<string>(data.devices[0]?.max_hr ? String(data.devices[0].max_hr) : "");
   const [pending, startTransition] = React.useTransition();
+  const [bpm, setBpm] = React.useState<number | null>(null);
+  const [cycles, setCycles] = React.useState(0);
+  const [lastCycleAt, setLastCycleAt] = React.useState<string | null>(null);
+  const [autolink, setAutolink] = React.useState(false);
+  const [liveMode, setLiveMode] = React.useState(false);
   const abortRef = React.useRef<AbortController | null>(null);
   const logRef = React.useRef<string[]>([]);
+  const liveRef = React.useRef(false);
 
   React.useEffect(() => {
-    const id = window.setTimeout(() => setSupport(strapSupport()), 0);
+    const id = window.setTimeout(() => {
+      setSupport(strapSupport());
+      setAutolink(readPref(PREF_AUTOLINK) === "1");
+      const savedModel = readPref(PREF_MODEL);
+      if (savedModel === "whoop4" || savedModel === "whoop5" || savedModel === "auto") setModel(savedModel);
+    }, 0);
     return () => window.clearTimeout(id);
   }, []);
   React.useEffect(() => () => abortRef.current?.abort(), []);
@@ -118,6 +151,104 @@ export function StrapView({ data, today }: { data: StrapData; today: string }) {
     })();
   }, [append, maxHr, model, router, status, support]);
 
+
+  /** Always-on mode: live heart rate plus a recorder pull every 15 minutes, with automatic reconnects. */
+  const startLive = React.useCallback(
+    (silent = false) => {
+      if (liveRef.current) return;
+      liveRef.current = true;
+      setLiveMode(true);
+      logRef.current = [];
+      setLog([]);
+      setProgress({ records: 0, chunks: 0, minutes: 0 });
+      setBpm(null);
+      setCycles(0);
+      setStatus("connecting");
+      writePref(PREF_AUTOLINK, "1");
+      writePref(PREF_MODEL, model);
+      setAutolink(true);
+      const controller = new AbortController();
+      abortRef.current = controller;
+      void (async () => {
+        const platform = support === "native" ? ((navigator.userAgent.includes("Android") ? "android" : "ios") as "ios" | "android") : "web";
+        const started = await startStrapOffload({ serial: null, platform, mode: "link" });
+        const offloadId = started.ok ? started.data.id : null;
+        let serial: string | null = null;
+        let battery: number | null = null;
+        let firmware: string | null = null;
+        let records = 0;
+        let chunks = 0;
+        let pullCount = 0;
+        try {
+          await runLiveLink({
+            model,
+            signal: controller.signal,
+            intervalMin: 15,
+            knownDeviceId: silent ? readPref(PREF_DEVICE) : null,
+            callbacks: {
+              onLog: (line, level) => append(level === "debug" ? line : `[${level}] ${line}`),
+              onState: (st) => setStatus(st === "linked" ? "linked" : st === "reconnecting" ? "reconnecting" : st === "offloading" ? "offloading" : st === "handshake" ? "handshake" : st === "bonding" ? "bonding" : st === "idle" ? "idle" : "connecting"),
+              onDevice: (info) => {
+                serial = info.serial ?? serial;
+                battery = info.battery ?? battery;
+                firmware = info.firmware ?? firmware;
+                if (info.deviceId) writePref(PREF_DEVICE, info.deviceId);
+                if (info.serial) void registerStrapDevice({ serial: info.serial, name: info.name ?? null, model, firmware: info.firmware ?? null, batteryPct: info.battery ?? null, maxHr: maxHr ? Number(maxHr) : null });
+              },
+              onProgress: (p) => {
+                records = p.records;
+                chunks = p.chunks;
+                setProgress(p);
+              },
+              onMinutes: async (minutes) => {
+                const res = await ingestStrapMinutes({ offloadId, minutes, records, chunks });
+                if (!res.ok) throw new Error(res.error);
+              },
+              onHeartRate: (value) => setBpm(value),
+              onCycle: ({ since }) => {
+                pullCount++;
+                setCycles(pullCount);
+                setLastCycleAt(new Date().toISOString());
+                void deriveStrapRecent({ sinceIso: since }).then((res) => {
+                  if (res.ok) router.refresh();
+                  else append(`[warn] derive failed: ${res.error}`);
+                });
+              },
+            },
+          });
+          if (offloadId) await finishStrapOffload({ offloadId, status: "aborted", serial, batteryPct: battery, firmware, log: logRef.current.slice(-120) });
+          setStatus("idle");
+        } catch (e) {
+          const message = e instanceof Error ? e.message : String(e);
+          append(`[error] ${message}`);
+          if (offloadId) await finishStrapOffload({ offloadId, status: "failed", error: message, serial, batteryPct: battery, firmware, log: logRef.current.slice(-120) });
+          if (!/cancel/i.test(message)) toast.error(message);
+          setStatus("error");
+        } finally {
+          liveRef.current = false;
+          setLiveMode(false);
+          setBpm(null);
+        }
+        router.refresh();
+      })();
+    },
+    [append, maxHr, model, router, support],
+  );
+
+  function stopLive() {
+    writePref(PREF_AUTOLINK, "0");
+    setAutolink(false);
+    abortRef.current?.abort();
+  }
+
+  // The app re-links on open when the user left the link on last time (native only: the picker needs a tap on the web).
+  React.useEffect(() => {
+    if (support !== "native" || !autolink || liveRef.current || !readPref(PREF_DEVICE)) return;
+    const id = window.setTimeout(() => startLive(true), 400);
+    return () => window.clearTimeout(id);
+  }, [autolink, startLive, support]);
+
+  const live = liveMode && status !== "idle" && status !== "error";
   const busy = status === "connecting" || status === "bonding" || status === "handshake" || status === "offloading" || status === "finishing";
   const device = data.devices[0];
 
@@ -176,17 +307,39 @@ export function StrapView({ data, today }: { data: StrapData; today: string }) {
                     <option value="whoop5">WHOOP 5.0 / MG</option>
                   </select>
                 </label>
-                {busy ? (
-                  <Button variant="outline" onClick={() => abortRef.current?.abort()}>
-                    <Square /> Stop
+                {busy || live ? (
+                  <Button variant="outline" onClick={liveMode ? stopLive : () => abortRef.current?.abort()}>
+                    <Square /> {liveMode ? "Disconnect" : "Stop"}
                   </Button>
                 ) : (
-                  <Button onClick={start} disabled={support === "unknown" || data.notReady}>
-                    <Bluetooth /> Connect and offload
-                  </Button>
+                  <>
+                    <Button onClick={() => startLive(false)} disabled={support === "unknown" || data.notReady}>
+                      <Link2 /> Keep connected
+                    </Button>
+                    <Button variant="outline" onClick={start} disabled={support === "unknown" || data.notReady}>
+                      <Bluetooth /> One-time pull
+                    </Button>
+                  </>
                 )}
               </div>
             </div>
+            {live ? (
+              <div className="mt-4 grid grid-cols-3 gap-3">
+                <div>
+                  <p className="text-text-3 text-meta">Heart rate</p>
+                  <p className={`nums text-3xl font-semibold tracking-tight ${bpm ? "text-text-1" : "text-text-3"}`} aria-live="polite">{bpm ?? "--"}<span className="text-text-3 ml-1 text-sm font-normal">bpm</span></p>
+                </div>
+                <div>
+                  <p className="text-text-3 text-meta">Recorder pulls</p>
+                  <p className="nums text-text-1 text-3xl font-semibold tracking-tight">{cycles}</p>
+                  {lastCycleAt ? <p className="text-text-3 text-meta nums">last {formatTimestamp(lastCycleAt)}</p> : null}
+                </div>
+                <div>
+                  <p className="text-text-3 text-meta">Minutes stored</p>
+                  <p className="nums text-text-1 text-3xl font-semibold tracking-tight">{progress.minutes}</p>
+                </div>
+              </div>
+            ) : null}
             {log.length ? <pre className="bg-surface-2 text-text-2 nums mt-4 max-h-56 overflow-auto rounded-md p-3 text-[11px] leading-relaxed">{log.join("\n")}</pre> : null}
             <div className="text-text-3 mt-4 space-y-1 text-sm">
               <p className="text-text-2">Before the first offload (the strap holds one encrypted bond at a time)</p>
@@ -194,8 +347,8 @@ export function StrapView({ data, today }: { data: StrapData; today: string }) {
               <p>2. If an earlier attempt half-paired the strap, forget it in this device&apos;s Bluetooth settings.</p>
               <p>3. WHOOP 5.0 or MG: tap the sensor firmly and repeatedly until the LEDs flash blue. That is its pairing window.</p>
               <p>4. On a Mac or Windows PC, pair the strap once in the system Bluetooth settings while the LEDs are blue, then come back and press Connect. Chrome cannot create the bond by itself on a desktop. The FRADY app on a phone bonds on its own.</p>
-              <p>5. Keep the strap within a metre until the offload completes. A full 14-day store takes several minutes.</p>
-              <p>The WHOOP app will need to re-pair afterwards if you go back to it.</p>
+              <p>5. Press Keep connected. FRADY streams your heart rate, pulls the strap&apos;s recorder every 15 minutes for sleep and motion, and reconnects by itself when the strap comes back into range. The first pull takes several minutes for a full 14-day store.</p>
+              <p>In the FRADY app the link keeps running in the background and reconnects on launch. In a browser it runs while this tab is open. The WHOOP app will need to re-pair if you go back to it.</p>
             </div>
           </div>
         )}

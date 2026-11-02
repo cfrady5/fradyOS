@@ -22,6 +22,10 @@
 	<string>$(MARKETING_VERSION)</string>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>bluetooth-central</string>
+	</array>
 	<key>NSBluetoothAlwaysUsageDescription</key>
 	<string>FRADY connects to your WHOOP strap to show live heart rate.</string>
 	<key>LSRequiresIPhoneOS</key>

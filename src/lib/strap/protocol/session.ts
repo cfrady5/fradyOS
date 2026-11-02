@@ -79,6 +79,8 @@ export type SessionState =
   | "handshake"
   | "settling"
   | "offloading"
+  /** keepAlive sessions: an offload cycle finished and the link stays up, waiting for resumeOffload(). */
+  | "linked"
   | "complete"
   | "aborted"
   | "failed";
@@ -125,6 +127,8 @@ export type Effect =
   | { kind: "response"; response: CommandResponse; decoded: DecodedResponseBody; matchedRequest: boolean }
   | ChunkEffect
   | { kind: "offloadProgress"; records: number; chunks: number }
+  /** keepAlive sessions: one offload cycle finished; the link stays up. */
+  | { kind: "cycleDone"; records: number; chunks: number; acked: number }
   | { kind: "done"; summary: DoneSummary }
   | { kind: "error"; message: string; fatal: boolean };
 
@@ -157,6 +161,8 @@ export interface StartOptions {
   nowMs: number;
   /** The custom service the transport discovered; required for `model: "auto"`. */
   serviceUuid?: string;
+  /** Keep the session alive after HISTORY_COMPLETE so the host can call resumeOffload() later. */
+  keepAlive?: boolean;
 }
 
 interface HandshakeStep {
@@ -246,6 +252,7 @@ export class StrapSession {
   private readonly awaitingStore = new Map<number, AwaitingChunk>();
   private lastAckedToken: Uint8Array | null = null;
   private completeSeen = false;
+  private keepAlive = false;
   private lastOffloadFrameMs = 0;
   private reRequests = 0;
   private warnedFamilyMismatch = false;
@@ -276,6 +283,7 @@ export class StrapSession {
   // -------------------------------------------------------------------------
 
   start(options: StartOptions): void {
+    this.keepAlive = options.keepAlive === true;
     if (this._state !== "idle") {
       this.fail("start() called twice; create a new StrapSession per connection", true);
       return;
@@ -420,9 +428,33 @@ export class StrapSession {
     this.dispatch();
   }
 
+  /** keepAlive sessions: pull whatever the strap recorded since the last cycle. Allowed only while linked. */
+  resumeOffload(): void {
+    if (this._state !== "linked") {
+      this.log("warn", `resumeOffload ignored in state ${this._state}`);
+      return;
+    }
+    this.completeSeen = false;
+    this.startSeen = false;
+    this.reRequests = 0;
+    this.requestHistory();
+    this.dispatch();
+  }
+
+  /** keepAlive sessions: close cleanly from the linked state (no abort command, nothing is trimmed). */
+  end(): void {
+    if (this.isFinished()) return;
+    if (this._state === "offloading" || this._state === "settling") {
+      this.abort();
+      return;
+    }
+    this.setState("complete");
+    this.finish("complete");
+  }
+
   /** TOGGLE_REALTIME_HR; allowed once the handshake is done. */
   requestRealtimeHr(on: boolean): void {
-    if (this._state !== "settling" && this._state !== "offloading" && this._state !== "complete") {
+    if (this._state !== "settling" && this._state !== "offloading" && this._state !== "complete" && this._state !== "linked") {
       this.log("warn", "requestRealtimeHr ignored: handshake not finished");
       return;
     }
@@ -432,7 +464,7 @@ export class StrapSession {
 
   /** GET_BATTERY_LEVEL poll; allowed once the handshake is done. */
   requestBattery(): void {
-    if (this._state !== "settling" && this._state !== "offloading" && this._state !== "complete") return;
+    if (this._state !== "settling" && this._state !== "offloading" && this._state !== "complete" && this._state !== "linked") return;
     this.enqueue({ spec: getBatteryLevel(), purpose: "battery" });
     this.dispatch();
   }
@@ -731,6 +763,11 @@ export class StrapSession {
     if (this.pendingWrite?.purpose === "ack" || this.writeQueue.some((w) => w.purpose === "ack")) return;
     if (this.current.rawFrames.length > 0) {
       this.log("warn", `${this.current.rawFrames.length} record(s) arrived after the last HISTORY_END and were not acknowledged; the strap will resend them`);
+    }
+    if (this.keepAlive) {
+      this.emit({ kind: "cycleDone", records: this.stats.records, chunks: this.stats.chunks, acked: this.stats.acked });
+      this.setState("linked");
+      return;
     }
     this.setState("complete");
     this.finish("complete");
