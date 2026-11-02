@@ -40,13 +40,13 @@ export function TaskBoard({ tasks }: { tasks: TaskWithRefs[] }) {
   }
 
   return (
-    <div className="-mx-3 flex gap-3 overflow-x-auto px-3 pb-3 md:-mx-6 md:px-6">
+    <div className="-mx-3 flex snap-x snap-mandatory gap-3 overflow-x-auto px-3 pb-3 md:-mx-6 md:snap-none md:px-6">
       {TASK_STATUSES.map((col) => {
         const items = local.filter((t) => t.status === col.value);
         return (
           <div
             key={col.value}
-            className={cn("bg-surface-1 border-line-1 flex w-72 shrink-0 flex-col rounded-lg border p-2 transition-colors duration-150", dragOver === col.value && "border-brand/50 bg-surface-2")}
+            className={cn("bg-surface-1 border-line-1 flex w-[84vw] shrink-0 snap-start flex-col rounded-lg border p-2 transition-colors duration-150 md:w-72", dragOver === col.value && "border-brand/50 bg-surface-2")}
             onDragOver={(e) => {
               e.preventDefault();
               if (dragOver !== col.value) setDragOver(col.value);

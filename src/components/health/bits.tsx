@@ -3,6 +3,7 @@ import * as React from "react";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useActiveTabInView } from "@/components/app/use-active-tab";
 import { cn } from "@/lib/utils";
 import { EmptyState } from "@/components/ui/empty-state";
 
@@ -24,9 +25,10 @@ export const HEALTH_TABS: { href: string; label: string }[] = [
 /** Section navigation for Health: underline tabs on a hairline, the same pattern as Finances. */
 export function HealthNav() {
   const pathname = usePathname();
+  const listRef = useActiveTabInView(pathname);
   return (
     <nav aria-label="Health sections" className="border-line-1 -mx-4 mb-6 border-b px-4 md:mx-0 md:px-0">
-      <ul className="-mb-px flex gap-1 overflow-x-auto [scrollbar-width:none]">
+      <ul ref={listRef} className="-mb-px flex gap-1 overflow-x-auto [scrollbar-width:none]">
         {HEALTH_TABS.map((t) => {
           const active = t.href === "/health" ? pathname === "/health" : pathname.startsWith(t.href);
           return (

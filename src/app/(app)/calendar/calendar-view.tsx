@@ -102,9 +102,9 @@ export function CalendarView({ items, view, date, from, to, preset, types }: { i
               ))}
             </div>
           </div>
-          <div className="flex flex-wrap gap-1.5" role="group" aria-label="Item types">
+          <div className="-mx-4 flex gap-1.5 overflow-x-auto px-4 [scrollbar-width:none] md:mx-0 md:flex-wrap md:px-0" role="group" aria-label="Item types">
             {ALL_KINDS.map((k) => (
-              <button key={k} type="button" aria-pressed={active.has(k)} onClick={() => toggleKind(k)} className={cn("focus-visible:ring-brand/40 rounded-full border px-2 py-0.5 text-[11px] font-medium transition-opacity outline-none focus-visible:ring-2", KIND_META[k].className, !active.has(k) && "opacity-35")}>
+              <button key={k} type="button" aria-pressed={active.has(k)} onClick={() => toggleKind(k)} className={cn("focus-visible:ring-brand/40 shrink-0 rounded-full border px-2 py-0.5 text-[11px] font-medium whitespace-nowrap transition-opacity outline-none focus-visible:ring-2", KIND_META[k].className, !active.has(k) && "opacity-35")}>
                 {KIND_META[k].label}
               </button>
             ))}
@@ -163,13 +163,20 @@ function MonthGrid({ date, items, today, weekStartsOn, onOpen, onDropPlanned }: 
             const inMonth = day.startsWith(month);
             const shown = dayItems.slice(0, 5);
             return (
-              <div key={day} className={cn("border-line-1 min-h-20 border-r p-1 transition-colors last:border-r-0 md:min-h-28", !inMonth && "bg-surface-0/60", over === day && "bg-surface-hover")}
+              <div key={day} className={cn("border-line-1 min-h-14 border-r p-1 transition-colors last:border-r-0 md:min-h-28", !inMonth && "bg-surface-0/60", over === day && "bg-surface-hover")}
                 onDragOver={(e) => { e.preventDefault(); if (over !== day) setOver(day); }}
                 onDragLeave={() => setOver(null)}
                 onDrop={(e) => { e.preventDefault(); setOver(null); const id = e.dataTransfer.getData("text/task-id"); if (id) onDropPlanned(day, id); }}
               >
                 <div className={cn("nums mb-1 flex size-6 items-center justify-center rounded-full text-xs", day === today ? "bg-brand font-semibold text-white" : inMonth ? "text-text-2" : "text-text-3")}>{parseInt(day.slice(8), 10)}</div>
-                <div className="flex flex-col gap-0.5">
+                {/* Phones: coloured dots and a count; the day opens the agenda. Wider screens: titled chips. */}
+                {dayItems.length ? (
+                  <Link href={`/calendar?view=agenda&date=${day}`} className="focus-visible:ring-brand/40 flex min-h-8 flex-wrap content-start gap-1 rounded-sm px-0.5 outline-none focus-visible:ring-2 md:hidden" aria-label={`${dayItems.length} items on ${formatDate(day, "medium", today)}`}>
+                    {dayItems.slice(0, 6).map((i) => <span key={i.id} className={cn("size-1.5 rounded-full border", KIND_META[i.kind].className)} />)}
+                    {dayItems.length > 6 ? <span className="text-text-3 text-[10px] leading-none">+{dayItems.length - 6}</span> : null}
+                  </Link>
+                ) : null}
+                <div className="hidden flex-col gap-0.5 md:flex">
                   {shown.map((i) => <Chip key={i.id} item={i} onOpen={onOpen} compact />)}
                   {dayItems.length > shown.length ? <Link href={`/calendar?view=agenda&date=${day}`} className="index hover:text-text-1 px-1 hover:underline">+{dayItems.length - shown.length} more</Link> : null}
                 </div>

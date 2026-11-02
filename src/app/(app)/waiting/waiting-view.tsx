@@ -107,7 +107,33 @@ export function WaitingView({ tasks, received, area, showReceived }: { tasks: Ta
 
 function WaitingTable({ tasks, today, taskHref }: { tasks: TaskWithRefs[]; today: string; taskHref: (id: string) => string }) {
   return (
-    <div className="border-line-1 bg-surface-1 mt-3 rounded-lg border">
+    <>
+      {/* Phones: one card per item; the table needs seven columns and does not fit. */}
+      <div className="mt-3 flex flex-col gap-2 md:hidden">
+        {tasks.map((t) => {
+          const lateDelivery = t.waiting_expected_date && t.waiting_expected_date < today;
+          const followupDue = t.waiting_followup_date && t.waiting_followup_date <= today;
+          return (
+            <article key={t.id} className={cn("border-line-1 bg-surface-1 rounded-lg border p-3", lateDelivery && "bg-danger/6")}>
+              <Link href={taskHref(t.id)} scroll={false} className="text-text-1 block font-medium hover:underline">{t.title}</Link>
+              {t.waiting_need ? <p className="text-text-2 text-meta mt-0.5">Need: {t.waiting_need}</p> : null}
+              <p className="text-text-3 text-meta mt-1 flex flex-wrap items-center gap-x-2.5">
+                {t.waiting_person ? <span className="text-text-2">{t.waiting_person}</span> : null}
+                {t.work_area ? <AreaTag name={t.work_area.name} color={t.work_area.color} /> : null}
+                {t.project ? <span>{t.project.name}</span> : null}
+                {t.event ? <span>{t.event.name}</span> : null}
+              </p>
+              <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                {t.waiting_expected_date ? <Badge variant={lateDelivery ? "destructive" : "muted"} className="nums">{lateDelivery ? "Late · " : "Due "}{relativeDayLabel(t.waiting_expected_date, today)}</Badge> : null}
+                {t.waiting_followup_date ? <Badge variant={followupDue ? "warning" : "secondary"} className="nums">Follow up {t.waiting_followup_date === today ? "today" : relativeDayLabel(t.waiting_followup_date, today).toLowerCase()}</Badge> : <Badge variant="outline">No follow-up set</Badge>}
+                {t.waiting_requested_date ? <span className="text-text-3 text-meta nums">asked {formatDate(t.waiting_requested_date, "short", today)}</span> : null}
+              </div>
+              <div className="mt-2 flex justify-end"><WaitingActions task={t} compact /></div>
+            </article>
+          );
+        })}
+      </div>
+      <div className="border-line-1 bg-surface-1 mt-3 hidden rounded-lg border md:block">
       <Table>
         <TableHeader>
           <TableRow>
@@ -156,6 +182,7 @@ function WaitingTable({ tasks, today, taskHref }: { tasks: TaskWithRefs[]; today
           })}
         </TableBody>
       </Table>
-    </div>
+      </div>
+    </>
   );
 }

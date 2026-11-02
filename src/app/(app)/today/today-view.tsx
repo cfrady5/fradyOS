@@ -103,10 +103,30 @@ export function TodayView({ data, standing, greeting, dateLabel }: { data: Today
         }
       />
 
+      {/* Phones: the page is long, so a sticky row of section links sits under the app header. */}
+      <nav aria-label="Sections" className="today-jump bg-surface-0/95 sticky top-14 z-20 -mx-4 -mt-2 mb-4 border-b border-line-1 px-4 backdrop-blur md:hidden">
+        <ul className="flex gap-1 overflow-x-auto py-2 [scrollbar-width:none]">
+          {[
+            ["today-attention", "Attention"],
+            ["today-focus", "Focus"],
+            ["today-next", "Up next"],
+            ["today-coming", "Coming up"],
+            ["today-standing", "Standing"],
+            ["today-body", "Body"],
+          ].map(([id, label]) => (
+            <li key={id} className="shrink-0">
+              <a href={`#${id}`} className="bg-surface-2 text-text-2 hover:text-text-1 inline-flex h-8 items-center rounded-full px-3 text-[13px] font-medium">
+                {label}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </nav>
+
       <div className="grid gap-x-10 gap-y-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,19rem)] lg:items-start xl:grid-cols-[minmax(0,1fr)_minmax(0,21rem)]">
         <div className="flex min-w-0 flex-col gap-8">
           {/* 01 — What needs my attention? */}
-          <section aria-labelledby="today-attention">
+          <section aria-labelledby="today-attention" className="scroll-mt-28 md:scroll-mt-4">
             <SectionHeader index="01" title={<span id="today-attention">Needs attention</span>} hint={clear ? "nothing overdue, no follow-ups due" : undefined} />
             <MetricStrip cols={4} className="mt-3">
               <Metric size="sm" label="Overdue" value={data.overdue.length} muted={!data.overdue.length} tone={data.overdue.length ? "critical" : "neutral"} sub={data.overdue.length ? "to decide" : "all clear"} href="/tasks?due=overdue" />
@@ -117,7 +137,7 @@ export function TodayView({ data, standing, greeting, dateLabel }: { data: Today
           </section>
 
           {/* 02 — What am I focusing on? */}
-          <section aria-labelledby="today-focus">
+          <section aria-labelledby="today-focus" className="scroll-mt-28 md:scroll-mt-4">
             <SectionHeader
               index="02"
               title={<span id="today-focus">Focus today</span>}
@@ -142,7 +162,7 @@ export function TodayView({ data, standing, greeting, dateLabel }: { data: Today
           </section>
 
           {/* 03 — What should I do next? */}
-          <section aria-labelledby="today-next">
+          <section aria-labelledby="today-next" className="scroll-mt-28 md:scroll-mt-4">
             <SectionHeader
               index="03"
               title={<span id="today-next">Up next</span>}
@@ -220,7 +240,7 @@ export function TodayView({ data, standing, greeting, dateLabel }: { data: Today
 
         <aside className="flex min-w-0 flex-col gap-8">
           {/* 04 — What's coming up? */}
-          <section aria-labelledby="today-coming">
+          <section aria-labelledby="today-coming" className="scroll-mt-28 md:scroll-mt-4">
             <SectionHeader index="04" title={<span id="today-coming">Coming up</span>} count={comingCount} action={<SectionLink href="/calendar">Calendar</SectionLink>} />
             {comingCount === 0 ? (
               <EmptyState className="mt-3" title="Quiet week ahead" description="Deadlines, events and posts in the next 7 days land here." />
@@ -266,7 +286,7 @@ export function TodayView({ data, standing, greeting, dateLabel }: { data: Today
           </section>
 
           {/* 05 — Where do I stand? */}
-          <section aria-labelledby="today-standing">
+          <section aria-labelledby="today-standing" className="scroll-mt-28 md:scroll-mt-4">
             <SectionHeader index="05" title={<span id="today-standing">Where I stand</span>} action={<SectionLink href="/finances">Finances</SectionLink>} />
             <div className="mt-3 flex flex-col gap-5">
               {standing.finance ? (
@@ -387,7 +407,7 @@ export function TodayView({ data, standing, greeting, dateLabel }: { data: Today
           </section>
 
           {/* 06 — How is my body? */}
-          <section aria-labelledby="today-body">
+          <section aria-labelledby="today-body" className="scroll-mt-28 md:scroll-mt-4">
             <SectionHeader index="06" title={<span id="today-body">Body</span>} hint={standing.health ? (standing.health.staleDays > 1 ? `Last data ${formatDate(standing.health.day, "medium", today)}` : undefined) : undefined} action={<SectionLink href="/health">Health</SectionLink>} />
             {standing.health ? (
               <MetricStrip cols={2} className="mt-3">

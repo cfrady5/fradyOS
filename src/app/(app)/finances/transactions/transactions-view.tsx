@@ -190,7 +190,13 @@ export function TransactionsView({ transactions, months, month, accounts, catego
           ) : visible.length === 0 ? (
             <p className="text-text-3 py-8 text-center text-sm">Nothing matches these filters.</p>
           ) : (
-            <Table>
+            <>
+            <div className="hairline-rows md:hidden">
+              {visible.map((t) => (
+                <MobileRow key={t.id} t={t} accountName={accountName.get(t.account_id) ?? "—"} categories={categories} recurring={recurring} today={today} selecting={selecting} checked={selected.has(t.id)} onToggle={(on) => toggle(t.id, on)} />
+              ))}
+            </div>
+            <Table className="hidden md:table">
               <TableHeader>
                 <TableRow>
                   {selecting ? <TableHead className="w-8" /> : null}
@@ -207,6 +213,7 @@ export function TransactionsView({ transactions, months, month, accounts, catego
                 ))}
               </TableBody>
             </Table>
+            </>
           )}
         </div>
       </div>
@@ -321,5 +328,53 @@ function Row({ t, accountName, categories, recurring, today, selecting, checked,
       </TableCell>
       <TableCell className={cn("nums text-text-1 text-right whitespace-nowrap", t.amount > 0 ? "text-success" : null)}>{fmtMoney(t.amount, { cents: true, sign: true })}</TableCell>
     </TableRow>
+  );
+}
+
+/** Phone layout: amount on the right, category picker underneath, everything in one tap-friendly block. */
+function MobileRow({ t, accountName, categories, recurring, today, selecting, checked, onToggle }: { t: FinancialTransaction; accountName: string; categories: BudgetCategory[]; recurring: RecurringItem[]; today: string; selecting: boolean; checked: boolean; onToggle: (on: boolean) => void }) {
+  const router = useRouter();
+  const [pending, startTransition] = React.useTransition();
+  const label = t.merchant_name?.trim() || t.description?.trim() || "—";
+  const hit = matchRecurring(`${t.merchant_name ?? ""} ${t.description ?? ""}`, recurring);
+  const budgetable = t.transaction_type !== "income" && t.transaction_type !== "transfer";
+  function setCategory(v: string) {
+    startTransition(async () => {
+      const res = await patchTransactions([t.id], { category_id: v || null });
+      if (!res.ok) return void toast.error(res.error);
+      router.refresh();
+    });
+  }
+  return (
+    <div className={cn("flex items-start gap-3 px-3 py-3", t.pending && "opacity-60", checked && "bg-brand/8")}>
+      {selecting ? <SelectCheckbox aria-label={`Select ${label}`} checked={checked} onCheckedChange={(v) => onToggle(Boolean(v))} className="mt-1" /> : null}
+      <div className="min-w-0 flex-1">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-text-1 truncate font-medium">{label}</p>
+            <p className="text-text-3 text-meta nums truncate">
+              {formatDate(t.transaction_date, "short", today)} · {accountName}
+              {t.pending ? " · pending" : ""}
+            </p>
+          </div>
+          <p className={cn("nums text-text-1 shrink-0 text-right font-medium", t.amount > 0 && "text-success")}>{fmtMoney(t.amount, { cents: true, sign: true })}</p>
+        </div>
+        <div className="mt-2 flex flex-wrap items-center gap-1.5">
+          <Badge variant={TYPE_BADGE[t.transaction_type]}>{TRANSACTION_TYPES.find((x) => x.value === t.transaction_type)?.label ?? t.transaction_type}</Badge>
+          {hit ? <Badge variant="outline" className="gap-1"><Repeat /> {hit.name}</Badge> : null}
+          {budgetable ? (
+            <NativeSelect aria-label={`Category for ${label}`} value={t.category_id ?? ""} onChange={(e) => setCategory(e.target.value)} className="h-8 max-w-[11rem] text-xs" disabled={pending}>
+              <option value="">{t.transaction_type === "payment" ? "Card payment" : "Uncategorized"}</option>
+              {categories.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </NativeSelect>
+          ) : null}
+          {pending ? <Loader2 className="text-text-3 size-3.5 animate-spin" aria-label="Saving" /> : null}
+        </div>
+      </div>
+    </div>
   );
 }

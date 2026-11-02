@@ -55,7 +55,7 @@ export function SettingsView(props: {
     <div className="mx-auto max-w-4xl">
       <PageHeader title="Settings" description="Workspace preferences, work areas, integrations and reminders." />
       <Tabs value={props.tab} onValueChange={(v) => router.push(`${pathname}?tab=${v}`)}>
-        <TabsList className="h-auto flex-wrap" aria-label="Settings sections">
+        <TabsList className="-mx-4 w-auto max-w-none rounded-none border-x-0 px-4 md:mx-0 md:w-fit md:rounded-md md:border-x md:px-1" aria-label="Settings sections">
           <TabsTrigger value="general" className="h-7 flex-none">General</TabsTrigger>
           <TabsTrigger value="areas" className="h-7 flex-none">Work areas</TabsTrigger>
           <TabsTrigger value="monday" className="h-7 flex-none">Monday.com</TabsTrigger>

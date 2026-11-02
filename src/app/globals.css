@@ -462,8 +462,20 @@ html.native [data-slot="sheet-content"] {
 html.native .site {
   padding-top: env(safe-area-inset-top);
 }
+html.native .today-jump {
+  top: calc(3.5rem + env(safe-area-inset-top));
+}
 html.native {
   /* Stop the rubber-band overscroll glow and the WebView's long-press callouts on chrome. */
   overscroll-behavior-y: none;
   -webkit-tap-highlight-color: transparent;
+}
+
+/* Touch screens: 16px text in fields stops iOS Safari zooming the page on focus. Unlayered so it beats utilities. */
+@media (pointer: coarse) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  select,
+  textarea {
+    font-size: max(16px, 1em);
+  }
 }
