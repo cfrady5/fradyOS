@@ -189,12 +189,13 @@ export function StrapView({ data, today }: { data: StrapData; today: string }) {
             </div>
             {log.length ? <pre className="bg-surface-2 text-text-2 nums mt-4 max-h-56 overflow-auto rounded-md p-3 text-[11px] leading-relaxed">{log.join("\n")}</pre> : null}
             <div className="text-text-3 mt-4 space-y-1 text-sm">
-              <p className="text-text-2">Before the first offload</p>
-              <p>1. Fully quit the WHOOP app on your phone, or turn Bluetooth off on that phone, so it is not holding the strap.</p>
-              <p>2. If the strap is already bonded to another device, forget it in that device&apos;s Bluetooth settings.</p>
-              <p>3. On a WHOOP 5.0 or MG, tap the sensor firmly and repeatedly until the LEDs flash blue (pairing mode). A 4.0 bonds on the first confirmed write.</p>
-              <p>4. Keep the strap within a metre until the offload completes. A full 14-day store takes several minutes.</p>
-              <p>The strap holds one encrypted bond at a time, so the WHOOP app will need to re-pair afterwards if you go back to it.</p>
+              <p className="text-text-2">Before the first offload (the strap holds one encrypted bond at a time)</p>
+              <p>1. Turn Bluetooth off on the phone that runs the WHOOP app. Quitting the app is not always enough.</p>
+              <p>2. If an earlier attempt half-paired the strap, forget it in this device&apos;s Bluetooth settings.</p>
+              <p>3. WHOOP 5.0 or MG: tap the sensor firmly and repeatedly until the LEDs flash blue. That is its pairing window.</p>
+              <p>4. On a Mac or Windows PC, pair the strap once in the system Bluetooth settings while the LEDs are blue, then come back and press Connect. Chrome cannot create the bond by itself on a desktop. The FRADY app on a phone bonds on its own.</p>
+              <p>5. Keep the strap within a metre until the offload completes. A full 14-day store takes several minutes.</p>
+              <p>The WHOOP app will need to re-pair afterwards if you go back to it.</p>
             </div>
           </div>
         )}

@@ -67,7 +67,9 @@ function describeProps(c: BluetoothRemoteGATTCharacteristic): string {
 const toBytes = (view: DataView) => new Uint8Array(view.buffer.slice(view.byteOffset, view.byteOffset + view.byteLength));
 
 async function connectWeb(log: OffloadCallbacks["onLog"]): Promise<Link> {
-  log(`Web Bluetooth on ${navigator.userAgent.replace(/^.*\((.*?)\).*$/, "$1")}`, "debug");
+  const ua = navigator.userAgent;
+  const os = /Android/.test(ua) ? "Android" : /Mac OS X/.test(ua) ? "macOS" : /Windows/.test(ua) ? "Windows" : /CrOS/.test(ua) ? "ChromeOS" : /Linux/.test(ua) ? "Linux" : "unknown OS";
+  log(`Web Bluetooth on ${os}, ${/Chrome\/(\d+)/.exec(ua)?.[0] ?? "unknown browser"}`, "debug");
   const device = await navigator.bluetooth.requestDevice({
     filters: [{ services: [WHOOP4_SERVICE] }, { services: [WHOOP5_SERVICE] }, { namePrefix: "WHOOP" }],
     optionalServices: [WHOOP4_SERVICE, WHOOP5_SERVICE, BATTERY_SERVICE, HEART_RATE_SERVICE, DEVICE_INFORMATION_SERVICE],
@@ -151,6 +153,18 @@ async function connectNative(log: OffloadCallbacks["onLog"]): Promise<Link> {
   if (!family) throw new Error("No WHOOP service found on this device.");
   const service = FAMILY_GATT[family].service;
   log(`Connected to ${device.name ?? "strap"} (${family})`, "info");
+  // Android can create the just-works bond explicitly; iOS bonds on the first encrypted access.
+  if (Capacitor.getPlatform() === "android") {
+    try {
+      const bonded = await BleClient.isBonded(device.deviceId);
+      if (!bonded) {
+        log("Requesting the system bond", "info");
+        await step("bond", () => BleClient.createBond(device.deviceId));
+      }
+    } catch (e) {
+      log(`Bond request failed: ${e instanceof Error ? e.message : String(e)}`, "warn");
+    }
+  }
   return {
     family,
     name: device.name ?? null,
@@ -324,7 +338,13 @@ export async function runOffload({ model, signal, callbacks }: RunOffloadOptions
         callbacks.onLog(`Subscribed to ${uuid.slice(0, 8)}`, "debug");
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e);
-        if (required.has(uuid)) throw new Error(`${msg}. If this is the first connection, the browser may have refused the encrypted channel: pair the strap in the system Bluetooth settings first (macOS and Windows), or use the FRADY app.`);
+        if (required.has(uuid)) {
+          const hint =
+            link.family === "whoop5"
+              ? "A WHOOP 5.0 only talks over an encrypted, bonded link and drops the connection when it will not accept one. Turn Bluetooth off on your phone, tap the strap firmly until its LEDs flash blue, pair it once in this computer's Bluetooth settings, then try again. The FRADY app on a phone bonds on its own."
+              : "The strap refused the encrypted channel. Quit the WHOOP app or turn that phone's Bluetooth off, then try again.";
+          throw new Error(`${msg}. ${hint}`);
+        }
         callbacks.onLog(`Optional channel ${uuid.slice(0, 8)} not available (${msg}); continuing`, "warn");
       }
     }
