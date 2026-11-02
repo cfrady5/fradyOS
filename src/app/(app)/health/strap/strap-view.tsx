@@ -38,6 +38,7 @@ export function StrapView({ data, today }: { data: StrapData; today: string }) {
   const [maxHr, setMaxHr] = React.useState<string>(data.devices[0]?.max_hr ? String(data.devices[0].max_hr) : "");
   const [pending, startTransition] = React.useTransition();
   const abortRef = React.useRef<AbortController | null>(null);
+  const logRef = React.useRef<string[]>([]);
 
   React.useEffect(() => {
     const id = window.setTimeout(() => setSupport(strapSupport()), 0);
@@ -45,9 +46,13 @@ export function StrapView({ data, today }: { data: StrapData; today: string }) {
   }, []);
   React.useEffect(() => () => abortRef.current?.abort(), []);
 
-  const append = React.useCallback((line: string) => setLog((l) => [...l.slice(-199), `${new Date().toLocaleTimeString()} ${line}`]), []);
+  const append = React.useCallback((line: string) => {
+    logRef.current = [...logRef.current.slice(-199), `${new Date().toLocaleTimeString()} ${line}`];
+    setLog(logRef.current);
+  }, []);
 
   const start = React.useCallback(() => {
+    logRef.current = [];
     setLog([]);
     setProgress({ records: 0, chunks: 0, minutes: 0 });
     setStatus("connecting");
@@ -73,7 +78,7 @@ export function StrapView({ data, today }: { data: StrapData; today: string }) {
           model,
           signal: controller.signal,
           callbacks: {
-            onLog: (line) => append(line),
+            onLog: (line, level) => append(level === "debug" ? line : `[${level}] ${line}`),
             onState: (s) => setStatus(s === "bonding" ? "bonding" : s === "handshake" ? "handshake" : s === "offloading" ? "offloading" : s === "connected" ? "bonding" : status),
             onDevice: (info) => {
               serial = info.serial ?? serial;
@@ -93,7 +98,7 @@ export function StrapView({ data, today }: { data: StrapData; today: string }) {
           },
         });
         setStatus("finishing");
-        const fin = await finishStrapOffload({ offloadId, status: "succeeded", serial, batteryPct: battery, firmware, log: log.slice(-100) });
+        const fin = await finishStrapOffload({ offloadId, status: "succeeded", serial, batteryPct: battery, firmware, log: logRef.current.slice(-120) });
         if (fin.ok) {
           toast.success(`Offload done: ${fin.data.days} days, ${fin.data.sleeps} sleeps, ${fin.data.workouts} workouts derived.`);
           setStatus("done");
@@ -105,13 +110,13 @@ export function StrapView({ data, today }: { data: StrapData; today: string }) {
         const message = e instanceof Error ? e.message : String(e);
         const aborted = controller.signal.aborted;
         append(aborted ? "Aborted." : `Error: ${message}`);
-        await finishStrapOffload({ offloadId, status: aborted ? "aborted" : "failed", error: aborted ? null : message, serial, batteryPct: battery, firmware });
+        await finishStrapOffload({ offloadId, status: aborted ? "aborted" : "failed", error: aborted ? null : message, serial, batteryPct: battery, firmware, log: logRef.current.slice(-120) });
         if (!aborted && !/cancel/i.test(message)) toast.error(message);
         setStatus(aborted ? "idle" : "error");
       }
       router.refresh();
     })();
-  }, [append, log, maxHr, model, router, status, support]);
+  }, [append, maxHr, model, router, status, support]);
 
   const busy = status === "connecting" || status === "bonding" || status === "handshake" || status === "offloading" || status === "finishing";
   const device = data.devices[0];
@@ -225,7 +230,15 @@ export function StrapView({ data, today }: { data: StrapData; today: string }) {
         {data.offloads.length ? (
           <div className="hairline-rows -mx-2 mt-3">
             {data.offloads.map((o) => (
-              <HealthRow key={o.id} title={`${formatTimestamp(o.started_at)} · ${o.status}${o.error ? ` · ${o.error}` : ""}`} meta={`${o.platform ?? ""}${o.first_sample_at && o.last_sample_at ? ` · ${formatTimestamp(o.first_sample_at)} to ${formatTimestamp(o.last_sample_at)}` : ""}`} value={`${o.minutes} min`} sub={`${o.records} records · ${o.chunks} chunks`} />
+              <div key={o.id}>
+                <HealthRow title={`${formatTimestamp(o.started_at)} · ${o.status}${o.error ? ` · ${o.error}` : ""}`} meta={`${o.platform ?? ""}${o.first_sample_at && o.last_sample_at ? ` · ${formatTimestamp(o.first_sample_at)} to ${formatTimestamp(o.last_sample_at)}` : ""}`} value={`${o.minutes} min`} sub={`${o.records} records · ${o.chunks} chunks`} />
+                {o.log?.length ? (
+                  <details className="px-2 pb-2">
+                    <summary className="text-text-3 text-meta cursor-pointer">Log ({o.log.length} lines)</summary>
+                    <pre className="bg-surface-2 text-text-2 nums mt-1 max-h-56 overflow-auto rounded-md p-3 text-[11px] leading-relaxed">{o.log.join("\n")}</pre>
+                  </details>
+                ) : null}
+              </div>
             ))}
           </div>
         ) : (

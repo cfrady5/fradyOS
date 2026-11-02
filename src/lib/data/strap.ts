@@ -28,6 +28,7 @@ export interface StrapOffload {
   first_sample_at: string | null;
   last_sample_at: string | null;
   error: string | null;
+  log: string[] | null;
 }
 
 export interface StrapData {
@@ -62,7 +63,7 @@ export const getStrapData = cache(async (userId: string, today: string, timezone
   return {
     notReady: false,
     devices: ((devices.data ?? []) as Record<string, unknown>[]).map((d) => ({ id: String(d.id), serial: String(d.serial), name: d.name ? String(d.name) : null, model: (d.model as StrapDevice["model"]) ?? "auto", firmware: d.firmware ? String(d.firmware) : null, battery_pct: num(d.battery_pct), max_hr: num(d.max_hr), last_seen_at: d.last_seen_at ? String(d.last_seen_at) : null, last_offload_at: d.last_offload_at ? String(d.last_offload_at) : null })),
-    offloads: ((offloads.data ?? []) as Record<string, unknown>[]).map((o) => ({ id: String(o.id), serial: o.serial ? String(o.serial) : null, platform: o.platform ? String(o.platform) : null, started_at: String(o.started_at), finished_at: o.finished_at ? String(o.finished_at) : null, status: o.status as StrapOffload["status"], records: num(o.records) ?? 0, chunks: num(o.chunks) ?? 0, minutes: num(o.minutes) ?? 0, first_sample_at: o.first_sample_at ? String(o.first_sample_at) : null, last_sample_at: o.last_sample_at ? String(o.last_sample_at) : null, error: o.error ? String(o.error) : null })),
+    offloads: ((offloads.data ?? []) as Record<string, unknown>[]).map((o) => ({ id: String(o.id), serial: o.serial ? String(o.serial) : null, platform: o.platform ? String(o.platform) : null, started_at: String(o.started_at), finished_at: o.finished_at ? String(o.finished_at) : null, status: o.status as StrapOffload["status"], records: num(o.records) ?? 0, chunks: num(o.chunks) ?? 0, minutes: num(o.minutes) ?? 0, first_sample_at: o.first_sample_at ? String(o.first_sample_at) : null, last_sample_at: o.last_sample_at ? String(o.last_sample_at) : null, error: o.error ? String(o.error) : null, log: Array.isArray(o.log) ? (o.log as string[]) : null })),
     coverage,
     totalMinutes: total.count ?? 0,
   };

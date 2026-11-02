@@ -49,15 +49,32 @@ interface Link {
   disconnect(): Promise<void>;
 }
 
+/** Runs one GATT step and rethrows with the step named, so a generic browser error still says where it happened. */
+async function step<T>(name: string, fn: () => Promise<T>): Promise<T> {
+  try {
+    return await fn();
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    throw new Error(`${name}: ${msg}`);
+  }
+}
+
+function describeProps(c: BluetoothRemoteGATTCharacteristic): string {
+  const p = c.properties;
+  return [p.read && "read", p.write && "write", p.writeWithoutResponse && "writeNoResp", p.notify && "notify", p.indicate && "indicate"].filter(Boolean).join(",");
+}
+
 const toBytes = (view: DataView) => new Uint8Array(view.buffer.slice(view.byteOffset, view.byteOffset + view.byteLength));
 
 async function connectWeb(log: OffloadCallbacks["onLog"]): Promise<Link> {
+  log(`Web Bluetooth on ${navigator.userAgent.replace(/^.*\((.*?)\).*$/, "$1")}`, "debug");
   const device = await navigator.bluetooth.requestDevice({
     filters: [{ services: [WHOOP4_SERVICE] }, { services: [WHOOP5_SERVICE] }, { namePrefix: "WHOOP" }],
     optionalServices: [WHOOP4_SERVICE, WHOOP5_SERVICE, BATTERY_SERVICE, HEART_RATE_SERVICE, DEVICE_INFORMATION_SERVICE],
   });
   if (!device.gatt) throw new Error("This device does not expose a GATT server.");
-  const server = await device.gatt.connect();
+  log(`Picked ${device.name ?? device.id}; connecting`, "debug");
+  const server = await step("connect", () => device.gatt!.connect());
   let family: StrapFamily | null = null;
   let service: BluetoothRemoteGATTService | null = null;
   for (const [fam, uuid] of [["whoop4", WHOOP4_SERVICE], ["whoop5", WHOOP5_SERVICE]] as const) {
@@ -66,10 +83,10 @@ async function connectWeb(log: OffloadCallbacks["onLog"]): Promise<Link> {
       family = fam;
       break;
     } catch {
-      // Try the other family.
+      log(`Service ${uuid.slice(0, 8)} not present`, "debug");
     }
   }
-  if (!family || !service) throw new Error("No WHOOP service found on this device.");
+  if (!family || !service) throw new Error("No WHOOP service found on this device (neither 61080001 nor fd4b0001).");
   log(`Connected to ${device.name ?? "strap"} (${family})`, "info");
   const chars = new Map<string, BluetoothRemoteGATTCharacteristic>();
   const char = async (uuid: string) => {
@@ -86,21 +103,23 @@ async function connectWeb(log: OffloadCallbacks["onLog"]): Promise<Link> {
     family,
     name: device.name ?? null,
     async subscribe(uuid, onValue) {
-      const c = await char(uuid);
+      const c = await step(`get characteristic ${uuid.slice(0, 8)}`, () => char(uuid));
       c.addEventListener("characteristicvaluechanged", (e) => {
         const v = (e.target as BluetoothRemoteGATTCharacteristic).value;
         if (v) onValue(toBytes(v));
       });
-      await c.startNotifications();
+      await step(`subscribe ${uuid.slice(0, 8)} (props: ${describeProps(c)})`, () => c.startNotifications());
     },
     async write(uuid, bytes, withResponse) {
-      const c = await char(uuid);
+      const c = await step(`get characteristic ${uuid.slice(0, 8)}`, () => char(uuid));
       const buf = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
       const withResp = (c as BluetoothRemoteGATTCharacteristic & { writeValueWithResponse?: (v: BufferSource) => Promise<void> }).writeValueWithResponse;
       const withoutResp = (c as BluetoothRemoteGATTCharacteristic & { writeValueWithoutResponse?: (v: BufferSource) => Promise<void> }).writeValueWithoutResponse;
-      if (withResponse && withResp) await withResp.call(c, buf);
-      else if (!withResponse && withoutResp) await withoutResp.call(c, buf);
-      else await c.writeValue(buf);
+      await step(`write ${bytes.length} bytes ${withResponse ? "with" : "without"} response to ${uuid.slice(0, 8)}`, async () => {
+        if (withResponse && withResp) await withResp.call(c, buf);
+        else if (!withResponse && withoutResp) await withoutResp.call(c, buf);
+        else await c.writeValue(buf);
+      });
     },
     async readSerial() {
       try {
@@ -136,12 +155,14 @@ async function connectNative(log: OffloadCallbacks["onLog"]): Promise<Link> {
     family,
     name: device.name ?? null,
     async subscribe(uuid, onValue) {
-      await BleClient.startNotifications(device.deviceId, service, uuid, (value) => onValue(toBytes(value)));
+      await step(`subscribe ${uuid.slice(0, 8)}`, () => BleClient.startNotifications(device.deviceId, service, uuid, (value) => onValue(toBytes(value))));
     },
     async write(uuid, bytes, withResponse) {
       const view = new DataView(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength));
-      if (withResponse) await BleClient.write(device.deviceId, service, uuid, view);
-      else await BleClient.writeWithoutResponse(device.deviceId, service, uuid, view);
+      await step(`write ${bytes.length} bytes ${withResponse ? "with" : "without"} response to ${uuid.slice(0, 8)}`, async () => {
+        if (withResponse) await BleClient.write(device.deviceId, service, uuid, view);
+        else await BleClient.writeWithoutResponse(device.deviceId, service, uuid, view);
+      });
     },
     async readSerial() {
       try {
@@ -295,7 +316,19 @@ export async function runOffload({ model, signal, callbacks }: RunOffloadOptions
   signal.addEventListener("abort", onAbort, { once: true });
 
   try {
-    for (const uuid of gatt.notify) await link.subscribe(uuid, (bytes) => session.onNotification(uuid, bytes));
+    // The command-response and data channels are required; the event and auxiliary channels are not.
+    const required = new Set([gatt.notify[0], gatt.notify[2]]);
+    for (const uuid of gatt.notify) {
+      try {
+        await link.subscribe(uuid, (bytes) => session.onNotification(uuid, bytes));
+        callbacks.onLog(`Subscribed to ${uuid.slice(0, 8)}`, "debug");
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        if (required.has(uuid)) throw new Error(`${msg}. If this is the first connection, the browser may have refused the encrypted channel: pair the strap in the system Bluetooth settings first (macOS and Windows), or use the FRADY app.`);
+        callbacks.onLog(`Optional channel ${uuid.slice(0, 8)} not available (${msg}); continuing`, "warn");
+      }
+    }
+    callbacks.onLog(`Starting ${model} session on ${gatt.service.slice(0, 8)}`, "info");
     session.start({ model, nowUnix: Math.floor(Date.now() / 1000), nowMs: performance.now(), serviceUuid: gatt.service });
     return await result;
   } finally {
